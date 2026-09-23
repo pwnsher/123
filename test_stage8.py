@@ -598,7 +598,7 @@ def test_csv_versioning():
         _row(tel, 50.0); _row(tel, 54.0)
         rows = list(csv.DictReader(open(path)))
         assert open(path).readline().strip().split(",") == pt.CSV_COLUMNS
-        assert len(rows) == 2 and all(r["telemetry_schema_version"] == "2" and r["feature_version"] == "step2_v1" for r in rows)
+        assert len(rows) == 2 and all(r["telemetry_schema_version"] == "3" and r["feature_version"] == "step2_v2" for r in rows)
         assert all(r["telemetry_session_id"] == "TEST" for r in rows) and [r["cycle_id"] for r in rows] == ["1", "2"]
         baks = [n for n in os.listdir(d) if n.startswith("perp.csv.schema-")]
         assert len(baks) == 1
@@ -669,7 +669,7 @@ def test_quality_analyzer():
         assert s["duplicate_rows"] == 1 and s["negative_causal_lag"] == 1 and s["crossed_books"] == 1
         assert s["non_finite_values"] == {"causal_premium_bps": 1} and s["impossible_prices"] == {"index_price": 1}
         assert s["out_of_order_rows"] >= 1 and s["duplicate_timestamps_per_coin"] >= 1
-        assert s["schema_versions_present"] == {"2": 126} and s["feature_versions_present"] == {"step2_v1": 126}
+        assert s["schema_versions_present"] == {"3": 126} and s["feature_versions_present"] == {"step2_v2": 126}
         assert o["queue"]["processed"] == 60
         # cadence is per-coin stream, never interleaved across coins (BTC/ETH offsets differ by 2 s)
         assert o["cadence_perp_snapshots"]["median_s"] == 4.0, o["cadence_perp_snapshots"]

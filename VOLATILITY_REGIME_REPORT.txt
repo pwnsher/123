@@ -1,0 +1,206 @@
+VOLATILITY-REGIME PERP TELEMETRY — ENGINEERING REPORT
+=====================================================
+Telemetry schema 3 / feature_version step2_v2 / Step 3 analysis step3_v2.
+Research telemetry ONLY. Nothing added here changes a call, direction, confidence, size, MIN_CONF
+or edge gate, entry, exit, stop, Discord post or order. New features reach production only through
+the unchanged Step 3 -> Step 4 frozen shadow policy -> prospective validation -> Step 5 experiment
+-> explicit manual promotion -> LIVE_VETO_ONLY chain.
+
+1. FILES MODIFIED
+  perp_telemetry.py             schema 3 columns, pure feature math, dashboard_view(), health()
+  analyze_perp_predictive.py    step3_v2: feature families, controls, interactions, regime description
+  analyze_perp_quality.py       coverage / regime / stability / blank reasons / pathological values
+  kalshi_dashboard.py           display-only: _perp_publish -> STATE["perp_vol"]; one line per card
+  promote_perp_integration.py   refuses a frozen policy whose schema/feature version is stale
+  run_all_tests.py              runs stages 1-14
+  test_stage8/9/10.py           version literals -> 3 / step2_v2 (fixtures use the constants)
+  test_stage9.py                primary count 7 -> 8; schema-3 fixture features on their own RNG
+                                stream (reproduces the original realization bit-for-bit)
+  test_stage9/11.py             whole-file hash pins re-pinned for perp_telemetry.py and
+                                kalshi_dashboard.py (documented note, same process as Step 6)
+  test_stage13.py               master-runner fixture extended from 13 to 14 stages; stage 14 added
+                                to the master-mode guard check
+  test_stage14.py               NEW: 26 tests (A-I below)
+  SETUP.txt, PRODUCTION_RUNBOOK.txt, VOLATILITY_REGIME_REPORT.txt (this file)
+  Not modified: perp_shadow.py, build_perp_shadow_policy.py, analyze_perp_shadow.py,
+  build_perp_integration_experiment.py, analyze_perp_integration.py, perp_probability.py,
+  perp_live.py, strategy_fingerprint.py, step5_baseline_manifest.json, kalshi_bot.py,
+  kalshi_backtest.py. Every strategy function and constant is byte/AST-identical.
+
+2. NEW FEATURES (all columns of pt.VOLATILITY_COLUMNS)
+  perp_momentum_z_{30,60,180}s, spot_momentum_z_{30,60,180}s, momentum_gap_z_{30,60,180}s,
+  perp_spread_median_5m_bps, perp_spread_baseline_n, perp_spread_ratio_5m, premium_stress_5m,
+  vol_regime, perp_stability_state, perp_stability_reasons.
+  Quality flags: VOL_NORM_DENOMINATOR_TOO_SMALL, INSUFFICIENT_SPREAD_BASELINE.
+
+3. EXACT FORMULAS (h in seconds; RV = realized_vol_bps, bps per sqrt-minute)
+  sigma_h              = RV_300s * sqrt(h / 60)           None unless RV_300s finite and >= 0.01
+  perp_momentum_z_h    = causal_perp_ret_h_bps / sigma_perp_h
+  spot_momentum_z_h    = causal_spot_ret_h_bps / sigma_spot_h
+  momentum_gap_z_h     = momentum_gap_h_bps / sqrt(sigma_perp_h^2 + sigma_spot_h^2)
+  perp_spread_median_5m_bps = median of spread_bps(bid, ask) over snapshots with
+                         sel.avail - 300 <= avail < sel.avail  (fresh at receipt, same contract
+                         scale, valid uncrossed two-sided book); needs >= 20 points spanning >= 240 s
+  perp_spread_ratio_5m = perp_spread_bps / perp_spread_median_5m_bps  (None if baseline <= 1e-12)
+  premium_stress_5m    = |premium_z_5m|
+  Derived values are computed from the logged (4-dp rounded) inputs, exactly like the existing
+  momentum_gap and vol_shock columns, so every value is reproducible from the CSV. Output rounded
+  to 4 dp. Missing inputs give None (never 0, never clipped, never inf/nan).
+  Why 300 s: 60 s RV reacts to the very move being measured; 900 s adapts too slowly. A 900 s
+  normalised value is NOT added as a column: it equals ret_h / (perp_rv_900s_bps * sqrt(h/60)),
+  computable exactly from columns already logged.
+  Why this gap denominator: it is the sd of the difference only under independence. Perp and spot
+  are strongly positively correlated, so the true sd is smaller and gap_z is CONSERVATIVE. It is
+  documented as a volatility-scaled disagreement metric, not a z-score. An empirical gap-RV
+  denominator was considered and rejected for now: perp (4 s snapshots) and spot (poll time) are
+  sampled asynchronously, so a realized vol of their difference is dominated by asynchronicity
+  noise (Epps effect) and would need a new paired series plus its own warm-up.
+
+4. VOLATILITY REGIME (observational; pt.vol_regime)
+  s = max of the AVAILABLE ratios among perp_vol_shock_60v300 (REQUIRED), perp_vol_shock_60v900,
+      spot_vol_shock_60v300, spot_vol_shock_60v900
+  LOW s < 0.5 | NORMAL 0.5 <= s < 1.5 | HIGH 1.5 <= s < 2.5 | EXTREME s >= 2.5 | UNKNOWN (no perp 60v300)
+  Constants VOL_REGIME_LOW_BELOW / _HIGH_AT / _EXTREME_AT. Justified by sampling theory only
+  (~15 returns per 60 s: relative sd of the 60 s vol estimate ~0.18 in a constant regime, so 1.5 and
+  0.5 are ~2.7 sd from 1, 2.5 is ~8 sd). Never tuned against outcomes. Logged, on the dashboard,
+  never blocks a call. The continuous ratios remain the analysed quantities.
+
+5. STABILITY STATE (transparent rule; pt.stability_state; no score, no weights)
+  component              CAUTION        UNSTABLE
+  vol_regime             HIGH           EXTREME
+  |momentum_gap_z_60s|   >= 1.0         >= 2.0
+  premium_stress_5m      >= 2.5         >= 4.0
+  perp_spread_ratio_5m   >= 2.0         >= 4.0
+  UNSTABLE: any UNSTABLE component, or >= 2 CAUTION components. CAUTION: exactly one CAUTION.
+  STABLE: all four components available and none triggered. UNKNOWN: row not analysis_ready, or
+  inputs missing and nothing triggered (with missing inputs CAUTION/UNSTABLE are lower bounds).
+  Reasons are logged (e.g. VOL_EXTREME;SPOT_PERP_DISAGREE). Nothing is labelled liquidation-driven.
+  Caveat: the |gap_z| thresholds assume nothing about perp/spot correlation. On simulated
+  INDEPENDENT walks |gap_z60| >= 1 fires on ~23% of rows; on real (highly correlated) data it should
+  fire far less. The quality report shows the real rate. Any revision must be predeclared from that
+  distribution, never from outcomes.
+
+6. CAUSAL PROTECTIONS
+  * Every new value is computed inside the existing PerpTelemetry._causal() from perp snapshots
+    with available_ts <= feature_end_ts and spot observations with ts <= feature_end_ts; the
+    read-only preview_row() uses the same code path (parity tested).
+  * Spread baseline is strictly BEFORE the selected snapshot; never bridges a contract re-scale
+    (store clears on rescale + per-snapshot scale filter); stale/erroneous snapshots excluded.
+  * No outcome/settlement field is read (AST checks); analysis_ready is unchanged and does not
+    depend on the new features warming up.
+  * Tests insert enormous future perp prices, spreads, index values and spot values and prove
+    no new feature changes (test_stage14 B1), and that outcome-like fields change nothing (B2).
+
+7. SCHEMA / VERSION CHANGES
+  TELEMETRY_SCHEMA_VERSION 2 -> 3; FEATURE_VERSION step2_v1 -> step2_v2; ANALYSIS_CODE_VERSION
+  step3_v1 -> step3_v2; Step 3 EXPECTED_* follow. Old CSVs are renamed to *.schema-<time>.bak
+  (never appended). Step 3 refuses schema-2 rows/files. Frozen schema-2 policies are refused by the
+  shadow loader, Step 5 builder, promotion command (new explicit check) and live gate (REFUSED ->
+  legacy behaviour). Nothing is migrated. Policy/experiment/promotion/live-veto artifact schema
+  versions are unchanged (their content format did not change).
+
+8. STEP 3 CHANGES (analyze_perp_predictive.py)
+  DIRECTIONAL  + perp_momentum_z_{30,60,180}s, momentum_gap_z_{30,60,180}s
+  RELIABILITY  + perp_spread_ratio_5m, premium_stress_5m   (feature + feature x base_logit design)
+  SPOT CONTROL + spot_momentum_z_{30,60,180}s
+  PRIMARY: exactly one new primary, perp_momentum_z_60s, controlled by spot_momentum_z_60s, so it
+  only counts if it beats EQUALLY NORMALISED spot momentum. BH family 7 -> 8 (slightly stricter for
+  the existing primaries). Everything else is secondary (EXPLORATORY_ONLY at best, 200 bootstrap
+  reps); momentum_gap_z_60s was kept secondary because given the spot control it is nearly
+  collinear with perp_momentum_z_60s and would spend multiple-testing budget twice.
+  Controls: perp_momentum_z_h / momentum_gap_z_h -> spot_momentum_z_h;
+            perp_spread_ratio_5m / premium_stress_5m -> spot_vol_shock_60v300.
+  INTERACTIONS (predeclared, 3): perp_momentum_z_60s x perp_vol_shock_60v300,
+     momentum_gap_z_60s x perp_vol_shock_60v300, perp_momentum_z_60s x perp_spread_ratio_5m.
+     base = A + spot control + feature + modifier + control x modifier; full = base + feature x
+     modifier. Same walk-forward folds, train-only winsorised scaling (within coin for ALL), identical
+     OOF rows, ticker-clustered bootstrap, BH within the family per cohort x group x horizon,
+     sign consistency and candidate-size gates. Best status INTERACTION_EVIDENCE_RESEARCH_ONLY:
+     never PROMISING_CANDIDATE, never in the candidate manifest (Step 4 policies cannot represent
+     an interaction model). Output: perp_interaction_screen.csv + report section.
+  Lead/lag: + perp_momentum_z_60s, momentum_gap_z_60s (research only, as before).
+  Descriptive only: base-model Brier/logloss/win rate per vol_regime and stability state.
+  Winsorisation stays in the analysis layer (train-only 1/99), never in raw telemetry.
+
+9. DASHBOARD
+  One compact line per coin card: "perp vol · stability (telemetry, observe only)":
+    UP +1.8σ60 · vol HIGH 1.70x · spot/perp AGREE · spread NORMAL · prem ELEVATED · CAUTION
+  colour STABLE neutral / CAUTION amber / UNSTABLE red / UNKNOWN dim; hover shows gap z, spread
+  ratio, premium |z|, stability reasons, perp status and lag (freshness). Labels come from one
+  Python function (pt.dashboard_view), so the thresholds have a single source of truth. The label
+  names a feature as LIVE only when an ACTIVE promoted veto actually uses it. Missing / disabled /
+  garbage telemetry renders UNKNOWN or a dash (tested in Python and by running the page's JS in
+  node). The call verdict, buttons and prices are unchanged.
+
+10. TESTS
+  test_stage14.py (new): A normalisation (exact 30/60/180, zero/missing/non-finite/floor/overflow,
+  warm-up, flat prices, missing spot); B causality (future perp/spot values, outcome fields, AST);
+  C regime/stability exact boundaries, UNKNOWN, lower bounds; D spread stress (normal, widening,
+  blowout, median robustness, missing bid, missing ask, crossed current + historical books,
+  insufficient count/span, window edge, re-scale incl. defence in depth); E gap exact values and
+  missing cases; F dashboard view + publish + page JS in node; G header/versions, v2 file rotated,
+  v2 rows/files refused by Step 3, stale Step 3 report/Step 4 policy refused everywhere, stale
+  promotion chain refused and gate INACTIVE (control: same chain ACTIVE when versions match);
+  H fingerprint == 8d94f241..., static isolation, real poller cycle with STRESSED vs normal vs
+  disabled telemetry gives identical strategy fields/calls/logs/paper/pending positions, nothing
+  new can become a call or candidate; Step 3 planted-signal tests (perp momentum beyond spot ->
+  candidate; spot-driven outcome -> not credited to perp; planted interaction -> evidence with the
+  right sign; none -> no evidence; deterministic); report sections; quality report.
+
+11. TEST RESULTS (actually run; "py run_all_tests.py" = each stage exactly once)
+  CPython 3.13.12:  stages 1-14 PASS  ->  ALL SUITES PASSED   (4m01s)
+  CPython 3.12.3 :  stages 1-14 PASS  ->  ALL SUITES PASSED   (4m10s; the original release interpreter)
+  test_stage14.py standalone (re-runs stages 1-13 itself): All Stage 14 tests passed.
+  Baseline (unmodified upload) also passes 1-13 on 3.13. On CPython 3.11 the UNMODIFIED upload
+  already fails stages 3/7/8 (kalshi_backtest.py PEP 701 f-string) and 12 (3.13 AST regression
+  test); unrelated to this change.
+  Existing assertions changed (none weakened): version literals 2/step2_v1 -> 3/step2_v2; the
+  mixed-schema test now injects a genuine step2_v1 row; PRIMARY count 7 -> 8; whole-file hash pins
+  for the two files changed by design; stage 13 runner fixture extended from 13 to 14 stages.
+  Legacy strategy fingerprint unchanged: 8d94f241e8fc8edadc76058e1f12f430b6e4f499f4c0a30fba1cb5cf07dad82a
+  (strategy_fingerprint.py --verify step5_baseline_manifest.json -> MATCHES baseline).
+
+12. PERFORMANCE (bench_perf.py, CPython 3.13.12, same machine; best of 2 runs before / 3 after)
+  metric                                        before ->        after   ratio
+  C_one_causal_feature_ms                        0.5656 ->       0.6368  x1.126
+  D_1000_causal_features_peak_bytes           2,442,784 ->    2,804,178  x1.148
+  D_1000_causal_features_s                       0.6105 ->       0.7062  x1.157
+  E_csv_10000_rows_open_calls                     2,500 ->        2,500  x1.000
+  E_csv_10000_rows_s                             0.4558 ->       0.5310  x1.165
+  F_100k_point_lookups_peak_bytes             6,289,076 ->    6,289,076  x1.000
+  F_100k_point_lookups_s                         0.1140 ->       0.1135  x0.996
+  G_step3_bootstrap_1000reps_peak_bytes         471,448 ->      471,448  x1.000
+  G_step3_bootstrap_1000reps_s                   0.3076 ->       0.3106  x1.010
+  H_step4_bootstrap_1000reps_peak_bytes         316,080 ->      316,080  x1.000
+  H_step4_bootstrap_1000reps_s                   0.7747 ->       0.7344  x0.948
+  H_step4_bootstrap_2000reps_peak_bytes         347,408 ->      347,408  x1.000
+  H_step4_bootstrap_2000reps_s                   1.5688 ->       1.5953  x1.017
+  I_step5_analysis_2000reps_peak_bytes        2,538,020 ->    2,538,020  x1.000
+  I_step5_analysis_2000reps_s                    0.6836 ->       0.5932  x0.868
+  Causal features: +0.07 ms per row (+13%), proportional to 16 new columns on the 44-column
+  feature block; runs on the telemetry worker, never the poller. The snapshot loop now reads
+  s.avail once per iteration (behaviour-preserving). CSV: +16% time for ~13% more columns per
+  row; header validation caching intact (still exactly 1 open per write). Point lookups, Step 3/4
+  bootstraps and Step 5 analysis unchanged within noise. Binary search lookup, trailing-window
+  slicing, thread-local HTTP sessions, nonblocking worker and bounded histories untouched.
+
+13. API / DATA LIMITATIONS
+  The repository's documented endpoints (GET /margin/markets, GET /margin/funding_rates/estimate)
+  supply bid, ask, last price, settlement mark, reference (index) price, contract size /
+  underlying multiplier, status and a funding estimate. No open interest, liquidation flow, trade
+  aggressor side or book depth is available, so none is recorded or inferred. Adding one later
+  needs a verified source, a new column group, a schema/feature-version bump, quality coverage,
+  and the same Step 3 -> promotion chain. The live API was not queried in this change.
+  Pre-existing: kalshi_backtest.py uses a Python 3.12+ f-string (PEP 701), so the suite does not
+  run on 3.10/3.11 despite the "3.10 - 3.13 intended" note in SETUP/RUNBOOK (not changed here).
+
+14. DELIBERATELY NOT IMPLEMENTED
+  * perp_spread_z_5m: Kalshi spreads are tick-quantised, so the trailing sd is often zero or
+    unstable; the median-based ratio is robust. (Could be added later as a secondary feature.)
+  * Any weighted stability score, any stability-based veto/confidence change, any use of the regime
+    in evaluate()/sizing/stops: forbidden until validated through the chain.
+  * Empirical perp-minus-spot RV denominator for gap_z (asynchronous sampling, see 3).
+  * A 900 s-normalised momentum column (exactly derivable from logged columns).
+  * Making more than one new feature PRIMARY, or interactions candidate-eligible (would need a
+    Step 4 policy-schema extension, predeclared before looking at data).
+  * MACD/RSI/moving averages or any other TA indicator; liquidation/OI inference.

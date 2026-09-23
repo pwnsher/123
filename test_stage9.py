@@ -244,6 +244,10 @@ def write_e2e(d, n_times=120, leak_decoys=True, signal_feature="causal_premium_b
     must never pick it."""
     import perp_telemetry as pt
     rng = random.Random(seed)
+    # schema-v3 research features get their own stream, so adding them leaves the original
+    # (step2_v1) synthetic realization — labels, base probabilities, planted signal — bit-identical
+    v3 = sorted(set(ap.FEATURE_ALLOWLIST) & set(pt.VOLATILITY_COLUMNS))
+    xrng = random.Random(seed + 1)
     tpath, lpath = os.path.join(d, "tele.csv"), os.path.join(d, "labels.csv")
     rows, labels = [], []
     for j in range(n_times):
@@ -254,7 +258,8 @@ def write_e2e(d, n_times=120, leak_decoys=True, signal_feature="causal_premium_b
             y = 1 if rng.random() < ap.sigmoid(b + 0.4 * s + 0.9 * z) else 0
             labels.append((tk, coin, close, y))
             p = round(ap.sigmoid(b) * 100, 4)
-            feats = {c: round(rng.gauss(0, 1), 6) for c in ap.FEATURE_ALLOWLIST}
+            feats = {c: round(rng.gauss(0, 1), 6) for c in ap.FEATURE_ALLOWLIST if c not in v3}
+            feats.update({c: round(xrng.gauss(0, 1), 6) for c in v3})
             for c in ("causal_spot_ret_30s_bps", "causal_spot_ret_60s_bps", "causal_spot_ret_180s_bps"):
                 feats[c] = round(s, 6)
             for c in ("spot_vol_shock_60v300", "spot_vol_shock_60v900", "perp_vol_shock_60v300",
@@ -273,7 +278,8 @@ def write_e2e(d, n_times=120, leak_decoys=True, signal_feature="causal_premium_b
         for k, (ts, tk, coin, close, p, feats, sig) in enumerate(sorted(rows)):
             spot_ms = int(ts * 1000)
             row = {c: "" for c in pt.CSV_COLUMNS}
-            row.update(telemetry_schema_version=2, feature_version="step2_v1", telemetry_session_id="SESS",
+            row.update(telemetry_schema_version=pt.TELEMETRY_SCHEMA_VERSION, feature_version=pt.FEATURE_VERSION,
+                       telemetry_session_id="SESS",
                        cycle_id=k, ts_utc=_iso(ts), ts_epoch_ms=spot_ms + 200, coin=coin, binary_status="ok",
                        binary_ticker=tk, binary_close_time=_iso(close), minutes_left=round((close - ts) / 60, 1),
                        spot_price=100.0, base_p_up=p, fav="UP" if p >= 50 else "DOWN", binary_signal=sig,
@@ -714,7 +720,7 @@ def test_allowlist():
             ap.screen_feature(synth(50), c); raise AssertionError("spot control screened as candidate")
         except ValueError:
             pass
-    assert set(ap.PRIMARY_FEATURES) <= set(ap.CANDIDATE_FEATURES) and len(ap.PRIMARY_FEATURES) == 7
+    assert set(ap.PRIMARY_FEATURES) <= set(ap.CANDIDATE_FEATURES) and len(ap.PRIMARY_FEATURES) == 8      # step3_v2 added exactly one: perp_momentum_z_60s
 
 
 def test_e2e_leak_decoys_and_outputs():
@@ -722,7 +728,7 @@ def test_e2e_leak_decoys_and_outputs():
     rep, out = e["rep"], os.path.join(e["dir"], "out")
     m = rep["dataset_manifest"]
     assert m["unique_tickers_labeled"] == 480 and m["unique_tickers_analyzed"] == 480 and m["unlabeled_tickers"] == 0
-    assert m["telemetry_schema_version"] == "2" and m["feature_version"] == "step2_v1" and m["bootstrap_seed"] == ap.SEED
+    assert m["telemetry_schema_version"] == "3" and m["feature_version"] == "step2_v2" and m["bootstrap_seed"] == ap.SEED
     b = rep["baseline"]["ALL|4"]
     assert b["unique_markets"] == 480 and b["yes_count"] + b["no_count"] == 480 and len(b["calibration"]) == 10
     # the leak decoys (after target, outcome encoded) must never be selected
@@ -770,7 +776,7 @@ def test_schema_and_metadata_validation():
     try:
         t, l = write_e2e(d, n_times=6)
         lines = open(t).read().splitlines()
-        lines[3] = lines[3].replace(",step2_v1,", ",step2_v0,", 1)
+        lines[3] = lines[3].replace(",step2_v2,", ",step2_v1,", 1)          # one OLD-schema row
         open(t, "w").write("\n".join(lines) + "\n")
         try:
             ap.load_telemetry(t); raise AssertionError("mixed schema accepted")
@@ -843,8 +849,13 @@ STRATEGY_FUNCTION_HASHES = {
 # perp_telemetry.py (read-only preview_row) changed by design in Step 6. Their LEGACY
 # behaviour is pinned by the per-function strategy hashes below, by the AST strategy
 # fingerprint (test_stage12) and by the unchanged Stage 1-11 behavioural tests.
+# Step 2 v2 note (volatility-regime research telemetry, schema 3 / step2_v2): perp_telemetry.py
+# (new causal columns) and kalshi_dashboard.py (display-only perp-vol line in _perp_publish/PAGE)
+# changed by design. Legacy behaviour is still pinned by the per-function strategy hashes, the
+# AST strategy fingerprint (test_stage12/14) and the unchanged behavioural tests; test_stage14
+# additionally proves poller outputs are identical with stressed, normal and disabled telemetry.
 LIVE_HASHES = {   # Step 2 output, byte-identical in Steps 3 and 4
-    "perp_telemetry.py": "454f87058780869660d8021ac8c12a88cda6f91bb88a542634a673fc8772d982",
+    "perp_telemetry.py": "5e1de6d6553032bd2902d0b9766086b826876c632bb41cfcfe52234c90b4d99e",
     "kalshi_bot.py": "9e064548c21144b00226920e21d114407ff306386fd740272cbd889d7d896d53",
     "kalshi_backtest.py": "718968348cacd89e07740414ac9567db6a22ba3b3dcd7d8d70cd4c0a0ef631f8",
     "kalshi_api_learn.py": "7b7bc2dd095cabe391549208a849c612a5465aac9139e8f8e841216cc96a26f6",

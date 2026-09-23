@@ -23,8 +23,20 @@ Design (full detail in SETUP.txt and the JSON report's config snapshot):
     BTC/ETH/SOL/XRP markets are never split between train and test).
   * All preprocessing (1/99 winsorisation, mean/std) fit on training rows only;
     within coin for the pooled ALL group.
-  * Ticker-clustered bootstrap CIs; BH-FDR across the 7 predeclared primary features
+  * Ticker-clustered bootstrap CIs; BH-FDR across the 8 predeclared primary features
     per cohort x group x horizon; conservative sample-size gates.
+
+step3_v2 (telemetry schema 3 / step2_v2) adds the volatility-regime research features:
+  * ONE new primary: perp_momentum_z_60s (60 s perp return / its 300 s realized-vol horizon
+    sigma), spot-controlled by spot_momentum_z_60s, so it only counts if it adds information
+    beyond equally normalised spot momentum. Every other new feature is SECONDARY (it is
+    screened and reported, but can never become a candidate).
+  * Normalised gaps are directional; spread ratio and premium stress are reliability features.
+  * A predeclared 3-member INTERACTION family asks whether perp predictive value changes with
+    volatility / liquidity (perp feature x modifier beyond both main effects AND the spot
+    control x modifier term). It is research only: its status is never PROMISING_CANDIDATE,
+    it never enters the candidate manifest, and Step 4 policies cannot represent it.
+  * Descriptive (never used for any status): base-model metrics by vol_regime / stability state.
 """
 import argparse
 import bisect
@@ -39,9 +51,9 @@ import random
 import sys
 from collections import defaultdict
 
-ANALYSIS_CODE_VERSION = "step3_v1"
-EXPECTED_SCHEMA_VERSION = "2"          # == perp_telemetry.TELEMETRY_SCHEMA_VERSION (checked by tests)
-EXPECTED_FEATURE_VERSION = "step2_v1"  # == perp_telemetry.FEATURE_VERSION
+ANALYSIS_CODE_VERSION = "step3_v2"
+EXPECTED_SCHEMA_VERSION = "3"          # == perp_telemetry.TELEMETRY_SCHEMA_VERSION (checked by tests)
+EXPECTED_FEATURE_VERSION = "step2_v2"  # == perp_telemetry.FEATURE_VERSION
 
 HORIZONS_MIN = (8, 6, 4, 2)
 HORIZON_MAX_EARLY_SECONDS = 10.0
@@ -78,19 +90,39 @@ COINS = ("BTC", "ETH", "SOL", "XRP")
 # ─────────────── predeclared feature families (POSITIVE ALLOWLIST) ───────────────
 PRIMARY_FEATURES = ("causal_premium_bps", "premium_change_60s_bps", "premium_z_5m",
                     "causal_perp_ret_60s_bps", "momentum_gap_60s_bps",
-                    "perp_vol_shock_60v300", "perp_spread_bps")
+                    "perp_vol_shock_60v300", "perp_spread_bps",
+                    "perp_momentum_z_60s")                     # step3_v2: the only new primary
 DIRECTIONAL_FEATURES = (
     "causal_premium_bps", "mark_index_premium_bps", "last_index_premium_bps", "mid_mark_basis_bps",
     "premium_change_30s_bps", "premium_change_60s_bps", "premium_change_180s_bps",
     "premium_z_5m", "premium_z_15m",
     "causal_perp_ret_30s_bps", "causal_perp_ret_60s_bps", "causal_perp_ret_180s_bps",
-    "momentum_gap_30s_bps", "momentum_gap_60s_bps", "momentum_gap_180s_bps")
+    "momentum_gap_30s_bps", "momentum_gap_60s_bps", "momentum_gap_180s_bps",
+    # step3_v2 volatility-normalised momentum and perp-vs-spot disagreement
+    "perp_momentum_z_30s", "perp_momentum_z_60s", "perp_momentum_z_180s",
+    "momentum_gap_z_30s", "momentum_gap_z_60s", "momentum_gap_z_180s")
 RELIABILITY_FEATURES = ("perp_spread_bps", "perp_rv_60s_bps", "perp_rv_300s_bps", "perp_rv_900s_bps",
-                        "perp_vol_shock_60v300", "perp_vol_shock_60v900")
+                        "perp_vol_shock_60v300", "perp_vol_shock_60v900",
+                        # step3_v2 liquidity deterioration / basis instability (secondary)
+                        "perp_spread_ratio_5m", "premium_stress_5m")
 EXPLORATORY_FUNDING = ("funding_rate",)          # units unverified: never a candidate
 SPOT_CONTROL_FEATURES = ("causal_spot_ret_30s_bps", "causal_spot_ret_60s_bps", "causal_spot_ret_180s_bps",
                          "spot_rv_60s_bps", "spot_rv_300s_bps", "spot_rv_900s_bps",
-                         "spot_vol_shock_60v300", "spot_vol_shock_60v900")
+                         "spot_vol_shock_60v300", "spot_vol_shock_60v900",
+                         "spot_momentum_z_30s", "spot_momentum_z_60s", "spot_momentum_z_180s")
+# Descriptive categorical telemetry (never a predictor; only grouped for description).
+CATEGORICAL_COLUMNS = ("vol_regime", "perp_stability_state")
+# Predeclared interaction family: (perp directional feature, modifier). Small on purpose.
+#   base  = A + spot control + feature + modifier + spot control x modifier
+#   full  = base + feature x modifier
+# Does the perp feature's incremental value CHANGE with volatility shock / spread stress, beyond
+# the same change for the matched spot control? Research only (see module docstring).
+INTERACTIONS = (("perp_momentum_z_60s", "perp_vol_shock_60v300"),
+                ("momentum_gap_z_60s", "perp_vol_shock_60v300"),
+                ("perp_momentum_z_60s", "perp_spread_ratio_5m"))
+IX_INSUFFICIENT = "INSUFFICIENT_DATA"
+IX_NONE = "NO_EVIDENCE_OF_INTERACTION"
+IX_EVIDENCE = "INTERACTION_EVIDENCE_RESEARCH_ONLY"
 CANDIDATE_FEATURES = DIRECTIONAL_FEATURES + RELIABILITY_FEATURES + EXPLORATORY_FUNDING
 FEATURE_ALLOWLIST = frozenset(CANDIDATE_FEATURES + SPOT_CONTROL_FEATURES)
 # belt-and-braces: even an allowlisted name may never look like a label
@@ -104,7 +136,8 @@ SECOND_CONTROL_MIN_COVERAGE = 0.80   # add spot_vol_shock_60v300 to premium/basi
 LEADLAG_FEATURES = ("causal_perp_ret_30s_bps", "causal_perp_ret_60s_bps", "causal_perp_ret_180s_bps",
                     "momentum_gap_30s_bps", "momentum_gap_60s_bps", "momentum_gap_180s_bps",
                     "causal_premium_bps", "premium_change_30s_bps", "premium_change_60s_bps",
-                    "premium_change_180s_bps")
+                    "premium_change_180s_bps",
+                    "perp_momentum_z_60s", "momentum_gap_z_60s")          # step3_v2
 FUTURE_HORIZONS_S = (10, 30, 60, 120)
 FUTURE_SPOT_TOLERANCE_SECONDS = 8.0
 LEADLAG_MAX_INTERNAL_GAP_SECONDS = 30.0
@@ -156,6 +189,10 @@ def feature_family(name):
 def spot_controls_for(feature, rows=None):
     """Predeclared spot-control mapping. rows (optional) decides whether the second
     premium/basis control has enough coverage (fixed 80% rule, not tuned)."""
+    if feature.startswith("perp_momentum_z_") or feature.startswith("momentum_gap_z_"):
+        return ["spot_momentum_z_" + feature.rsplit("_", 1)[-1]]      # equally normalised spot momentum
+    if feature in ("perp_spread_ratio_5m", "premium_stress_5m"):
+        return ["spot_vol_shock_60v300"]                              # market-wide stress control
     if feature.startswith("causal_perp_ret_") or feature.startswith("momentum_gap_"):
         h = feature.split("_")[-2]                          # '30s' / '60s' / '180s'
         return [f"causal_spot_ret_{h}_bps"]
@@ -523,7 +560,7 @@ REQUIRED_COLUMNS = ("telemetry_schema_version", "feature_version", "telemetry_se
                     "coin", "binary_status", "binary_ticker", "binary_close_time", "minutes_left",
                     "spot_price", "base_p_up", "fav", "binary_signal", "spot_observed_ts_epoch_ms",
                     "perp_snapshot_ts_epoch_ms", "perp_lag_to_spot_ms", "feature_end_ts_epoch_ms",
-                    "causal_pair_ok", "analysis_ready") + tuple(sorted(FEATURE_ALLOWLIST))
+                    "causal_pair_ok", "analysis_ready") + tuple(sorted(FEATURE_ALLOWLIST)) + CATEGORICAL_COLUMNS
 
 
 def _f(v):
@@ -568,6 +605,7 @@ def _row_from_csv(i, r):
         "fe_ms": _f(r.get("feature_end_ts_epoch_ms")), "lag_ms": _f(r.get("perp_lag_to_spot_ms")),
         "ts": spot_ms / 1000.0 if spot_ms is not None else None,
         "f": {c: _f(r.get(c)) for c in FEATURE_ALLOWLIST},
+        "cat": {c: (r.get(c) or "").strip() or None for c in CATEGORICAL_COLUMNS},
     }
 
 
@@ -781,7 +819,7 @@ def _obs(r, y, horizon, target=None):
     p = r["p"]
     return {"ticker": r["ticker"], "coin": r["coin"], "session": r["session"], "close": r["close"],
             "ts": r["ts"], "horizon": horizon, "y": y, "p": p, "base_logit": logit(p), "fav": r["fav"],
-            "f": r["f"], "ready": r["ready"], "row_index": r["i"],
+            "f": r["f"], "cat": r.get("cat") or {}, "ready": r["ready"], "row_index": r["i"],
             "horizon_early_ms": int(round((target - r["ts"]) * 1000)) if target is not None else None,
             "favored_correct": (y == 1) if r["fav"] == "UP" else ((y == 0) if r["fav"] == "DOWN" else None),
             "base_error": y - p}
@@ -1074,6 +1112,172 @@ def apply_bh_and_classify(results, thresholds=None, invariants_ok=True):
     return results
 
 
+# ═══════════════════════ step3_v2: predeclared interaction family (research only) ═══════════════════════
+def interaction_design(o, model, controls, feature, modifier, scalers, by_coin):
+    """base: [base_logit, spot controls, feature, modifier, control_i x modifier]
+       full: base + [feature x modifier]           (all terms train-only scaled)"""
+    zc = [_scaled(o, c, scalers, by_coin) for c in controls]
+    zf = _scaled(o, feature, scalers, by_coin)
+    zm = _scaled(o, modifier, scalers, by_coin)
+    x = [o["base_logit"]] + zc + [zf, zm] + [c * zm for c in zc]
+    if model == "full":
+        x.append(zf * zm)
+    return x
+
+
+def screen_interaction(obs, feature, modifier, group="ALL", horizon=None, cohort="primary", reps=BOOTSTRAP_REPS,
+                       seed=SEED, thresholds=None):
+    """Does feature x modifier improve OUT-OF-FOLD fit beyond both main effects and the matched
+    spot control x modifier term? Same safeguards as screen_feature: walk-forward folds on whole
+    close-time groups, train-only winsorised scaling (within coin for ALL), identical OOF rows for
+    both models, ticker-clustered bootstrap. Research only: never a candidate."""
+    th = dict(DEFAULT_THRESHOLDS, **(thresholds or {}))
+    if (feature, modifier) not in INTERACTIONS:
+        raise ValueError(f"({feature}, {modifier}) is not a predeclared interaction")
+    assert_allowed_predictor(feature)
+    assert_allowed_predictor(modifier)
+    controls = spot_controls_for(feature)
+    for c in controls:
+        assert_allowed_predictor(c)
+    need = list(dict.fromkeys(controls + [feature, modifier]))
+    by_coin = group == "ALL"
+    avail = sorted((o for o in obs if all(_ok(o["f"].get(c)) for c in need) and _ok(o["base_logit"])),
+                   key=lambda o: (o["close"], o["ticker"]))
+    n_obs = len(obs)
+    res = {"cohort": cohort, "group": group, "coin": group, "horizon_min": horizon, "feature_name": feature,
+           "modifier_name": modifier, "interaction": f"{feature} x {modifier}", "controls": controls,
+           "model_type": "interaction_research_only", "unique_markets": n_obs, "n_available": len(avail),
+           "coverage_pct": round(100.0 * len(avail) / n_obs, 2) if n_obs else None,
+           "yes_count": sum(o["y"] for o in avail), "no_count": len(avail) - sum(o["y"] for o in avail),
+           "valid_folds": 0, "folds": [], "notes": []}
+    if len(avail) < max(th["min_analysis_markets"], MIN_TRAIN_ROWS_PER_FOLD + MIN_TEST_ROWS_PER_FOLD):
+        res["notes"].append("n_available below min_analysis_markets: not analysed")
+        return res
+    oof, coefs = [], []
+    folds = walk_forward_folds([o["close"] for o in avail])
+    for fno, tr_i, te_i in folds:
+        train, test = [avail[i] for i in tr_i], [avail[i] for i in te_i]
+        fd = {"fold": fno, "train_n": len(train), "test_n": len(test)}
+        res["folds"].append(fd)
+        ys = [o["y"] for o in train]
+        if len(train) < MIN_TRAIN_ROWS_PER_FOLD or len(test) < MIN_TEST_ROWS_PER_FOLD or sum(ys) in (0, len(ys)):
+            fd["skipped"] = "too few rows or single-class training data"; continue
+        try:
+            scalers = fit_scalers(train, need, by_coin)
+        except ValueError as e:
+            fd["skipped"] = str(e); continue
+        if by_coin:
+            ok_coins = {k for k, c in scalers if c == feature}
+            train = [o for o in train if o["coin"] in ok_coins]
+            test = [o for o in test if o["coin"] in ok_coins]
+            if len(test) < MIN_TEST_ROWS_PER_FOLD or not train:
+                fd["skipped"] = "too few rows after within-coin scaling"; continue
+        X = {m: ([interaction_design(o, m, controls, feature, modifier, scalers, by_coin) for o in train],
+                 [interaction_design(o, m, controls, feature, modifier, scalers, by_coin) for o in test])
+             for m in ("base", "full")}
+        try:
+            fits = {m: fit_logistic(X[m][0], [o["y"] for o in train]) for m in ("base", "full")}
+        except SingularMatrixError as e:
+            fd["skipped"] = f"singular fit: {e}"; continue
+        pb = predict_logistic(fits["base"]["beta"], X["base"][1])
+        pf = predict_logistic(fits["full"]["beta"], X["full"][1])
+        coefs.append(fits["full"]["beta"][-1])
+        fd["interaction_coef"] = fits["full"]["beta"][-1]
+        fd["converged"] = fits["base"]["converged"] and fits["full"]["converged"]
+        for o, b_, f_ in zip(test, pb, pf):
+            oof.append({"ticker": o["ticker"], "y": o["y"], "pb": b_, "pf": f_})
+    res["valid_folds"] = len(coefs)
+    res["attempted_folds"] = len(folds)
+    if not oof:
+        res["notes"].append("no valid folds")
+        return res
+    y = [r["y"] for r in oof]
+    P = {"base": [r["pb"] for r in oof], "full": [r["pf"] for r in oof]}
+    res["oof_n"] = len(oof)
+    for m in ("base", "full"):
+        res[f"oof_brier_{m}"], res[f"oof_logloss_{m}"], res[f"auc_{m}"] = brier(P[m], y), logloss(P[m], y), auc(P[m], y)
+    res["brier_improvement"] = res["oof_brier_base"] - res["oof_brier_full"]
+    res["logloss_improvement"] = res["oof_logloss_base"] - res["oof_logloss_full"]
+
+    def ll1(p, yy):
+        pc = clamp_p(p)
+        return -(yy * math.log(pc) + (1 - yy) * math.log(1 - pc))
+    d_brier = [(r["pb"] - r["y"]) ** 2 - (r["pf"] - r["y"]) ** 2 for r in oof]
+    d_ll = [ll1(r["pb"], r["y"]) - ll1(r["pf"], r["y"]) for r in oof]
+    boot = cluster_bootstrap([r["ticker"] for r in oof], {"brier": d_brier, "ll": d_ll}, reps,
+                             _derived_seed(seed, "interaction", cohort, group, horizon, feature, modifier))
+    res["bootstrap_reps"] = reps
+    res["brier_ci_low"], res["brier_ci_high"] = ci95(boot["brier"])
+    res["logloss_ci_low"], res["logloss_ci_high"] = ci95(boot["ll"])
+    res["p_value"] = bootstrap_p_improvement(boot["brier"])
+    ss = sign_stats(coefs, len(folds))
+    res.update({"interaction_" + k: v for k, v in ss.items()})
+    res["interaction_sign"] = ss["dominant_sign"]
+    res["sign_consistency_pct"] = ss["sign_consistency_pct"]
+    return res
+
+
+def classify_interaction(res, thresholds=None):
+    """Research status only. The best possible status is IX_EVIDENCE, which is NOT a Step 3
+    candidate and is never written to the candidate manifest."""
+    th = dict(DEFAULT_THRESHOLDS, **(thresholds or {}))
+    n = res.get("n_available", 0)
+    if n < th["min_analysis_markets"] or res.get("valid_folds", 0) < th["min_valid_folds"]:
+        return IX_INSUFFICIENT, [f"n_available {n} < {th['min_analysis_markets']} or valid folds "
+                                 f"{res.get('valid_folds', 0)} < {th['min_valid_folds']}"]
+    reasons = []
+    bi, li, lo, q = (res.get(k) for k in ("brier_improvement", "logloss_improvement", "brier_ci_low", "q_value"))
+    if not (bi is not None and bi > 0 and li is not None and li > 0 and lo is not None and lo > 0
+            and q is not None and q <= th["q_max"]):
+        reasons.append("OOF improvement over the main-effects model not established (Brier/logloss/CI/q)")
+    sc = res.get("sign_consistency_pct")
+    if sc is None or sc < th["sign_consistency_min_pct"]:
+        reasons.append(f"interaction sign consistency {sc} < {th['sign_consistency_min_pct']}")
+    if n < th["min_candidate_markets"] or res.get("yes_count", 0) < th["min_class_count"] \
+            or res.get("no_count", 0) < th["min_class_count"]:
+        reasons.append("below candidate-level sample thresholds")
+    if reasons:
+        return IX_NONE, reasons
+    return IX_EVIDENCE, ["interaction evidence (research only: not a candidate, changes nothing)"]
+
+
+def apply_bh_interactions(results, thresholds=None):
+    """BH-FDR across the predeclared interaction family within each (cohort, group, horizon)."""
+    fam = defaultdict(list)
+    for r in results:
+        if r.get("p_value") is not None:
+            fam[(r["cohort"], r["group"], r["horizon_min"])].append(r)
+    for rs in fam.values():
+        for r, q in zip(rs, bh_qvalues([r["p_value"] for r in rs])):
+            r["q_value"] = q
+    for r in results:
+        r.setdefault("q_value", None)
+        r["status"], r["status_reasons"] = classify_interaction(r, thresholds)
+    return results
+
+
+VOL_REGIME_CATEGORIES = ("LOW", "NORMAL", "HIGH", "EXTREME", "UNKNOWN")      # == perp_telemetry.VOL_REGIMES
+STABILITY_CATEGORIES = ("STABLE", "CAUTION", "UNSTABLE", "UNKNOWN")         # == perp_telemetry.STABILITY_STATES
+
+
+def categorical_regime_description(obs):
+    """DESCRIPTIVE ONLY (never used for any status): the existing model's raw metrics within each
+    fixed telemetry category. Categories come from predeclared telemetry rules, not from data."""
+    out = {}
+    for col, cats in (("vol_regime", VOL_REGIME_CATEGORIES), ("perp_stability_state", STABILITY_CATEGORIES)):
+        d = {}
+        for cat in cats:
+            rs = [o for o in obs if ((o.get("cat") or {}).get(col) if (o.get("cat") or {}).get(col) in cats
+                                     else "UNKNOWN") == cat]
+            p, y = [o["p"] for o in rs], [o["y"] for o in rs]
+            d[cat] = {"n": len(rs), "yes_rate": (sum(y) / len(y)) if y else None,
+                      "brier": brier(p, y) if y else None, "logloss": logloss(p, y) if y else None,
+                      "favored_win_rate": mean([1.0 if o["favored_correct"] else 0.0 for o in rs
+                                                if o["favored_correct"] is not None])}
+        out[col] = d
+    return out
+
+
 # ═══════════════════════ baseline (existing model) ═══════════════════════
 def baseline_metrics(obs):
     y = [o["y"] for o in obs]
@@ -1252,6 +1456,13 @@ LEADLAG_CSV_COLUMNS = ["group", "coin", "future_horizon_s", "feature_name", "con
                        "oof_n", "mse_base", "mse_aug", "mse_improvement", "mse_ci_low", "mse_ci_high",
                        "mae_base", "mae_aug", "r2_oos_base", "r2_oos_aug", "pearson", "spearman", "p_value",
                        "q_value", "gamma_dominant_sign", "sign_consistency_pct", "status"]
+INTERACTION_CSV_COLUMNS = ["group", "coin", "horizon_min", "cohort", "feature_name", "modifier_name", "controls",
+                           "unique_markets", "n_available", "yes_count", "no_count", "coverage_pct", "valid_folds",
+                           "oof_n", "oof_brier_base", "oof_brier_full", "brier_improvement", "oof_logloss_base",
+                           "oof_logloss_full", "logloss_improvement", "auc_base", "auc_full", "brier_ci_low",
+                           "brier_ci_high", "p_value", "q_value", "interaction_sign",
+                           "interaction_positive_folds", "interaction_negative_folds", "sign_consistency_pct",
+                           "bootstrap_reps", "status"]
 
 
 def _group_obs(obs, group):
@@ -1282,11 +1493,16 @@ def run_analysis(telemetry, labels_path, outdir="analysis_output", seed=SEED, re
     analyzed = {o["ticker"] for h in horizon_obs.values() for o in h} | {o["ticker"] for o in signal_obs}
 
     baseline, regimes, screens, oof_rows = {}, {}, [], []
+    cat_regimes, interactions = {}, []
     for h in HORIZONS_MIN:
         for g in GROUPS:
             obs = _group_obs(horizon_obs[h], g)
             baseline[f"{g}|{h}"] = baseline_metrics(obs)
             regimes[f"{g}|{h}"] = regime_description(obs)
+            cat_regimes[f"{g}|{h}"] = categorical_regime_description(obs)
+            for feat, mod in INTERACTIONS:
+                interactions.append(screen_interaction(obs, feat, mod, group=g, horizon=h, cohort="primary",
+                                                       reps=reps, seed=seed, thresholds=th))
             for feat in CANDIDATE_FEATURES:
                 r = screen_feature(obs, feat, group=g, horizon=h, cohort="primary",
                                    reps=reps if feat in PRIMARY_FEATURES else min(reps, SECONDARY_BOOTSTRAP_REPS),
@@ -1311,8 +1527,13 @@ def run_analysis(telemetry, labels_path, outdir="analysis_output", seed=SEED, re
                 "mean_among_losses": mean([o["f"][feat] for o in losses if _ok(o["f"].get(feat))])}
             screens.append(screen_feature(obs, feat, group=g, horizon="first_signal", cohort="first_signal",
                                           reps=reps, seed=seed, thresholds=th))
+        for feat, mod in INTERACTIONS:
+            interactions.append(screen_interaction(obs, feat, mod, group=g, horizon="first_signal",
+                                                   cohort="first_signal", reps=reps, seed=seed, thresholds=th))
+        cat_regimes[f"{g}|first_signal"] = categorical_regime_description(obs)
         first_signal[g] = desc
     apply_bh_and_classify(screens, th, invariants_ok=True)
+    apply_bh_interactions(interactions, th)
 
     leadlag = []
     for H in FUTURE_HORIZONS_S:
@@ -1365,6 +1586,14 @@ def run_analysis(telemetry, labels_path, outdir="analysis_output", seed=SEED, re
             "directional_features": list(DIRECTIONAL_FEATURES), "reliability_features": list(RELIABILITY_FEATURES),
             "exploratory_funding": list(EXPLORATORY_FUNDING), "spot_controls": list(SPOT_CONTROL_FEATURES),
             "spot_control_mapping": {f: spot_controls_for(f) for f in CANDIDATE_FEATURES},
+            "interactions": {"members": [list(x) for x in INTERACTIONS],
+                             "base_model": "A + spot control + feature + modifier + spot control x modifier",
+                             "full_model": "base + feature x modifier",
+                             "multiple_testing": "BH-FDR across the interaction family per cohort x group x horizon",
+                             "status": "research only; never PROMISING_CANDIDATE; never in the candidate manifest"},
+            "categorical_descriptive": {"vol_regime": list(VOL_REGIME_CATEGORIES),
+                                        "perp_stability_state": list(STABILITY_CATEGORIES),
+                                        "use": "descriptive only; never used for any status"},
             "second_premium_control": f"spot_vol_shock_60v300 added when >= {SECOND_CONTROL_MIN_COVERAGE:.0%} available",
             "probability_clamp": PROB_CLAMP, "winsorization_percentiles": list(WINSOR_PCT),
             "logistic_ridge": LOGIT_RIDGE, "pooled_ALL_scaling": "within-coin, training rows only",
@@ -1374,6 +1603,8 @@ def run_analysis(telemetry, labels_path, outdir="analysis_output", seed=SEED, re
                         "r2_definition": "1 - SSE / sum((y - training-fold mean)^2)"}},
         "quality_report_structural": qr,
         "baseline": baseline, "regime_descriptive": regimes,
+        "volatility_regime_descriptive": cat_regimes,
+        "interaction_screen": [{k: v for k, v in r.items() if not k.startswith("_")} for r in interactions],
         "feature_screen": [{k: v for k, v in r.items() if not k.startswith("_")} for r in screens],
         "first_signal_cohort": first_signal, "leadlag": leadlag, "candidates": candidates,
     }
@@ -1383,6 +1614,7 @@ def run_analysis(telemetry, labels_path, outdir="analysis_output", seed=SEED, re
                   f, indent=1, sort_keys=True, default=str)
     _write_csv(os.path.join(outdir, "perp_feature_screen.csv"), SCREEN_CSV_COLUMNS, screens)
     _write_csv(os.path.join(outdir, "perp_leadlag_report.csv"), LEADLAG_CSV_COLUMNS, leadlag)
+    _write_csv(os.path.join(outdir, "perp_interaction_screen.csv"), INTERACTION_CSV_COLUMNS, interactions)
     with open(os.path.join(outdir, "perp_candidate_manifest.json"), "w") as f:
         json.dump(candidates, f, indent=1, sort_keys=True)
     if write_oof and len(oof_rows) <= 300_000:
@@ -1454,6 +1686,17 @@ def render(rep):
         best = [r for r in rs if r["status"] == LL_SIGNAL]
         L.append(f"  +{H:>3d}s  " + "  ".join(f"{k}={v}" for k, v in sorted(cnt.items()))
                  + ("" if not best else "   signal: " + ", ".join(f"{r['group']}:{r['feature_name']}" for r in best)))
+    L += ["", "INTERACTIONS (research only: can never become a candidate; full vs main-effects model)"]
+    ix = rep.get("interaction_screen", [])
+    for feat, mod in INTERACTIONS:
+        rs = [r for r in ix if r["feature_name"] == feat and r["modifier_name"] == mod]
+        cnt = defaultdict(int)
+        for r in rs:
+            cnt[r["status"]] += 1
+        hits = [r for r in rs if r["status"] == IX_EVIDENCE]
+        L.append(f"  {feat} x {mod}: " + "  ".join(f"{k}={v}" for k, v in sorted(cnt.items()))
+                 + ("" if not hits else "   evidence: " + ", ".join(f"{r['cohort']}:{r['group']}:{r['horizon_min']}"
+                                                                     for r in hits)))
     L += ["", f"CANDIDATE MANIFEST: {len(rep['candidates'])} PROMISING_CANDIDATE entr"
           f"{'y' if len(rep['candidates']) == 1 else 'ies'}"]
     if not rep["candidates"]:

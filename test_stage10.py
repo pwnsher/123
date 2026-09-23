@@ -249,7 +249,7 @@ def make_policy(gamma=-3.0, threshold=-0.1, feature="causal_premium_bps", contro
          "model_b_coefficients": [0.0, 1.0] + [0.0] * len(controls),
          "model_c_coefficients": [0.0, 1.0] + [0.0] * len(controls) + [gamma] + ([0.0] if rel else []),
          "conflict_threshold": threshold, "expected_training_block_fraction": 0.10,
-         "telemetry_schema_version": "2", "feature_version": "step2_v1",
+         "telemetry_schema_version": ap.EXPECTED_SCHEMA_VERSION, "feature_version": ap.EXPECTED_FEATURE_VERSION,
          "source_hashes": {"telemetry": "t", "labels": "l"},
          "training_feature_summary": {"n": 500, "mean": 0.0, "std": 3.0, "p05": -5, "p25": -2, "p50": 0, "p75": 2, "p95": 5}}
     p.update(extra)

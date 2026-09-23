@@ -116,7 +116,8 @@ def test_master_runner_runs_each_stage_once():
     d = tempfile.mkdtemp()
     shutil.copy(os.path.join(HERE, "run_all_tests.py"), d)
     log = os.path.join(d, "calls.log")
-    for i in range(1, 14):
+    last = 14                                        # run_all_tests.py runs stages 1..14 (stage 14: schema 3)
+    for i in range(1, last + 1):
         body = (f"import os, subprocess, sys\nopen({log!r}, 'a').write('stage{i}\\n')\n"
                 f"if os.environ.get('KALSHI_MASTER_TEST_RUN') != '1':\n"
                 f"    for j in range(1, {i}):\n"
@@ -126,9 +127,9 @@ def test_master_runner_runs_each_stage_once():
     p = subprocess.run([sys.executable, "run_all_tests.py"], cwd=d, capture_output=True, text=True,
                        env={kk: v for kk, v in os.environ.items() if kk != "KALSHI_MASTER_TEST_RUN"})
     calls = open(log).read().split()
-    assert p.returncode == 0 and calls == [f"stage{i}" for i in range(1, 14)], calls          # 1: exactly once each
+    assert p.returncode == 0 and calls == [f"stage{i}" for i in range(1, last + 1)], calls    # 1: exactly once each
     assert "ALL SUITES PASSED" in p.stdout
-    for f in ("test_stage9.py", "test_stage10.py", "test_stage11.py", "test_stage12.py"):
+    for f in ("test_stage9.py", "test_stage10.py", "test_stage11.py", "test_stage12.py", "test_stage14.py"):
         src = open(os.path.join(HERE, f)).read()
         fn = src[src.index("def test_previous_stages"):].split("\ndef ")[0]
         assert 'os.environ.get("KALSHI_MASTER_TEST_RUN") == "1"' in fn and 'KALSHI_MASTER_TEST_RUN="1"' in fn, f

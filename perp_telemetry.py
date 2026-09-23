@@ -32,6 +32,16 @@ Step 2 (schema v2, feature_version step2_v1) — causal alignment:
   feature is computed from data at or before that time. "Causal" in field names means
   "uses no future data" — it is NOT a claim that perp moves cause or lead spot moves.
 
+Schema v3 (feature_version step2_v2) — volatility-regime RESEARCH telemetry:
+  Adds volatility-normalized perp/spot momentum and perp-vs-spot gap, a trailing perp
+  spread baseline, a premium stress magnitude, an observational volatility regime and a
+  rule-based stability state (see "STEP 2 v2" below). They are telemetry only: nothing in
+  the bot reads them. They can influence a decision ONLY through the unchanged
+  Step 3 -> Step 4 -> Step 5 -> manual promotion -> LIVE_VETO_ONLY chain.
+  Only fields the two documented endpoints above actually return are used. The API
+  supplies no open interest, liquidation flow, trade aggressor side or book depth, so
+  nothing here is (or may be) inferred about them.
+
 Price units — read before analysing the CSV:
   perp_bid/ask/mid/last/mark and index_price are Kalshi PER-CONTRACT dollars.
   spot_price is Coinbase USD per whole coin. They are NOT directly comparable
@@ -70,8 +80,8 @@ STATUS_UNAVAILABLE = "unavailable"
 STATUS_ERROR = "error"
 STATUS_DISABLED = "disabled"
 
-TELEMETRY_SCHEMA_VERSION = 2
-FEATURE_VERSION = "step2_v1"
+TELEMETRY_SCHEMA_VERSION = 3
+FEATURE_VERSION = "step2_v2"
 
 INDEX_SOURCE = "kalshi_reference_price"   # CF Benchmarks RTI, scaled per perp contract
 SPOT_SOURCE = "coinbase_ticker"
@@ -430,6 +440,8 @@ Q_RV_INSUFF = "RV_INSUFFICIENT"
 Q_SCALE = "CONTRACT_SCALE_CHANGED"
 Q_FUNDING_MISSING = "FUNDING_MISSING"
 Q_QUEUE_DROPS = "QUEUE_DROPS_SINCE_PREV"
+Q_NORM_FLOOR = "VOL_NORM_DENOMINATOR_TOO_SMALL"   # 300 s RV present but below NORM_MIN_VOL_BPS
+Q_SPREAD_BASE_INSUFF = "INSUFFICIENT_SPREAD_BASELINE"
 QUALITY_FLAG_DELIM = ";"
 
 
@@ -552,6 +564,210 @@ def _iso_to_epoch(s) -> Optional[float]:
     if d.tzinfo is None:
         d = d.replace(tzinfo=dt.timezone.utc)
     return d.timestamp()
+
+
+# ═══════════════════════ STEP 2 v2: volatility-regime research features ═══════════════════════
+# TELEMETRY / RESEARCH INPUTS ONLY. Nothing below is read by evaluate(), signals, confidence,
+# edge, sizing, entries, exits, stops, calls or Discord posts. Every threshold is a fixed,
+# predeclared constant that follows from the definitions; none is tuned against outcomes.
+# The categorical labels are diagnostics for humans; the continuous values are what Step 3
+# analyses. Volatility is treated as a RELIABILITY / regime variable, never as bullish or bearish.
+#
+# (A) Volatility-normalised momentum (perp and spot, 30/60/180 s):
+#       sigma_h = rv_300s * sqrt(h / 60)        rv in bps per sqrt-minute (realized_vol_bps)
+#       z_h     = return_h / sigma_h
+#     The 300 s RV is the normaliser: 60 s RV reacts to the very move being measured and 900 s RV
+#     adapts too slowly to a regime change. A 900 s-normalised value would be exactly
+#     return / (rv_900s * sqrt(h/60)) from columns that are already logged, so it is not
+#     duplicated as a column.
+NORM_RV_WINDOW_S = 300
+NORM_MIN_VOL_BPS = 0.01        # numerical guard only (one 1-bp price change in 300 s alone gives
+                               # ~0.45): a smaller RV -> None, never clipped or replaced
+# (B) Normalised perp-vs-spot gap:
+#       gap_z_h = (perp_ret_h - spot_ret_h) / sqrt(sigma_perp_h^2 + sigma_spot_h^2)
+#     The denominator equals the sd of the difference only if perp and spot returns were
+#     independent. They are strongly positively correlated (same underlying), so the true sd of
+#     the gap is SMALLER and this metric is conservative. It is a volatility-scaled disagreement
+#     measure, NOT a calibrated z-score.
+# (C) Spread baseline: median of the valid two-sided spreads of the snapshots strictly BEFORE the
+#     selected snapshot and within 300 s of it (same contract scale, fresh at receipt).
+#       perp_spread_ratio_5m = perp_spread_bps / perp_spread_median_5m_bps
+SPREAD_BASELINE_WINDOW_S = 300.0
+SPREAD_BASELINE_MIN_N = 20
+SPREAD_BASELINE_MIN_SPAN_S = 240.0
+# (D) Premium stress: premium_stress_5m = |premium_z_5m| (distance of the perp premium from its own
+#     trailing 5-minute behaviour, sign-free). Existing premium columns are not duplicated.
+# (E) Observational volatility regime from the RV shock ratios (60 s RV / 300 s or 900 s RV):
+#       s = max of the AVAILABLE ratios {perp 60v300 (required), perp 60v900, spot 60v300, spot 60v900}
+#       LOW s < 0.5 | NORMAL 0.5 <= s < 1.5 | HIGH 1.5 <= s < 2.5 | EXTREME s >= 2.5
+#       UNKNOWN when perp_vol_shock_60v300 is unavailable.
+#     Rationale (sampling theory, not outcomes): ~15 returns per 60 s at 4 s sampling give the 60 s
+#     vol estimate a relative sd of ~sqrt(1/30) ~ 0.18 in a CONSTANT regime, so 1.5 is ~2.7 sd above
+#     a ratio of 1, 2.5 is ~8 sd above it, and 0.5 is ~2.7 sd below it.
+VOL_REGIME_LOW_BELOW = 0.5
+VOL_REGIME_HIGH_AT = 1.5
+VOL_REGIME_EXTREME_AT = 2.5
+VR_LOW, VR_NORMAL, VR_HIGH, VR_EXTREME, VR_UNKNOWN = "LOW", "NORMAL", "HIGH", "EXTREME", "UNKNOWN"
+VOL_REGIMES = (VR_LOW, VR_NORMAL, VR_HIGH, VR_EXTREME, VR_UNKNOWN)
+# (F) Stability state: a transparent RULE, not a score, and never an input to any probability.
+#       component              CAUTION at     UNSTABLE at
+#       vol regime             HIGH           EXTREME
+#       |momentum_gap_z_60s|   >= 1.0         >= 2.0
+#       premium_stress_5m      >= 2.5         >= 4.0
+#       perp_spread_ratio_5m   >= 2.0         >= 4.0
+#     UNSTABLE if any component is at its UNSTABLE level, or >= 2 components are at CAUTION;
+#     CAUTION  if exactly one component is at CAUTION;
+#     STABLE   only if all four components are available and none is triggered;
+#     UNKNOWN  otherwise (row not analysis_ready, or inputs missing and nothing triggered).
+#     With inputs missing, CAUTION/UNSTABLE are lower bounds (a missing input can only hide stress).
+#     gap_z 1.0 = the two moves differ by the combined 1-sigma horizon scale (e.g. perp +0.7 sigma
+#     while spot -0.7 sigma); premium |z| 2.5 / 4 are far tails of the trailing 5-min distribution;
+#     a spread ratio of 2 / 4 means the book is 2x / 4x wider than its own 5-minute median.
+GAP_Z_CAUTION, GAP_Z_UNSTABLE = 1.0, 2.0
+PREMIUM_STRESS_CAUTION, PREMIUM_STRESS_UNSTABLE = 2.5, 4.0
+SPREAD_RATIO_CAUTION, SPREAD_RATIO_UNSTABLE = 2.0, 4.0
+STABILITY_MULTI_CAUTION = 2
+ST_STABLE, ST_CAUTION, ST_UNSTABLE, ST_UNKNOWN = "STABLE", "CAUTION", "UNSTABLE", "UNKNOWN"
+STABILITY_STATES = (ST_STABLE, ST_CAUTION, ST_UNSTABLE, ST_UNKNOWN)
+DIRECTION_Z_MIN = 1.0          # dashboard label only: perp_momentum_z_60s >= +1 UP, <= -1 DOWN, else FLAT
+
+
+def _finite(x):
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
+
+
+def horizon_sigma_bps(vol_bps_per_sqrt_min, horizon_s) -> Optional[float]:
+    """Expected 1-sigma move in bps over horizon_s from a volatility in bps per sqrt-minute:
+    vol * sqrt(horizon_s / 60). None unless the vol is finite and >= NORM_MIN_VOL_BPS."""
+    if not _finite(vol_bps_per_sqrt_min) or vol_bps_per_sqrt_min < NORM_MIN_VOL_BPS or not horizon_s > 0:
+        return None
+    return vol_bps_per_sqrt_min * math.sqrt(horizon_s / 60.0)
+
+
+def normalized_return(ret_bps, vol_bps_per_sqrt_min, horizon_s) -> Optional[float]:
+    """return / expected horizon sigma (see (A)). None if either input is unusable; never inf/nan."""
+    sig = horizon_sigma_bps(vol_bps_per_sqrt_min, horizon_s)
+    if sig is None or not _finite(ret_bps):
+        return None
+    z = ret_bps / sig
+    return z if math.isfinite(z) else None
+
+
+def normalized_gap(gap_bps, perp_vol, spot_vol, horizon_s) -> Optional[float]:
+    """Volatility-scaled perp-vs-spot disagreement (see (B)). None if any input is unusable."""
+    sp, ss = horizon_sigma_bps(perp_vol, horizon_s), horizon_sigma_bps(spot_vol, horizon_s)
+    if sp is None or ss is None or not _finite(gap_bps):
+        return None
+    z = gap_bps / math.hypot(sp, ss)
+    return z if math.isfinite(z) else None
+
+
+def trailing_median_before(series, anchor_ts, window_s, min_n, min_span_s):
+    """Median of the points with anchor_ts - window_s <= ts < anchor_ts. The anchor itself and
+    anything later are excluded. Returns (median | None, n); None unless >= min_n points that
+    span >= min_span_s."""
+    lo, hi = _count_lt(series, anchor_ts - window_s), _count_lt(series, anchor_ts)
+    n = hi - lo
+    if n <= 0 or n < min_n or series[hi - 1][0] - series[lo][0] < min_span_s:
+        return None, max(n, 0)
+    v = sorted(x for _, x in series[lo:hi])
+    m = n // 2
+    return (v[m] if n % 2 else (v[m - 1] + v[m]) / 2.0), n
+
+
+def spread_ratio(current_bps, baseline_bps) -> Optional[float]:
+    """current spread / trailing median spread. None if either is missing or the baseline is ~0."""
+    if not _finite(current_bps) or not _finite(baseline_bps) or current_bps < 0 or baseline_bps <= ZERO_VAR_EPS:
+        return None
+    return current_bps / baseline_bps
+
+
+def vol_regime(perp_60v300, perp_60v900=None, spot_60v300=None, spot_60v900=None) -> str:
+    """Observational regime label (see (E)). Deterministic; UNKNOWN without perp 60v300."""
+    if not _finite(perp_60v300) or perp_60v300 < 0:
+        return VR_UNKNOWN
+    s = max(x for x in (perp_60v300, perp_60v900, spot_60v300, spot_60v900) if _finite(x) and x >= 0)
+    if s >= VOL_REGIME_EXTREME_AT:
+        return VR_EXTREME
+    if s >= VOL_REGIME_HIGH_AT:
+        return VR_HIGH
+    return VR_LOW if s < VOL_REGIME_LOW_BELOW else VR_NORMAL
+
+
+def _stress_level(value, caution, unstable):
+    """0 normal, 1 caution, 2 unstable, None unavailable (on |value|)."""
+    if not _finite(value):
+        return None
+    v = abs(value)
+    return 2 if v >= unstable else (1 if v >= caution else 0)
+
+
+_VOL_LEVEL = {VR_LOW: 0, VR_NORMAL: 0, VR_HIGH: 1, VR_EXTREME: 2}
+# component -> (reason at CAUTION, reason at UNSTABLE, reason when unavailable)
+_STABILITY_COMPONENTS = (("vol", "VOL_HIGH", "VOL_EXTREME", "VOL_UNKNOWN"),
+                         ("agreement", "SPOT_PERP_DIVERGING", "SPOT_PERP_DISAGREE", "AGREEMENT_UNKNOWN"),
+                         ("premium", "PREMIUM_ELEVATED", "PREMIUM_EXTREME", "PREMIUM_UNKNOWN"),
+                         ("spread", "SPREAD_WIDENING", "SPREAD_BLOWOUT", "SPREAD_UNKNOWN"))
+
+
+def stability_levels(regime, gap_z_60s, premium_stress, spread_ratio_5m):
+    return {"vol": _VOL_LEVEL.get(regime),
+            "agreement": _stress_level(gap_z_60s, GAP_Z_CAUTION, GAP_Z_UNSTABLE),
+            "premium": _stress_level(premium_stress, PREMIUM_STRESS_CAUTION, PREMIUM_STRESS_UNSTABLE),
+            "spread": _stress_level(spread_ratio_5m, SPREAD_RATIO_CAUTION, SPREAD_RATIO_UNSTABLE)}
+
+
+def stability_state(analysis_ready, regime, gap_z_60s, premium_stress, spread_ratio_5m):
+    """The rule in (F). Returns (state, [reason codes]). Deterministic; no weights, no score."""
+    if analysis_ready is not True:
+        return ST_UNKNOWN, ["NOT_ANALYSIS_READY"]
+    lv = stability_levels(regime, gap_z_60s, premium_stress, spread_ratio_5m)
+    reasons, n_caution, n_unstable, n_missing = [], 0, 0, 0
+    for name, r_caution, r_unstable, r_missing in _STABILITY_COMPONENTS:
+        v = lv[name]
+        if v is None:
+            n_missing += 1; reasons.append(r_missing)
+        elif v == 2:
+            n_unstable += 1; reasons.append(r_unstable)
+        elif v == 1:
+            n_caution += 1; reasons.append(r_caution)
+    if n_unstable or n_caution >= STABILITY_MULTI_CAUTION:
+        return ST_UNSTABLE, reasons
+    if n_caution:
+        return ST_CAUTION, reasons
+    return (ST_UNKNOWN if n_missing else ST_STABLE), reasons
+
+
+_LEVEL_LABELS = {"agreement": ("AGREE", "DIVERGING", "DISAGREE"),
+                 "premium": ("NORMAL", "ELEVATED", "EXTREME"),
+                 "spread": ("NORMAL", "WIDENING", "BLOWOUT")}
+
+
+def dashboard_view(row):
+    """Compact DISPLAY-ONLY summary of one telemetry row (direction + reliability). Pure, never
+    raises; unavailable inputs show as None / UNKNOWN. Nothing reads this back."""
+    try:
+        r = row if isinstance(row, dict) else {}
+        g = lambda c: _num(r.get(c))
+        z = g("perp_momentum_z_60s")
+        regime = r.get("vol_regime") if r.get("vol_regime") in VOL_REGIMES else VR_UNKNOWN
+        lv = stability_levels(regime, g("momentum_gap_z_60s"), g("premium_stress_5m"), g("perp_spread_ratio_5m"))
+        label = lambda k: "UNKNOWN" if lv[k] is None else _LEVEL_LABELS[k][lv[k]]
+        state = r.get("perp_stability_state")
+        lag = g("perp_lag_to_spot_ms")
+        return {"direction": None if z is None else
+                ("UP" if z >= DIRECTION_Z_MIN else ("DOWN" if z <= -DIRECTION_Z_MIN else "FLAT")),
+                "momentum_z_60s": z, "vol_regime": regime, "vol_shock_60v300": g("perp_vol_shock_60v300"),
+                "agreement": label("agreement"), "gap_z_60s": g("momentum_gap_z_60s"),
+                "premium_stress": label("premium"), "premium_stress_5m": g("premium_stress_5m"),
+                "spread_stress": label("spread"), "spread_ratio_5m": g("perp_spread_ratio_5m"),
+                "stability": state if state in STABILITY_STATES else ST_UNKNOWN,
+                "stability_reasons": r.get("perp_stability_reasons") or None,
+                "source_status": r.get("source_status"),
+                "analysis_ready": r.get("analysis_ready") if isinstance(r.get("analysis_ready"), bool) else None,
+                "lag_s": None if lag is None else round(lag / 1000.0, 1)}
+    except Exception:                                   # display must never break
+        return {"direction": None, "vol_regime": VR_UNKNOWN, "stability": ST_UNKNOWN, "view_error": True}
 
 
 # ─────────────────────── bounded, thread-safe snapshot store ───────────────────────
@@ -714,6 +930,16 @@ STEP1_COLUMNS = [
     "source_status", "source_error",
 ]
 
+# Schema v3 (feature_version step2_v2): volatility-regime research telemetry (see STEP 2 v2 above).
+VOLATILITY_COLUMNS = [
+    "perp_momentum_z_30s", "perp_momentum_z_60s", "perp_momentum_z_180s",
+    "spot_momentum_z_30s", "spot_momentum_z_60s", "spot_momentum_z_180s",
+    "momentum_gap_z_30s", "momentum_gap_z_60s", "momentum_gap_z_180s",
+    "perp_spread_median_5m_bps", "perp_spread_baseline_n", "perp_spread_ratio_5m",
+    "premium_stress_5m",
+    "vol_regime", "perp_stability_state", "perp_stability_reasons",
+]
+
 # Step 2 columns. Canonical analysis fields; Step 1 columns above are kept unchanged
 # for backward compatibility / diagnostics (lead_* is just perp_ret - spot_ret).
 STEP2_COLUMNS = [
@@ -731,6 +957,7 @@ STEP2_COLUMNS = [
     "spot_rv_60s_bps", "spot_rv_300s_bps", "spot_rv_900s_bps",
     "perp_vol_shock_60v300", "perp_vol_shock_60v900",
     "spot_vol_shock_60v300", "spot_vol_shock_60v900",
+] + VOLATILITY_COLUMNS + [
     "funding_available", "funding_age_ms",
     "submitted_cycles_total", "processed_cycles_total", "dropped_cycles_total",
     "drops_since_previous_row",
@@ -807,9 +1034,10 @@ class PerpTelemetry:
 
     FEATURE END TIME (feature_end_ts_epoch_ms) = the binary row's spot receive time
     (spot_observed_ts, captured inside evaluate() right after the spot response).
-    Every causal_* / premium_* / momentum_gap_* / *_rv_* / *_vol_shock_* feature
-    uses only perp snapshots with available_ts <= feature_end and spot
-    observations with ts <= feature_end.
+    Every causal_* / premium_* / momentum_gap_* / *_rv_* / *_vol_shock_* feature, and every
+    schema-v3 volatility-regime column (*_momentum_z_*, momentum_gap_z_*, perp_spread_*_5m,
+    premium_stress_5m, vol_regime, perp_stability_*), uses only perp snapshots with
+    available_ts <= feature_end and spot observations with ts <= feature_end.
     """
 
     def __init__(self, provider: PerpProvider, coins, log_path=None,
@@ -1008,24 +1236,36 @@ class PerpTelemetry:
             flags.append(Q_SCALE)
 
         # --- perp-side features (anchored on the selected snapshot; data <= end only) ---
-        perp_series, prem_series = [], []
+        perp_series, prem_series, spread_series = [], [], []
         if perp_ok:
+            spread_from = sel.avail - SPREAD_BASELINE_WINDOW_S
             for s in self.store.upto(coin, end):
                 if s.scale != sel.scale and None not in s.scale and None not in sel.scale:
                     continue                          # defense in depth: never bridge a re-scale
                 if not self._fresh_at_receipt(s) and s is not sel:
                     continue
+                a = s.avail
+                if s is not sel and a >= spread_from:                # spread baseline: strictly before sel
+                    sp = spread_bps(s.perp_bid, s.perp_ask)          # None if one-sided or crossed
+                    if sp is not None:
+                        spread_series.append((a, sp))
                 if s.perp_mid is not None:
-                    perp_series.append((s.avail, s.perp_mid))
+                    perp_series.append((a, s.perp_mid))
                     p = premium_bps(s.perp_mid, s.index_price)
                     if p is not None:
-                        prem_series.append((s.avail, p))
+                        prem_series.append((a, p))
             # the anchor must be the selected snapshot itself
             if not perp_series or perp_series[-1][0] != sel.avail:
                 perp_series = []
             if not prem_series or prem_series[-1][0] != sel.avail:
                 prem_series = []
             f["perp_spread_bps"] = _r(spread_bps(sel.perp_bid, sel.perp_ask))
+            med, f["perp_spread_baseline_n"] = trailing_median_before(
+                spread_series, sel.avail, SPREAD_BASELINE_WINDOW_S, SPREAD_BASELINE_MIN_N, SPREAD_BASELINE_MIN_SPAN_S)
+            f["perp_spread_median_5m_bps"] = _r(med)
+            f["perp_spread_ratio_5m"] = _r(spread_ratio(f["perp_spread_bps"], f["perp_spread_median_5m_bps"]))
+            if f["perp_spread_bps"] is not None and med is None:
+                flags.append(Q_SPREAD_BASE_INSUFF)
             f["causal_premium_bps"] = _r(premium_bps(sel.perp_mid, sel.index_price))
             f["mark_index_premium_bps"] = _r(basis_bps(sel.perp_mark, sel.index_price))
             f["last_index_premium_bps"] = _r(basis_bps(sel.perp_last, sel.index_price))
@@ -1039,6 +1279,8 @@ class PerpTelemetry:
                     flags.append(Q_INSUFF_Z[name])
                 elif why == "zero_variance":
                     flags.append(Q_ZERO_VAR)
+            if f["premium_z_5m"] is not None:
+                f["premium_stress_5m"] = abs(f["premium_z_5m"])
             for h in HORIZONS_S:
                 f[f"causal_perp_ret_{h}s_bps"] = _r(causal_return_bps(perp_series, h, self.tolerance_s))
             for w, (mn, span) in RV_WINDOWS.items():
@@ -1076,10 +1318,24 @@ class PerpTelemetry:
            (spot_series and None in (f["spot_rv_60s_bps"], f["spot_rv_300s_bps"], f["spot_rv_900s_bps"])):
             flags.append(Q_RV_INSUFF)
 
+        # --- STEP 2 v2 volatility-regime research features (derived from the logged values above) ---
+        prv, srv = f[f"perp_rv_{NORM_RV_WINDOW_S}s_bps"], f[f"spot_rv_{NORM_RV_WINDOW_S}s_bps"]
+        for h in HORIZONS_S:
+            f[f"perp_momentum_z_{h}s"] = _r(normalized_return(f[f"causal_perp_ret_{h}s_bps"], prv, h))
+            f[f"spot_momentum_z_{h}s"] = _r(normalized_return(f[f"causal_spot_ret_{h}s_bps"], srv, h))
+            f[f"momentum_gap_z_{h}s"] = _r(normalized_gap(f[f"momentum_gap_{h}s_bps"], prv, srv, h))
+        if any(v is not None and v < NORM_MIN_VOL_BPS for v in (prv, srv)):
+            flags.append(Q_NORM_FLOOR)
+        f["vol_regime"] = vol_regime(f["perp_vol_shock_60v300"], f["perp_vol_shock_60v900"],
+                                     f["spot_vol_shock_60v300"], f["spot_vol_shock_60v900"])
+
         # analysis_ready: base row usable; depends on NO outcome and NO feature warm-up
         f["analysis_ready"] = bool(
             binary_ok and spot is not None and end is not None and causal_pair_ok and perp_ok
             and sel.perp_mid is not None and sel.index_price is not None)
+        state, why = stability_state(f["analysis_ready"], f["vol_regime"], f["momentum_gap_z_60s"],
+                                     f["premium_stress_5m"], f["perp_spread_ratio_5m"])
+        f["perp_stability_state"], f["perp_stability_reasons"] = state, QUALITY_FLAG_DELIM.join(why)
         f["quality_flags"] = QUALITY_FLAG_DELIM.join(dict.fromkeys(flags))
         return f, sel
 
@@ -1176,7 +1432,9 @@ class PerpTelemetry:
                         "snapshots_held": self.store.count(c),
                         "analysis_ready": row.get("analysis_ready"),
                         "perp_lag_to_spot_ms": row.get("perp_lag_to_spot_ms"),
-                        "quality_flags": row.get("quality_flags")}
+                        "quality_flags": row.get("quality_flags"),
+                        "vol_regime": row.get("vol_regime"),
+                        "perp_stability_state": row.get("perp_stability_state")}
         return {"telemetry_schema_version": TELEMETRY_SCHEMA_VERSION, "feature_version": FEATURE_VERSION,
                 "session_id": self.session_id,
                 "sampler_alive": bool(smp and smp.alive),

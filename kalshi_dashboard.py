@@ -1093,11 +1093,30 @@ def _perp_publish(rows):
         health = t.health() if t is not None else None
     except Exception as e:
         health = {"error": str(e)}
+    views = _perp_vol_views(rows)
     with LOCK:
         STATE["perps"] = rows
+        STATE["perp_vol"] = views
         if health is not None:
             STATE["perp_health"] = health
     _shadow_process(rows)          # Step 4: observation only, on this worker thread
+
+def _perp_vol_views(rows):
+    """Display-only volatility/stability summary per coin (schema v3 telemetry). Never raises and
+    is never read by the strategy. A feature is labelled LIVE only while an ACTIVE promoted live
+    veto actually uses it; everything else is observational telemetry."""
+    try:
+        import perp_telemetry as pt
+        g = _gate
+        live = (g.promotion or {}).get("feature_name") if g is not None and g.active else None
+        out = {}
+        for c, r in (rows or {}).items():
+            v = pt.dashboard_view(r)
+            v["live_veto_feature"] = live
+            out[c] = v
+        return out
+    except Exception as e:
+        return {"error": str(e)[:200]}
 
 # ─────────────────────── Step 4: shadow-only perp filter validation ───────────────────────
 _shadow = None
@@ -1414,6 +1433,7 @@ function buildCards(){
    <div class="rowline"><span class="k">conf · edge raw/net</span><span id="ce_${c}">–</span></div>
    <div class="rowline"><span class="k">stop · size</span><span id="st_${c}">–</span></div>
    <div class="rowline mini"><span class="k">perp · prem · fund · lead30 (observe only)</span><span id="pf_${c}">–</span></div>
+   <div class="rowline mini"><span class="k" id="pvk_${c}">perp vol · stability (telemetry, observe only)</span><span id="pv_${c}">–</span></div>
    <div class="chart" id="ch_${c}"></div>
    <div class="verdict blk" id="vd_${c}">…</div>
    <div style="margin-top:6px;text-align:center"><button class="btn" id="pe_${c}">Enter paper trade</button> <span class="mini" id="pm_${c}"></span></div>`;
@@ -1517,6 +1537,19 @@ function renderPerp(c,p){   // passive telemetry display only; never drives anyt
  el.className=st==="fresh"?"":(st==="stale"?"amb":"dim");
  el.title=p.source_error||"";
 }
+function renderPerpVol(c,v){   // display only: labels come from perp_telemetry.dashboard_view; never drives anything
+ const el=document.getElementById("pv_"+c), key=document.getElementById("pvk_"+c); if(!el) return;
+ if(!v||typeof v!=="object"){el.textContent="–";el.className="dim";el.title="";return;}
+ const u=x=>x==null||x===""?"UNKNOWN":String(x);
+ const z=(x,d)=>x==null||!isFinite(x)?"–":(x>0?"+":"")+Number(x).toFixed(d);
+ const r=(x,d)=>x==null||!isFinite(x)?"–":Number(x).toFixed(d);
+ el.textContent=`${v.direction||"–"} ${z(v.momentum_z_60s,1)}σ60 · vol ${u(v.vol_regime)} ${r(v.vol_shock_60v300,2)}x · spot/perp ${u(v.agreement)} · spread ${u(v.spread_stress)} · prem ${u(v.premium_stress)} · ${u(v.stability)}`;
+ el.className={STABLE:"",CAUTION:"amb",UNSTABLE:"red"}[v.stability]??"dim";
+ el.title=`gap z60 ${z(v.gap_z_60s,2)} · spread ratio ${r(v.spread_ratio_5m,2)}x · premium |z| ${r(v.premium_stress_5m,2)} · `+
+   `${v.stability_reasons||(v.stability==="STABLE"?"no stress triggers":"–")} · perp ${v.source_status||"?"}${v.lag_s==null?"":" lag "+v.lag_s+"s"}`;
+ if(key) key.textContent=v.live_veto_feature?`perp vol · stability (observe only; LIVE veto uses ${v.live_veto_feature})`
+                                            :"perp vol · stability (telemetry, observe only)";
+}
 let candleTick=0;
 async function tick(){
  try{
@@ -1525,6 +1558,7 @@ async function tick(){
   if(d.controls) renderControls(d.controls);
   COINS.forEach(c=>renderCoin(c,(d.coins||{})[c],(d.fresh||{})[c]));
   COINS.forEach(c=>renderPerp(c,(d.perps||{})[c]));
+  COINS.forEach(c=>renderPerpVol(c,(d.perp_vol||{})[c]));
   renderGate(d.perp_live_veto);
   if((candleTick++)%5===0) COINS.forEach(loadCandles);   // refresh charts every ~15s
  }catch(e){}

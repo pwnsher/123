@@ -11,6 +11,13 @@ win rates, correlations, P&L or any predictive quantity — that is Step 3.
 Bad rows are counted and reported, never deleted.
 
 Percentiles use linear interpolation between closest ranks (numpy's default).
+
+Schema v3 adds a volatility-regime section: coverage of every new continuous feature
+(overall, by coin, and on analysis_ready rows), vol_regime / stability-state distributions
+(including % UNKNOWN), the reason each new feature is blank (warm-up, missing input, ...),
+and extreme / pathological values. Values are REPORTED, never clipped or winsorised here;
+any winsorisation belongs to the analysis layer (Step 3 fits 1/99 winsorisation on
+training rows only).
 """
 import argparse
 import csv
@@ -35,11 +42,29 @@ FEATURES = [
     "spot_vol_shock_60v300", "spot_vol_shock_60v900",
     "perp_spread_bps", "mark_index_premium_bps", "last_index_premium_bps", "mid_mark_basis_bps",
 ]
+# schema v3 volatility-regime research features (continuous)
+VOL_FEATURES = [
+    "perp_momentum_z_30s", "perp_momentum_z_60s", "perp_momentum_z_180s",
+    "spot_momentum_z_30s", "spot_momentum_z_60s", "spot_momentum_z_180s",
+    "momentum_gap_z_30s", "momentum_gap_z_60s", "momentum_gap_z_180s",
+    "perp_spread_median_5m_bps", "perp_spread_ratio_5m", "premium_stress_5m",
+]
+FEATURES = FEATURES + VOL_FEATURES
+VOL_REGIMES = ("LOW", "NORMAL", "HIGH", "EXTREME", "UNKNOWN")          # == perp_telemetry.VOL_REGIMES
+STABILITY_STATES = ("STABLE", "CAUTION", "UNSTABLE", "UNKNOWN")        # == perp_telemetry.STABILITY_STATES
+# Plausibility bounds used ONLY to report obviously pathological values (nothing is clipped).
+_Z_BOUNDS = (-50.0, 50.0)
+PATHOLOGICAL_BOUNDS = dict(
+    {f: _Z_BOUNDS for f in VOL_FEATURES if "_z_" in f},
+    perp_spread_median_5m_bps=(0.0, 1000.0), perp_spread_ratio_5m=(0.0, 50.0), premium_stress_5m=(0.0, 50.0),
+    perp_vol_shock_60v300=(0.0, 50.0), perp_vol_shock_60v900=(0.0, 50.0),
+    spot_vol_shock_60v300=(0.0, 50.0), spot_vol_shock_60v900=(0.0, 50.0))
 NON_NUMERIC = {"ts_utc", "coin", "binary_status", "binary_ticker", "binary_close_time", "spot_source",
                "fav", "binary_signal", "binary_reason", "perp_symbol", "perp_market_status",
                "index_source", "funding_next_time", "funding_computed_time", "source_status",
                "source_error", "causal_pair_ok", "analysis_ready", "quality_flags", "feature_version",
-               "telemetry_session_id", "funding_available"}
+               "telemetry_session_id", "funding_available",
+               "vol_regime", "perp_stability_state", "perp_stability_reasons"}
 
 
 def fnum(v):
@@ -172,7 +197,104 @@ def analyze_group(rows):
             if flag:
                 fc[flag] += 1
     rep["quality_flags"] = dict(sorted(fc.items(), key=lambda kv: -kv[1]))
+    rep["volatility"] = volatility_section(rows)
     return rep
+
+
+def _blank(r, c):
+    return (r.get(c) or "").strip() == ""
+
+
+def missing_reason(r, f):
+    """Why a schema-v3 feature is blank on this row, derived ONLY from other logged columns.
+    perp_spread_baseline_n is written whenever the selected perp snapshot was usable, so it
+    marks 'perp usable' without re-running the telemetry."""
+    perp_ok = not _blank(r, "perp_spread_baseline_n")
+    spot_ok = not _blank(r, "spot_price") and not _blank(r, "spot_observed_ts_epoch_ms")
+    h = f.rsplit("_", 1)[-1]
+    if f.startswith(("perp_momentum_z_", "spot_momentum_z_")):
+        side = f.split("_", 1)[0]
+        if not (perp_ok if side == "perp" else spot_ok):
+            return "PERP_SNAPSHOT_NOT_USABLE" if side == "perp" else "SPOT_UNAVAILABLE"
+        if _blank(r, f"causal_{side}_ret_{h}_bps"):
+            return f"{side.upper()}_{h.upper()}_RETURN_WARMUP_OR_GAP"
+        if _blank(r, f"{side}_rv_300s_bps"):
+            return f"{side.upper()}_RV300_WARMUP_OR_GAP"
+        return "RV300_BELOW_NUMERICAL_FLOOR"
+    if f.startswith("momentum_gap_z_"):
+        if not perp_ok:
+            return "PERP_SNAPSHOT_NOT_USABLE"
+        if not spot_ok:
+            return "SPOT_UNAVAILABLE"
+        if _blank(r, f"momentum_gap_{h}_bps"):
+            return f"GAP_{h.upper()}_UNAVAILABLE"
+        for side in ("perp", "spot"):
+            if _blank(r, f"{side}_rv_300s_bps"):
+                return f"{side.upper()}_RV300_WARMUP_OR_GAP"
+        return "RV300_BELOW_NUMERICAL_FLOOR"
+    if not perp_ok:
+        return "PERP_SNAPSHOT_NOT_USABLE"
+    if f == "premium_stress_5m":
+        return "PREMIUM_Z_5M_WARMUP_OR_ZERO_VARIANCE"
+    if f == "perp_spread_ratio_5m" and _blank(r, "perp_spread_bps"):
+        return "NO_VALID_CURRENT_SPREAD"
+    if _blank(r, "perp_spread_median_5m_bps"):
+        return "SPREAD_BASELINE_INSUFFICIENT"
+    return "SPREAD_BASELINE_ZERO"
+
+
+def extremes(values):
+    v = [x for x in values if x is not None and math.isfinite(x)]
+    if not v:
+        return {"n": 0}
+    return {"n": len(v), "min": _rd(min(v), 4), "p01": _rd(pct(v, 1), 4), "median": _rd(pct(v, 50), 4),
+            "p99": _rd(pct(v, 99), 4), "max": _rd(max(v), 4)}
+
+
+def _dist_of(rows, col, cats):
+    c = Counter((r.get(col) or "").strip() or "UNKNOWN" for r in rows)
+    out = {k: {"count": c.get(k, 0), "pct": share(c.get(k, 0), len(rows))} for k in cats}
+    other = {k: v for k, v in c.items() if k not in cats}
+    if other:
+        out["unrecognised"] = other
+    return out
+
+
+def volatility_section(rows):
+    """Schema-v3 regime/stability diagnostics for one group of rows (outcomes never read)."""
+    ready = [r for r in rows if truthy(r.get("analysis_ready"))]
+    reasons = {f: dict(Counter(missing_reason(r, f) for r in rows if _blank(r, f)).most_common()) for f in VOL_FEATURES}
+    sr = Counter()
+    for r in rows:
+        for x in (r.get("perp_stability_reasons") or "").split(";"):
+            if x:
+                sr[x] += 1
+    return {"vol_regime": _dist_of(rows, "vol_regime", VOL_REGIMES),
+            "vol_regime_when_analysis_ready": _dist_of(ready, "vol_regime", VOL_REGIMES),
+            "vol_regime_unknown_pct": share(sum(1 for r in rows if (r.get("vol_regime") or "UNKNOWN") == "UNKNOWN"), len(rows)),
+            "stability_state": _dist_of(rows, "perp_stability_state", STABILITY_STATES),
+            "stability_state_when_analysis_ready": _dist_of(ready, "perp_stability_state", STABILITY_STATES),
+            "stability_unknown_pct": share(sum(1 for r in rows if (r.get("perp_stability_state") or "UNKNOWN") == "UNKNOWN"), len(rows)),
+            "stability_reason_counts": dict(sr.most_common()),
+            "missing_reasons": reasons,
+            "extremes": {f: extremes([fnum(r.get(f)) for r in rows]) for f in VOL_FEATURES}}
+
+
+def pathological(rows):
+    """Values outside PATHOLOGICAL_BOUNDS (or non-finite). Reported with examples, never clipped."""
+    out = {}
+    for f, (lo, hi) in PATHOLOGICAL_BOUNDS.items():
+        bad = []
+        for i, r in enumerate(rows):
+            raw = (r.get(f) or "").strip()
+            if not raw:
+                continue
+            x = fnum(raw)
+            if x is None or not math.isfinite(x) or x < lo or x > hi:
+                bad.append({"row": i, "coin": r.get("coin"), "ts_utc": r.get("ts_utc"), "value": raw})
+        if bad:
+            out[f] = {"count": len(bad), "bounds": [lo, hi], "examples": bad[:5]}
+    return out
 
 
 def structural(rows, header):
@@ -232,6 +354,7 @@ def structural(rows, header):
                                                and not truthy(r.get("causal_pair_ok")))
     out["schema_versions_present"] = dict(Counter(r.get("telemetry_schema_version") or "none(step1)" for r in rows))
     out["feature_versions_present"] = dict(Counter(r.get("feature_version") or "none(step1)" for r in rows))
+    out["pathological_values"] = pathological(rows)
     return out
 
 
@@ -286,6 +409,26 @@ def render(rep):
         for f in FEATURES:
             L.append(f"    {f:28s} {str(g['feature_coverage_pct'][f]):>7} | {g['feature_coverage_pct_when_analysis_ready'][f]}")
         L.append("  quality_flags: " + (", ".join(f"{k}={v}" for k, v in g["quality_flags"].items()) or "none"))
+        v = g["volatility"]
+        dfmt = lambda d: "  ".join(f"{k}={x['count']}({x['pct']}%)" for k, x in d.items() if isinstance(x, dict) and "count" in x)
+        L.append("  volatility regime (telemetry, observational):")
+        L.append(f"    all rows            {dfmt(v['vol_regime'])}")
+        L.append(f"    analysis_ready rows {dfmt(v['vol_regime_when_analysis_ready'])}")
+        L.append(f"    UNKNOWN {v['vol_regime_unknown_pct']}%")
+        L.append("  stability state (rule-based, observational):")
+        L.append(f"    all rows            {dfmt(v['stability_state'])}")
+        L.append(f"    analysis_ready rows {dfmt(v['stability_state_when_analysis_ready'])}")
+        L.append(f"    UNKNOWN {v['stability_unknown_pct']}%   reasons: "
+                 + (", ".join(f"{k}={n}" for k, n in v["stability_reason_counts"].items()) or "none"))
+        L.append("  blank-value reasons (schema v3 features):")
+        for f in VOL_FEATURES:
+            if v["missing_reasons"][f]:
+                L.append(f"    {f:28s} " + ", ".join(f"{k}={n}" for k, n in v["missing_reasons"][f].items()))
+        L.append("  extremes (min / p01 / median / p99 / max; reported, never clipped):")
+        for f in VOL_FEATURES:
+            e = v["extremes"][f]
+            if e["n"]:
+                L.append(f"    {f:28s} {e['min']} / {e['p01']} / {e['median']} / {e['p99']} / {e['max']}  (n={e['n']})")
     L.append("")
     L.append("== STRUCTURAL CHECKS (rows are reported, never deleted) ==")
     for k, v in rep["structural"].items():

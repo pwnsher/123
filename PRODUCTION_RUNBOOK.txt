@@ -38,6 +38,21 @@ LIFECYCLE (each step must succeed before the next; commands are Windows "py")
     running legacy behaviour, which is safe.
 
 -----------------------------------------------------------------------------------------
+UPGRADE NOTE — TELEMETRY SCHEMA 3 (feature_version step2_v2, Step 3 step3_v2)
+-----------------------------------------------------------------------------------------
+  Adds volatility-regime RESEARCH telemetry (normalised momentum/gap, spread stress, premium
+  stress, vol regime, stability state). It changes NO call, confidence, size, entry, exit,
+  stop or post. What happens on upgrade:
+    * kalshi_perp_telemetry.csv (schema 2) is renamed to *.schema-<time>.bak on first write.
+    * Step 3 refuses schema-2 telemetry; every frozen Step 4 policy / Step 5 experiment /
+      promotion built on schema 2 is refused (shadow loader, experiment builder, promotion
+      command, live gate). Nothing is migrated. The live veto therefore stays or becomes
+      INACTIVE and the bot runs legacy behaviour until the lifecycle above is repeated on
+      schema-3 data.
+    * The dashboard shows the new line "perp vol · stability (telemetry, observe only)". It is
+      display only; the label names a feature only if an ACTIVE promoted veto actually uses it.
+
+-----------------------------------------------------------------------------------------
 EMERGENCY SHUTDOWN OF THE PERP VETO (does NOT stop the watcher)
 -----------------------------------------------------------------------------------------
   Create the kill file in the bot's working directory:

@@ -74,6 +74,10 @@ def verify_chain(cand, experiments, policies, report, baseline, dashboard, allow
         errs.append("policy registry hash differs from the candidate")
     if ps.compute_policy_hash(pol) != pol.get("policy_hash"):
         errs.append("Step 4 policy content does not match its own hash")
+    # full frozen-policy validation (incl. telemetry schema / feature version): a policy frozen on an
+    # older telemetry schema is refused here, not only later at live-gate activation
+    errs += [f"Step 4 policy invalid: {e}" for e in ps.validate_policy(pol, allow_synthetic=True)
+             if "policy_hash" not in e]
     import build_perp_integration_experiment as bx
     if bx.compute_experiment_hash(exp) != exp.get("experiment_hash"):
         errs.append("Step 5 experiment content does not match its own hash")

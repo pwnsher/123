@@ -32,9 +32,14 @@ G = {"min_calendar_days": 7.0, "min_settled_total": 200, "min_tuning_settled": 1
 # perp_telemetry.py (read-only preview_row) changed by design in Step 6. Their LEGACY
 # behaviour is pinned by the per-function strategy hashes below, by the AST strategy
 # fingerprint (test_stage12) and by the unchanged Stage 1-11 behavioural tests.
+# Step 2 v2 note (volatility-regime research telemetry, schema 3 / step2_v2): perp_telemetry.py
+# (new causal columns) and kalshi_dashboard.py (display-only perp-vol line in _perp_publish/PAGE)
+# changed by design. Legacy behaviour is still pinned by the per-function strategy hashes, the
+# AST strategy fingerprint (test_stage12/14) and the unchanged behavioural tests; test_stage14
+# additionally proves poller outputs are identical with stressed, normal and disabled telemetry.
 STEP4_HASHES = {   # Step 4 output; Step 5 must leave these byte-identical
-    "kalshi_dashboard.py": "412d80c5940cee4cf7d93fdb5e461c38cee0f1cb15a87912b8f9d376869aa5f1",
-    "perp_telemetry.py": "454f87058780869660d8021ac8c12a88cda6f91bb88a542634a673fc8772d982",
+    "kalshi_dashboard.py": "3fcdea681d958fd751edcdc530114f2afc873a29941db5acf924c38c8cd51ca8",
+    "perp_telemetry.py": "5e1de6d6553032bd2902d0b9766086b826876c632bb41cfcfe52234c90b4d99e",
     "perp_shadow.py": "ba3b3444e83fe384f5556050abc7d543d9c06fbc147a51319a314dddf12794c3",
     "kalshi_bot.py": "9e064548c21144b00226920e21d114407ff306386fd740272cbd889d7d896d53",
     "kalshi_backtest.py": "718968348cacd89e07740414ac9567db6a22ba3b3dcd7d8d70cd4c0a0ef631f8",

@@ -84,6 +84,56 @@ PERP TELEMETRY — STEP 2 (causal alignment + data quality; still observation on
 
   Tests:  py test_stage8.py     (or py run_all_tests.py for stages 1-8)
 
+PERP TELEMETRY — STEP 2 v2 (schema 3 / feature_version step2_v2): VOLATILITY-REGIME RESEARCH
+  Why: a +20 bp perp move means something different in a quiet market than in a violent one.
+  These columns let Step 3 test that. They are TELEMETRY ONLY: nothing in the bot reads them,
+  and they can only ever matter through Step 3 -> Step 4 -> Step 5 -> manual promotion ->
+  LIVE_VETO_ONLY, exactly like every other perp feature. Volatility is treated as a
+  reliability/regime variable, never as bullish or bearish.
+
+  New columns (all computed only from data available at feature_end_ts_epoch_ms):
+    perp_momentum_z_{30,60,180}s   causal_perp_ret_h / (perp_rv_300s_bps * sqrt(h/60))
+    spot_momentum_z_{30,60,180}s   same for spot (a CONTROL in Step 3, never a candidate)
+    momentum_gap_z_{30,60,180}s    momentum_gap_h / sqrt(sigma_perp_h^2 + sigma_spot_h^2)
+                                   (a volatility-scaled disagreement measure, NOT a true z-score:
+                                   perp and spot are positively correlated, so it is conservative)
+    perp_spread_median_5m_bps      median two-sided spread of the snapshots in the 300 s BEFORE
+                                   the selected one (>= 20 points spanning >= 240 s, same contract
+                                   scale; one-sided/crossed books excluded)
+    perp_spread_baseline_n         number of snapshots in that baseline
+    perp_spread_ratio_5m           perp_spread_bps / perp_spread_median_5m_bps
+    premium_stress_5m              |premium_z_5m|
+    vol_regime                     LOW <0.5 | NORMAL | HIGH >=1.5 | EXTREME >=2.5 | UNKNOWN, from the
+                                   max available RV shock ratio (perp 60v300 required; perp 60v900 and
+                                   spot 60v300/60v900 when available). Observational only.
+    perp_stability_state           STABLE | CAUTION | UNSTABLE | UNKNOWN, a transparent rule (no score):
+                                   CAUTION at vol HIGH, |gap_z60| >= 1, premium stress >= 2.5,
+                                   spread ratio >= 2; UNSTABLE at vol EXTREME, |gap_z60| >= 2,
+                                   premium stress >= 4, spread ratio >= 4, or any two CAUTIONs.
+                                   STABLE needs all four inputs. Never fed to any probability.
+    perp_stability_reasons         which rule(s) fired, ';'-separated
+  RV is in bps per sqrt-minute; the 300 s RV is the normaliser (60 s reacts to the move itself,
+  900 s adapts too slowly). A 300 s RV below 0.01 bps/sqrt-min gives a blank, never a clipped value
+  (flag VOL_NORM_DENOMINATOR_TOO_SMALL). analysis_ready does NOT depend on these features warming up.
+  New quality flags: VOL_NORM_DENOMINATOR_TOO_SMALL, INSUFFICIENT_SPREAD_BASELINE.
+  Not available from the documented perps endpoints, so NOT recorded or inferred: open interest,
+  liquidations, trade aggressor side, order-book depth.
+
+  Upgrading from schema 2: the existing kalshi_perp_telemetry.csv is renamed to
+  *.schema-<time>.bak on first write (never mixed). Step 3 refuses schema-2 rows; frozen Step 4
+  policies built on schema 2 are refused by the shadow loader, the Step 5 builder, the promotion
+  command and the live gate (never migrated). Re-collect telemetry and re-run the research chain.
+
+  Dashboard: each coin card has one extra line "perp vol · stability (telemetry, observe only)":
+  direction + 60 s normalised momentum, vol regime + shock ratio, spot/perp agreement, spread and
+  premium stress, stability state (hover for the numbers, reasons and data freshness).
+
+  Quality report (analyze_perp_quality.py) adds coverage of every new feature (overall, by coin,
+  analysis_ready rows), regime / stability distributions and % UNKNOWN, the reason each new feature
+  is blank, and extreme/pathological values (reported, never clipped).
+
+  Tests:  py test_stage14.py    (or py run_all_tests.py for stages 1-14)
+
 STEP 3 — OUTCOME LABELS + OFFLINE PREDICTIVE ANALYSIS (research only; changes nothing in the bot)
   1) Label settled markets (reads the telemetry, never modifies it; GET only):
        py label_binary_outcomes.py
@@ -109,7 +159,14 @@ STEP 3 — OUTCOME LABELS + OFFLINE PREDICTIVE ANALYSIS (research only; changes 
        C = B + one perp feature (reliability features also get feature x base_logit)
   A perp feature only counts if C beats B (not merely A). Chronological walk-forward on
   whole close-time groups; train-only winsorise/standardise (within coin for ALL);
-  ticker-clustered bootstrap; BH-FDR over the 7 predeclared primary features.
+  ticker-clustered bootstrap; BH-FDR over the 8 predeclared primary features (step3_v2 added
+  perp_momentum_z_60s, judged against spot_momentum_z_60s; all other schema-3 features are
+  secondary and can never become candidates).
+  step3_v2 also screens a predeclared 3-member INTERACTION family (perp_momentum_z_60s x
+  perp_vol_shock_60v300, momentum_gap_z_60s x perp_vol_shock_60v300, perp_momentum_z_60s x
+  perp_spread_ratio_5m) beyond both main effects and spot-control x modifier; BH within the
+  family. Research only: never a candidate (perp_interaction_screen.csv). The report also
+  describes the existing model's accuracy per vol_regime / stability state (descriptive only).
   Candidate status needs >= 500 markets, >= 100 of each outcome, >= 3 folds, positive
   Brier AND log-loss gain vs B, CI > 0, q <= 0.05, >= 75% sign consistency.
   An empty perp_candidate_manifest.json is a normal, valid result — expect
