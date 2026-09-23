@@ -1,0 +1,90 @@
+{
+ "baseline_generated_python": "3.12.3",
+ "fingerprint_algorithm": "canonical_ast_v2_sha256",
+ "fingerprint_format_version": 2,
+ "legacy_strategy_fingerprint": "8d94f241e8fc8edadc76058e1f12f430b6e4f499f4c0a30fba1cb5cf07dad82a",
+ "manifest_schema_version": 1,
+ "runtime_mutable_constants": [
+  "BANKROLL",
+  "ENTRY_MODE"
+ ],
+ "step5_dashboard_sha256": "6ff7e6225f55aa4c706a57c0ad45c0ce564c57fcaa6a120252ace04a6c31670c",
+ "strategy_config_hash": "5b8a10d1579953e8c56cd6438c723be37484903e1005fb5a8e464446d8ff26b9",
+ "strategy_config_values": {
+  "BANKROLL": 1000.0,
+  "CHOP_MAX": 3,
+  "COINS": {
+   "BTC": {
+    "product": "BTC-USD",
+    "series": "KXBTC15M",
+    "sl_pct": 0.75
+   },
+   "ETH": {
+    "product": "ETH-USD",
+    "series": "KXETH15M",
+    "sl_pct": 0.6
+   },
+   "SOL": {
+    "product": "SOL-USD",
+    "series": "KXSOL15M",
+    "sl_pct": 0.75
+   },
+   "XRP": {
+    "product": "XRP-USD",
+    "series": "KXXRP15M",
+    "sl_pct": 0.65
+   }
+  },
+  "EDGE_THRESH": 0.0,
+  "ENTRY_COST_CENTS": 2.0,
+  "ENTRY_MODE": "taker",
+  "FEE_CENTS": 2.0,
+  "INTERVAL_MIN": 15,
+  "LAST_STOP_MIN": 2.0,
+  "MAX_ENTRY_MIN": 8.0,
+  "MIN_CONF": 80.0,
+  "MIN_PRICE": 85.0,
+  "VOL_LOOKBACK_MIN": 60,
+  "VOL_MULT": 1.15
+ },
+ "strategy_constants": [
+  "INTERVAL_MIN",
+  "MAX_ENTRY_MIN",
+  "LAST_STOP_MIN",
+  "MIN_PRICE",
+  "MIN_CONF",
+  "EDGE_THRESH",
+  "ENTRY_COST_CENTS",
+  "CHOP_MAX",
+  "VOL_LOOKBACK_MIN",
+  "VOL_MULT",
+  "BANKROLL",
+  "ENTRY_MODE",
+  "FEE_CENTS",
+  "COINS"
+ ],
+ "strategy_function_hashes": {
+  "_contracts": "84538df1dbe51f8a9e812afc0b6e0ccd848eb1c3e579962f93daaae1f0953193",
+  "_limit_price": "8b45bf5dab33752ccc34e0b6d926535aeb90cc50be032bc76603e505e893f1f6",
+  "_size_fraction": "dff50e3a3b7f6e0cbed1020258e4194f8f5b6542f403d6db85dafae5e59ff40c",
+  "conf_side": "817c4c3f7602df27f61ee961a4efe1fca74a85c748b548c4b637538ca4ec1363",
+  "crossings": "8e1763d012d282818552910c9b4d3e45d6ccd625cba3511ab7acf35e142652de",
+  "evaluate": "46791a249612042afb6084c2070cd676d7867116108b905a8fd63d113b39bf16",
+  "kalshi_fee_cents": "d9066748c082f838ac0365042dcb48bd69202bf343d2a68e7921436fee6851f2",
+  "log_call": "8646832c2e4ad26c6e0d6b0029b1fd0c55674025edaa422380e704c3732ea4b4",
+  "norm_cdf": "8e9d66b45d8f78760838aff0ff0a4c50d9d0f9c026b16c9d527629008082df35",
+  "settle_calls": "82f0f2485aafe6e1c87120dd167a863ad6b6954221954217dabc664b4b1ebd56"
+ },
+ "strategy_functions": [
+  "norm_cdf",
+  "conf_side",
+  "crossings",
+  "evaluate",
+  "kalshi_fee_cents",
+  "_size_fraction",
+  "_contracts",
+  "_limit_price",
+  "log_call",
+  "settle_calls"
+ ]
+}

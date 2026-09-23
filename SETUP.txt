@@ -1,0 +1,219 @@
+SETUP
+
+Discord (in kalshi_bot.py, near the top — fine to hardcode, shared with trusted people):
+  BOT_TOKEN          -> paste your bot token (or set $env:DISCORD_BOT_TOKEN)
+  CALLS_CHANNEL_ID   -> calls (with buttons)
+  JOURNAL_CHANNEL_ID -> results + weekly report (0 = use calls channel)
+  EXPLAIN_CHANNEL_ID -> explainer (0 = use calls channel)
+
+Telegram (optional, in kalshi_dashboard.py — fine to hardcode):
+  TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+
+Kalshi API (PRIVATE — keep manual, never share; used only by kalshi_api_learn.py):
+  $env:KALSHI_API_KEY_ID       = "your-key-id"
+  $env:KALSHI_PRIVATE_KEY_PATH = "kalshi_private_key.pem"
+  $env:KALSHI_ENV              = "prod"   # read-only on your real account
+
+Run:
+  py kalshi_bot.py        # bot + watcher + website (http://localhost:8000)
+  py kalshi_dashboard.py  # website only
+
+Webhooks are fully removed — all Discord posting now goes through the bot to real channels.
+
+PERP TELEMETRY (Step 1 — passive, read-only research recorder)
+  What it is: every poll cycle, the watcher hands its binary results to a background
+  thread that fetches Kalshi perpetual-futures market data and writes one row per coin
+  to kalshi_perp_telemetry.csv (perp bid/ask/mid/last/mark, Kalshi reference/index price,
+  premium, funding-rate estimate, 30/60/180s perp & spot returns, perp-minus-spot lead,
+  plus the binary ticker, strike, p_up/conf/fav, edge, signal and reason so rows can be
+  joined to market outcomes later).
+
+  It is READ-ONLY and OBSERVATIONAL. It places no orders (perp or binary), touches no
+  margin/leverage/transfers, and cannot affect signal, confidence, p_up, edge, stops,
+  sizing, maker/taker, timing, calls, Discord posts, or the backtest. evaluate() never
+  reads it. It runs off-thread, so even a hung perp endpoint cannot delay the watcher.
+
+  Data source (docs.kalshi.com, Perps API): GET /trade-api/v2/margin/markets and
+  GET /trade-api/v2/margin/funding_rates/estimate — both documented as public (no key).
+  No environment variables are required. Perp tickers are auto-discovered; if discovery
+  is ambiguous, set e.g.  $env:KALSHI_PERP_TICKER_BTC = "<exact ticker>".
+  Optional: $env:KALSHI_PERP_API_BASE (e.g. the demo host).
+
+  Units: perp prices and index_price are Kalshi PER-CONTRACT dollars; spot_price is
+  Coinbase USD per coin, so don't compare their levels. premium_bps = perp_mid vs Kalshi's
+  own reference price. Returns (bps) are ratios and ARE comparable. base_p_up is a percent.
+  Blank CSV cells mean "not available" (never a fabricated 0). funding_rate is Kalshi's
+  estimate for the in-progress period, logged as returned.
+
+  If perp data is unavailable: the binary bot runs exactly as before; rows are still
+  written with source_status = error / unavailable / stale and a source_error reason.
+  Statuses: fresh | stale (older than PERP_STALE_SECONDS) | unavailable | error | disabled.
+  Size: ~4 rows per poll cycle (roughly 20-40 MB/day at a 4 s poll).
+
+  Disable: set PERP_TELEMETRY_ENABLED = False in kalshi_dashboard.py, or
+           $env:KALSHI_PERP_TELEMETRY = "0"
+  This is unproven research data — nothing here claims perps improve profitability.
+
+TESTS
+  py run_all_tests.py      # stages 1-7
+  py test_stage7.py        # perp telemetry only (no network needed)
+
+PERP TELEMETRY — STEP 2 (causal alignment + data quality; still observation only)
+  Timing: a background sampler polls Kalshi perps every PERP_SAMPLE_SECONDS into a
+  bounded 30-minute history. Each binary row uses the newest perp snapshot that was
+  fully received AT OR BEFORE that row's spot price arrived (feature_end_ts_epoch_ms),
+  and only if it is no older than PERP_ALIGNMENT_MAX_LAG_SECONDS (8 s). A snapshot
+  received even 1 ms after the spot observation is never used.
+  "causal_*" means "computed only from data available at that time" — it does not
+  claim that perps lead or cause spot moves. That is tested in Step 3.
+
+  New columns (schema v2): versions/session/cycle ids, spot receive time + latency,
+  perp snapshot time + lag, causal_pair_ok, analysis_ready, quality_flags (';'-separated
+  codes), spread, basis measures, premium changes & z-scores, causal returns, momentum
+  gaps (perp return - spot return), realized volatility and vol-shock ratios, funding
+  availability/age, queue counters. All Step 1 columns are kept unchanged.
+  An existing Step 1 CSV is renamed to *.schema-<time>.bak on first run (never mixed).
+
+  analysis_ready = binary row OK + spot price & time present + a prior perp snapshot
+  within the lag limit + that snapshot fresh + two-sided mid + Kalshi index present.
+  Longer-window features (e.g. premium_z_15m) may still be blank while warming up.
+
+  Data-quality report (reads the CSV only; no predictive analysis):
+    py analyze_perp_quality.py
+    py analyze_perp_quality.py --file kalshi_perp_telemetry.csv --json quality_report.json
+
+  Tests:  py test_stage8.py     (or py run_all_tests.py for stages 1-8)
+
+STEP 3 — OUTCOME LABELS + OFFLINE PREDICTIVE ANALYSIS (research only; changes nothing in the bot)
+  1) Label settled markets (reads the telemetry, never modifies it; GET only):
+       py label_binary_outcomes.py
+       py label_binary_outcomes.py --telemetry kalshi_perp_telemetry.csv --output kalshi_binary_outcomes.csv
+     Source: GET /trade-api/v2/markets/{ticker} -> market.result (same call the watcher uses).
+     yes -> outcome_up 1, no -> 0, anything else -> unresolved (never guessed).
+     Only asked once now >= close + 90 s. Final labels are cached and never refetched;
+     --verify-final re-checks them and flags CONFLICTING_SETTLEMENT_RESULT instead of overwriting.
+     Safe to run repeatedly (e.g. hourly).
+
+  2) Analyse (two local CSVs only; no network):
+       py analyze_perp_predictive.py
+       py analyze_perp_predictive.py --telemetry kalshi_perp_telemetry.csv \
+          --labels kalshi_binary_outcomes.csv --outdir analysis_output
+     Writes analysis_output/: perp_predictive_report.json, perp_feature_screen.csv,
+     perp_leadlag_report.csv, perp_candidate_manifest.json, perp_oof_predictions.csv.
+     Fails loudly (exit 3) on a mixed/unknown schema or any causal-invariant violation.
+
+  What it tests: one observation per market at 8/6/4/2 minutes before close (latest
+  analysis-ready row at or before the target, <= 10 s early, never after). Nested
+  logistic models scored out-of-sample on identical rows:
+       A = recalibrated existing probability   B = A + matched spot control
+       C = B + one perp feature (reliability features also get feature x base_logit)
+  A perp feature only counts if C beats B (not merely A). Chronological walk-forward on
+  whole close-time groups; train-only winsorise/standardise (within coin for ALL);
+  ticker-clustered bootstrap; BH-FDR over the 7 predeclared primary features.
+  Candidate status needs >= 500 markets, >= 100 of each outcome, >= 3 folds, positive
+  Brier AND log-loss gain vs B, CI > 0, q <= 0.05, >= 75% sign consistency.
+  An empty perp_candidate_manifest.json is a normal, valid result — expect
+  INSUFFICIENT_DATA for the first days. No thresholds or trading rules are produced.
+
+  Tests:  py test_stage9.py     (or py run_all_tests.py for stages 1-9)
+
+STEP 4 — CANDIDATE PERP FILTERS + SHADOW-ONLY VALIDATION (nothing is ever enabled)
+  Expected today: Step 3 has no real candidate -> no policy -> the bot runs exactly as before.
+
+  1) After a Step 3 run on REAL data, freeze policies (offline, fails closed on any mismatch):
+       py build_perp_shadow_policy.py
+     Uses ONLY analysis_output/perp_candidate_manifest.json, and only cohort=first_signal
+     candidates (fixed-horizon ones are reported NOT_CALL_FILTER_ELIGIBLE). Verifies file hashes
+     against the Step 3 report, recomputes Step 3's out-of-fold results, and refuses data without
+     real-collection provenance. Each candidate gets its own policy:
+       conflict_score = P_C(favoured side) - P_B(favoured side)   (Step 3 MODEL C vs MODEL B)
+       threshold = most conservative of the 5/10/15/20/25th percentiles of OOF conflict scores that
+       passes count, 5-25% block-rate, >=5pp loss-enrichment, bootstrap-CI and BH gates.
+     Output perp_shadow_policies.json: immutable, hashed, mode SHADOW_ONLY. Rebuilding with new
+     data creates a NEW policy id; old policies are never edited.
+
+  2) Live: the watcher loads perp_shadow_policies.json (if present) and, on the telemetry worker
+     AFTER the real call was made, records the policy's ALLOW / WOULD_BLOCK / UNAVAILABLE verdict
+     for the FIRST signal of each ticker in kalshi_perp_shadow.csv. WOULD_BLOCK changes nothing.
+     Disable with $env:KALSHI_PERP_SHADOW = "0". Corrupt/synthetic policy files are ignored.
+
+  3) Evaluate prospectively (offline; never retunes the frozen threshold):
+       py analyze_perp_shadow.py
+     -> analysis_output/perp_shadow_report.json. Only calls after the discovery cutoff count.
+     Joins settlement (kalshi_binary_outcomes.csv) and actual paper P&L (kalshi_calls.json) by
+     exact ticker. Unfilled maker orders are not trades. Needs >= 7 days, >= 200 settled calls,
+     >= 30 would-block, >= 150 would-allow, >= 90% coverage, >= 75% retention.
+     Best possible status is SHADOW_VALIDATED_CANDIDATE = eligible for Step 5 review only.
+
+  Call journal: new calls now carry ticker + signal_ts (kalshi_calls.json and kalshi_trades.csv).
+  An older trades CSV header is renamed to kalshi_trades.legacy-<time>.csv (kept, never mixed).
+
+  Tests:  py test_stage10.py    (or py run_all_tests.py for stages 1-10)
+
+STEP 5 — VALIDATED PERP PROBABILITY OVERLAY (offline shadow analysis; nothing is activated)
+  Expected today: no Step 4 policy has reached SHADOW_VALIDATED_CANDIDATE -> 0 experiments,
+  0 candidates, the bot runs exactly as before. No live file changed in Step 5.
+
+  1) Freeze an experiment for each SHADOW_VALIDATED_CANDIDATE policy (fails closed on any
+     policy / report / journal disagreement; the Step 3 manifest is never used here):
+       py build_perp_integration_experiment.py
+     step5_start_cutoff = the Step 4 report's prospective_last_ts, so Step 4 validation data is
+     never reused. Strategy constants are read from kalshi_dashboard.py via AST (not executed).
+     KEEP A COPY of analysis_output/perp_shadow_report.json: the experiment records its SHA-256,
+     and Step 5 analysis refuses a report that has since been regenerated.
+
+  2) Collect new first signals (the existing shadow journal already logs MODEL B/C), then:
+       py analyze_perp_integration.py
+     Overlay:  delta = P_C_UP - P_B_UP, capped at +-5pp (fixed);
+               p = clip(p_base + alpha * delta_capped, 1e-6, 1-1e-6),  alpha in {0.25,0.5,0.75,1.0}
+     Legacy side fixed; conf / raw edge / net edge use the bot's exact formulas; a direction flip,
+     low confidence or no edge only ever BLOCKS an existing call. No new calls, no sizing or stop
+     changes. Step 4 WOULD_BLOCK calls are excluded. Chronological 50/50 split by close time:
+     alpha chosen on the first half (smallest qualifying), then tested once on the second half.
+     Needs >= 14 days, >= 400 settled, >= 200 per half, >= 150 holdout fills, >= 50 of each outcome.
+     Outputs analysis_output/perp_integration_report.json, perp_integration_alpha_screen.csv,
+     perp_integration_candidate.json (candidates only if every gate passes; activation_allowed=false).
+
+  Tests:  py test_stage11.py    (or py run_all_tests.py for stages 1-11)
+  (step5_fixture.py is a synthetic data generator used only by the tests.)
+
+STEP 6 — MANUAL PROMOTION + FAIL-SAFE LIVE VETO (suppress-only; inactive by default)
+  Current state: no validated Step 5 candidate -> no promotion -> live veto OFF. Legacy behaviour.
+  Full lifecycle, activation and emergency shutdown: see PRODUCTION_RUNBOOK.txt.
+
+  The veto can only SUPPRESS an already-valid legacy call. It can never create a call, flip a
+  side, change size, stops, entry mode, pricing or timing, and it places no orders.
+
+  Promote (offline; writes perp_live_promotion.json only, activates nothing):
+      py promote_perp_integration.py --experiment-id <id> --confirm LIVE_VETO_ONLY
+  Check (offline):      py check_perp_deployment.py      -> INACTIVE / READY_BUT_DISABLED /
+                                                             ACTIVE_VETO_ONLY / REFUSED
+  Activate (this shell only, then restart):
+      cmd:        set PERP_LIVE_VETO_ENABLED=1 && py kalshi_bot.py
+      PowerShell: $env:PERP_LIVE_VETO_ENABLED = "1"; py kalshi_bot.py
+  Emergency off (veto only; watcher keeps running): create a file named DISABLE_PERP_LIVE_VETO
+
+  step5_baseline_manifest.json pins the legacy strategy (AST fingerprint). Verify any time:
+      py strategy_fingerprint.py --verify step5_baseline_manifest.json
+
+  Tests:  py test_stage12.py    (or py run_all_tests.py for stages 1-12)
+
+SUPPORTED PYTHON (Step 6.1)
+  Intended: CPython 3.10 - 3.13. Validated in the release environment: CPython 3.12.3 only
+  (full Stage 1-12 suite + clean extraction). Python 3.13 was NOT available there; its AST
+  differences (ast.dump show_empty=False; FunctionDef.type_params) are covered by explicit
+  cross-schema regression tests. The strategy fingerprint is format v2 (canonical_ast_v2_sha256):
+  a different Python minor version is NOT itself a reason for rejection — only a real change to
+  strategy constants or functions is. check_perp_deployment.py shows the runtime Python as a
+  diagnostic.
+
+PERFORMANCE PASS (behaviour-preserving; no strategy, statistics or safety parameter changed)
+  * Tests: "py run_all_tests.py" now runs each stage EXACTLY ONCE (it sets
+    KALSHI_MASTER_TEST_RUN=1 so later stages skip their "all previous stages" re-run).
+    Running a stage by itself (e.g. "py test_stage12.py") still re-verifies all earlier stages,
+    each once. Stage 13 proves every optimisation is output-identical to the old code.
+  * HTTP: GET requests reuse one pooled connection per thread (http_session.py). URLs, params,
+    timeouts and retries are unchanged; cookies are refused, so requests stay stateless.
+  * Telemetry CSV: the header is validated once per file; a file replaced by a different schema
+    is still detected and renamed aside.
+  * Benchmarks (local, no network):  py bench_perf.py --repo . --out performance_after.json

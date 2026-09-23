@@ -1,0 +1,58 @@
+KALSHI BOT — PERFORMANCE OPTIMIZATION REPORT (behaviour-preserving pass)
+Python 3.12.3  |  Linux-6.18.44-fc-v37-x86_64-with-glibc2.39
+Measured with bench_perf.py (time.perf_counter; tracemalloc in a separate pass) and timed full
+suite runs. Before/after runs were sequential on an otherwise idle machine. Numbers are as
+measured on this machine; they are not guarantees.
+
+area                                       before        after    change    peak mem before        after   change
+A master test suite (s)                  813.1201     149.0423    -81.7%                  -            -        -
+B standalone Stage 12 (s)                390.6557     113.4965    -70.9%                  -            -        -
+C one causal feature (ms)                  0.7281       0.5293    -27.3%                  -            -        -
+D 1,000 causal features (s)                0.7871       0.5716    -27.4%          2,450,112    2,442,784    -0.3%
+E CSV 10,000 rows (s)                      0.5077       0.4351    -14.3%                  -            -        -
+E CSV file opens / 10k rows                 4,999        2,500    -50.0%                  -            -        -
+F 100k point lookups (s)                   0.9396       0.0889    -90.5%          6,294,344    6,289,076    -0.1%
+G Step 3 bootstrap 1000 reps (s)           0.3211       0.3150     -1.9%            471,440      471,440    +0.0%
+H Step 4 bootstrap 1000 reps (s)           1.3415       0.7153    -46.7%            411,392      316,072   -23.2%
+H Step 4 bootstrap 2000 reps (s)           2.6864       1.4253    -46.9%            473,976      347,400   -26.7%
+I Step 5 analysis 2000 reps (s)            0.6313       0.6491     +2.8%          2,538,012    2,538,012    +0.0%
+
+BEHAVIOURAL PARITY: every optimised path is compared EXACTLY against the pre-optimisation
+implementation in test_stage13.py (no tolerances were needed: operation order is unchanged).
+Legacy strategy fingerprint unchanged: 8d94f241e8fc8edadc76058e1f12f430b6e4f499f4c0a30fba1cb5cf07dad82a
+
+CHANGES (production files)
+1. run_all_tests.py + test_stage9..12 (tests): the master run sets KALSHI_MASTER_TEST_RUN=1 so each
+   stage runs exactly once (previously 143 nested stage executions per master run; now 13).
+   Standalone test_stage12.py still re-verifies Stages 1-11, each once. Proof: Stage 13 tests 1-2.
+2. perp_telemetry.point_at_or_before: direct binary search over the (ts, value) tuples instead of
+   building a timestamp list per lookup. Identical index selection. Proof: Stage 13 tests 3-4
+   (20,000+ randomised cases incl. empty/one-point/exact/duplicate/irregular).
+3. perp_telemetry trailing_zscore / realized_vol_bps: the window start is found by binary search and
+   the series is sliced, instead of scanning the whole history with a filter. The slice contains
+   exactly the same elements in the same order, so all arithmetic is identical. Causality is
+   untouched (inputs are still only data at/before feature_end). Proof: Stage 13 test 5 (10,000
+   helper cases + 10,000 end-to-end feature cycles, every Step 2 field exactly equal), tests 6-7.
+4. perp_telemetry.TelemetryCSVLogger: the header is validated once per file identity (st_dev,
+   st_ino); ordinary appends no longer reopen the file to read the header. A new or replaced file is
+   re-validated and a different schema is still renamed aside. Proof: Stage 13 tests 8-9, Stage 7.
+5. http_session.py (new) used by kalshi_dashboard._get, KalshiPerpProvider and OutcomeFetcher:
+   one pooled requests.Session per thread (never shared). URL, params, timeout, retries and
+   response handling are unchanged; cookies are refused so requests remain stateless like
+   requests.get. Proof: Stage 13 tests 10-12. (No live network is used by any test.)
+6. analyze_perp_shadow._bootstrap: tickers are aggregated once into integer counts / blocked P&L,
+   the grouping is released, and each replicate sums aggregates instead of rebuilding a row list.
+   Same seed, same rng.choices draws, same arithmetic order -> bit-identical results.
+   Proof: Stage 13 tests 20-22 (incl. multi-row tickers).
+
+DEFERRED (not done; behaviour/timing risk outweighed the gain in this pass)
+* Coinbase candle cache consolidation: candles() is a strategy input pinned by the Stage 9
+  strategy-function hashes; merging it with web_candles() changes that function. candles()
+  already has its own 30 s cache (verified: 2 calls within TTL -> 1 fetch).
+* Settlement journal in-memory cache: settle_pending() is pinned, and a process-owned cache would
+  silently miss external edits to the JSON journals. Journal behaviour is unchanged.
+* Active Kalshi market cache: market selection is strategy-adjacent (current_market is pinned);
+  deferred as the spec allows.
+* Step 3 / Step 5 bootstraps: already cluster-aggregated in their original design (no change needed,
+  benchmarks G and I confirm).
+* No async rewrite, no parallel coin evaluation, no module restructuring beyond http_session.py.

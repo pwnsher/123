@@ -1,0 +1,20 @@
+{
+ "C_one_causal_feature_ms": 0.7280759999730435,
+ "D_1000_causal_features_peak_bytes": 2450112,
+ "D_1000_causal_features_s": 0.7870694390001063,
+ "E_csv_10000_rows_open_calls": 4999,
+ "E_csv_10000_rows_s": 0.507683787000019,
+ "F_100k_point_lookups_peak_bytes": 6294344,
+ "F_100k_point_lookups_s": 0.9396014850000256,
+ "G_step3_bootstrap_1000reps_peak_bytes": 471440,
+ "G_step3_bootstrap_1000reps_s": 0.3210577629999989,
+ "H_step4_bootstrap_1000reps_peak_bytes": 411392,
+ "H_step4_bootstrap_1000reps_s": 1.3415203389999988,
+ "H_step4_bootstrap_2000reps_peak_bytes": 473976,
+ "H_step4_bootstrap_2000reps_s": 2.686446761999946,
+ "I_step5_analysis_2000reps_peak_bytes": 2538012,
+ "I_step5_analysis_2000reps_s": 0.6312864980000086,
+ "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39",
+ "python": "3.12.3",
+ "repo": "/tmp/BASE"
+}
