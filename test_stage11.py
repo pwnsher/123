@@ -37,8 +37,11 @@ G = {"min_calendar_days": 7.0, "min_settled_total": 200, "min_tuning_settled": 1
 # changed by design. Legacy behaviour is still pinned by the per-function strategy hashes, the
 # AST strategy fingerprint (test_stage12/14) and the unchanged behavioural tests; test_stage14
 # additionally proves poller outputs are identical with stressed, normal and disabled telemetry.
+# Dashboard real-time pass (stage 15): kalshi_dashboard.py changed in the PAGE script (local countdown,
+# 1 s self-scheduling /data loop, live newest chart bar, 60 s history reconcile, data-age display) and in
+# Handler (no-store headers; /data socket write outside LOCK). Strategy pinned as above; see test_stage15.
 STEP4_HASHES = {   # Step 4 output; Step 5 must leave these byte-identical
-    "kalshi_dashboard.py": "3fcdea681d958fd751edcdc530114f2afc873a29941db5acf924c38c8cd51ca8",
+    "kalshi_dashboard.py": "aa66c7ae1d6cf8b913b746b05bfd6cf64197454d3b7fd00a2ba174749150c595",
     "perp_telemetry.py": "5e1de6d6553032bd2902d0b9766086b826876c632bb41cfcfe52234c90b4d99e",
     "perp_shadow.py": "ba3b3444e83fe384f5556050abc7d543d9c06fbc147a51319a314dddf12794c3",
     "kalshi_bot.py": "9e064548c21144b00226920e21d114407ff306386fd740272cbd889d7d896d53",

@@ -116,7 +116,7 @@ def test_master_runner_runs_each_stage_once():
     d = tempfile.mkdtemp()
     shutil.copy(os.path.join(HERE, "run_all_tests.py"), d)
     log = os.path.join(d, "calls.log")
-    last = 14                                        # run_all_tests.py runs stages 1..14 (stage 14: schema 3)
+    last = 15                                        # run_all_tests.py runs stages 1..15 (15: dashboard real-time)
     for i in range(1, last + 1):
         body = (f"import os, subprocess, sys\nopen({log!r}, 'a').write('stage{i}\\n')\n"
                 f"if os.environ.get('KALSHI_MASTER_TEST_RUN') != '1':\n"
@@ -129,7 +129,7 @@ def test_master_runner_runs_each_stage_once():
     calls = open(log).read().split()
     assert p.returncode == 0 and calls == [f"stage{i}" for i in range(1, last + 1)], calls    # 1: exactly once each
     assert "ALL SUITES PASSED" in p.stdout
-    for f in ("test_stage9.py", "test_stage10.py", "test_stage11.py", "test_stage12.py", "test_stage14.py"):
+    for f in ("test_stage9.py", "test_stage10.py", "test_stage11.py", "test_stage12.py", "test_stage14.py", "test_stage15.py"):
         src = open(os.path.join(HERE, f)).read()
         fn = src[src.index("def test_previous_stages"):].split("\ndef ")[0]
         assert 'os.environ.get("KALSHI_MASTER_TEST_RUN") == "1"' in fn and 'KALSHI_MASTER_TEST_RUN="1"' in fn, f

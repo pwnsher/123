@@ -1410,14 +1410,27 @@ PAGE = """<!doctype html><html><head><meta charset="utf-8"><title>Kalshi 15m Pap
    <span class="dim">coins</span><span id="coinToggles"></span>
    <span class="dim">latency</span><b id="lat" class="grn">–</b>
    <span class="dim">updated</span><span id="upd" class="dim">–</span>
+   <span class="dim">data</span><b id="link" class="dim">–</b>
  </div>
  <div class="grid" id="grid"></div>
- <div class="foot">Paper / demo only — no real orders are placed. Charts: 60m 1-min spot with the strike line.
+ <div class="foot">Paper / demo only — no real orders are placed. Charts: 60m 1-min spot with the strike line; the newest bar follows the watcher's own spot
+  observations and history re-syncs with Coinbase every 60 s. "spot Ns" = age of the last spot observation
+  (the watcher polls every few seconds; the page re-reads its state every second).
   Latency is the round-trip to place a paper order once you press Enter.</div>
 </div>
 <script>
 const COINS=["BTC","ETH","SOL","XRP"];
 const charts={}, series={}, strikeLine={}, chartKind={};
+// ── real-time PRESENTATION state (display only; nothing here is sent anywhere or read by the strategy) ──
+// The browser re-reads the server's local STATE every DATA_REFRESH_MS. That does NOT make the strategy
+// evaluate faster: the watcher still polls every POLL_SECONDS; the page just sees each result sooner.
+const DATA_REFRESH_MS=1000;       // self-scheduling /data loop (a slow request can never overlap the next)
+const DATA_TIMEOUT_MS=5000;       // a hung /data request is abandoned; the loop keeps going
+const COUNTDOWN_MS=250;           // countdown/age refresh: pure local clock math, never a request
+const CANDLE_RECONCILE_MS=60000;  // full 1-min history (authoritative Coinbase bars via /candles)
+const AGE_WARN_S=5, AGE_STALE_S=10;   // spot-age colouring only
+const marketCloseMs={}, marketTicker={}, spotTs={}, strikeVal={};
+const liveCandle={}, lastBars={}, lastBarTime={}, candleLoading={};
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function fmt(x){return x==null?"–":Math.round(x)+"¢";}
 
@@ -1427,7 +1440,7 @@ function buildCards(){
   const el=document.createElement("div"); el.className="card"; el.id="card_"+c;
   el.innerHTML=`<div class="chd"><span><span class="sym">${c}</span> <span class="tick" id="tk_${c}"></span></span>
      <span><span class="seg"><button class="btn" data-kind="line" data-coin="${c}">line</button><button class="btn" data-kind="cand" data-coin="${c}">candle</button></span>
-     &nbsp;<span class="cd" id="cd_${c}">–</span></span></div>
+     &nbsp;<span class="mini" id="age_${c}"></span> <span class="cd" id="cd_${c}">–</span></span></div>
    <div class="rowline"><span class="k">spot / strike</span><span id="ss_${c}">–</span></div>
    <div class="rowline"><span class="k">UP bid/ask · DN bid/ask</span><span id="bk_${c}">–</span></div>
    <div class="rowline"><span class="k">conf · edge raw/net</span><span id="ce_${c}">–</span></div>
@@ -1457,20 +1470,73 @@ function setKind(c,kind){
  charts[c].removeSeries(series[c]);
  series[c]= kind==="cand" ? charts[c].addCandlestickSeries({upColor:"#3ddc84",downColor:"#ff5c5c",wickUpColor:"#3ddc84",wickDownColor:"#ff5c5c",borderVisible:false})
                           : charts[c].addLineSeries({color:"#3ddc84",lineWidth:2});
- chartKind[c]=kind; loadCandles(c);
+ chartKind[c]=kind; strikeLine[c]=null; lastBarTime[c]=null;
+ const k=strikeVal[c]; strikeVal[c]=null; drawStrike(c,k);      // the strike line belongs to the new series
+ if(lastBars[c]) renderBars(c); else loadCandles(c);
 }
-async function loadCandles(c){
+// ── chart = authoritative 1-min history (/candles, every CANDLE_RECONCILE_MS) + a live newest bar
+//    patched from the spot the watcher ALREADY observed (r.spot / r.spot_observed_ts in /data).
+//    No extra Coinbase request is made for the live bar.
+function minuteOf(ts){return Math.floor(ts/60)*60;}
+function cleanBars(bars){          // sorted, finite, unique timestamps (setData rejects duplicates)
+ const out=[]; let last=null;
+ bars.filter(b=>b&&Number.isFinite(b.t)&&[b.o,b.h,b.l,b.c].every(Number.isFinite)).sort((a,b)=>a.t-b.t)
+     .forEach(b=>{ if(b.t!==last){out.push(b); last=b.t;} else out[out.length-1]=b; });
+ return out;
+}
+function pushLive(c){              // update() the newest bar only; never setData
+ const lc=liveCandle[c]; if(!lc||!series[c]) return;
+ if(lastBarTime[c]!=null && lc.time<lastBarTime[c]) return;   // never write behind the newest bar
  try{
-  const bars=await (await fetch("/candles?coin="+c)).json();
-  if(!Array.isArray(bars)) return;
-  if(chartKind[c]==="cand") series[c].setData(bars.map(b=>({time:b.t,open:b.o,high:b.h,low:b.l,close:b.c})));
-  else series[c].setData(bars.map(b=>({time:b.t,value:b.c})));
+  series[c].update(chartKind[c]==="cand"?{time:lc.time,open:lc.open,high:lc.high,low:lc.low,close:lc.close}
+                                        :{time:lc.time,value:lc.close});
+  lastBarTime[c]=lc.time;
  }catch(e){}
 }
+function renderBars(c){            // full redraw from history, then reconcile + re-apply the live bar
+ const bars=lastBars[c]; if(!bars||!series[c]) return;
+ try{
+  series[c].setData(chartKind[c]==="cand"?bars.map(b=>({time:b.t,open:b.o,high:b.h,low:b.l,close:b.c}))
+                                         :bars.map(b=>({time:b.t,value:b.c})));
+ }catch(e){return;}
+ const last=bars.length?bars[bars.length-1]:null, lc=liveCandle[c];
+ lastBarTime[c]=last?last.t:null;
+ if(last){
+  if(!lc||lc.time<last.t) liveCandle[c]={time:last.t,open:last.o,high:last.h,low:last.l,close:last.c};
+  else if(lc.time===last.t){lc.open=last.o; lc.high=Math.max(lc.high,last.h); lc.low=Math.min(lc.low,last.l);}
+ }
+ pushLive(c);
+}
+function liveSpot(c,r){            // one existing backend spot observation -> newest bar H/L/C
+ if(!r) return;
+ const px=Number(r.spot), ts=Number(r.spot_observed_ts);
+ if(!Number.isFinite(px)||px<=0||!Number.isFinite(ts)||ts<=0) return;
+ if(spotTs[c]!=null && ts<=spotTs[c]) return;          // same observation re-read: nothing new
+ spotTs[c]=ts;
+ const t=minuteOf(ts), lc=liveCandle[c];
+ if(lc && t<lc.time) return;
+ if(lc && t===lc.time){lc.high=Math.max(lc.high,px); lc.low=Math.min(lc.low,px); lc.close=px;}
+ else liveCandle[c]={time:t,open:px,high:px,low:px,close:px};   // a new minute starts a new bar
+ pushLive(c);
+}
+async function loadCandles(c){
+ if(candleLoading[c]) return false;                    // at most one history fetch per coin in flight
+ candleLoading[c]=true;
+ try{
+  const bars=await (await fetch("/candles?coin="+c,{cache:"no-store"})).json();
+  if(!Array.isArray(bars)) return false;
+  lastBars[c]=cleanBars(bars);
+  renderBars(c);                                       // drawn with whatever chart kind is current NOW
+  return true;
+ }catch(e){return false;}
+ finally{candleLoading[c]=false;}
+}
 function drawStrike(c,strike){
- if(strike==null) return;
- if(strikeLine[c]) series[c].removePriceLine(strikeLine[c]);
+ if(strike==null||!series[c]) return;
+ if(strikeVal[c]===strike && strikeLine[c]) return;    // unchanged: keep the existing line
+ if(strikeLine[c]){try{series[c].removePriceLine(strikeLine[c]);}catch(e){}}
  strikeLine[c]=series[c].createPriceLine({price:strike,color:"#e6b84c",lineWidth:1,lineStyle:2,title:"strike"});
+ strikeVal[c]=strike;
 }
 async function paperEnter(c){
  const t0=performance.now(); document.getElementById("pm_"+c).textContent="…";
@@ -1484,7 +1550,7 @@ async function paperEnter(c){
 }
 async function ping(){
  const t0=performance.now();
- try{ await fetch("/ping"); document.getElementById("lat").textContent=Math.round(performance.now()-t0)+"ms"; }catch(e){}
+ try{ await fetch("/ping",{cache:"no-store"}); document.getElementById("lat").textContent=Math.round(performance.now()-t0)+"ms"; }catch(e){}
 }
 function post(action,extra){return fetch("/control",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.assign({action},extra||{}))});}
 
@@ -1503,7 +1569,30 @@ function renderControls(ctrl){
  const bank=document.getElementById("bank"); if(document.activeElement!==bank) bank.value=ctrl.bankroll;
 }
 
+function setMarketClose(c,r){     // absolute market close; the countdown is computed locally from it
+ if(!r) return;                                        // coin absent from this payload: keep last known
+ if(r.close){const t=Date.parse(r.close); marketCloseMs[c]=Number.isFinite(t)?t:null; marketTicker[c]=r.ticker||null; return;}
+ if(r.status==="ok"||r.status==="no market") marketCloseMs[c]=null;   // no close for this market -> "–"
+ // "stale" / "net error": transient, the current market's close still applies
+}
+function fmtCountdown(ms){const s=Math.ceil(Math.max(ms,0)/1000); return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;}
+function updateCountdowns(){       // purely local: Date.now() vs absolute close; makes no request
+ const now=Date.now();
+ COINS.forEach(c=>{
+  const el=document.getElementById("cd_"+c);
+  if(el){const close=marketCloseMs[c]; el.textContent=close?fmtCountdown(close-now):"–";}
+  const ag=document.getElementById("age_"+c);
+  if(ag){
+   const ts=spotTs[c];
+   if(!ts){ag.textContent="";ag.className="mini";}
+   else{const a=Math.max(now/1000-ts,0);
+        ag.textContent=`spot ${a<10?a.toFixed(1):Math.round(a)}s`;
+        ag.className="mini"+(a>AGE_STALE_S?" red":(a>=AGE_WARN_S?" amb":""));}
+  }
+ });
+}
 function renderCoin(c,r,freshIso){
+ setMarketClose(c,r);
  document.getElementById("tk_"+c).textContent=r&&r.ticker?r.ticker:"";
  const vd=document.getElementById("vd_"+c);
  if(!r||r.status!=="ok"){ vd.textContent=(r&&(r.verdict||r.status))||"…"; vd.className="verdict blk"; return; }
@@ -1514,9 +1603,6 @@ function renderCoin(c,r,freshIso){
  const cls=r.reason==="ENTER"?"verdict go":(String(r.reason||"").startsWith("BLOCK")||r.reason==="WAIT_LATE")?"verdict stop":"verdict warn";
  vd.className=cls; vd.textContent=r.verdict+"  ["+r.reason+"]";
  drawStrike(c,r.strike);
- // countdown
- const cd=document.getElementById("cd_"+c);
- if(r.remain!=null){const m=Math.floor(r.remain),s=Math.round((r.remain-m)*60);cd.textContent=`${m}:${String(s).padStart(2,"0")}`;}
 }
 
 function renderGate(g){
@@ -1550,34 +1636,51 @@ function renderPerpVol(c,v){   // display only: labels come from perp_telemetry.
  if(key) key.textContent=v.live_veto_feature?`perp vol · stability (observe only; LIVE veto uses ${v.live_veto_feature})`
                                             :"perp vol · stability (telemetry, observe only)";
 }
-let candleTick=0;
-async function tick(){
+function setLink(ok){
+ const el=document.getElementById("link"); if(!el) return;
+ el.textContent=ok?"live":"retrying"; el.className=ok?"grn":"amb";
+}
+async function tick(){             // ONE read of local STATE; values stay on screen if it fails
+ const ctl=new AbortController(), to=setTimeout(()=>ctl.abort(),DATA_TIMEOUT_MS);
  try{
-  const d=await (await fetch("/data")).json();
+  const d=await (await fetch("/data",{cache:"no-store",signal:ctl.signal})).json();
   document.getElementById("upd").textContent=d.updated||"–";
   if(d.controls) renderControls(d.controls);
-  COINS.forEach(c=>renderCoin(c,(d.coins||{})[c],(d.fresh||{})[c]));
+  COINS.forEach(c=>{try{renderCoin(c,(d.coins||{})[c],(d.fresh||{})[c]);}catch(e){}});
+  COINS.forEach(c=>liveSpot(c,(d.coins||{})[c]));
   COINS.forEach(c=>renderPerp(c,(d.perps||{})[c]));
   COINS.forEach(c=>renderPerpVol(c,(d.perp_vol||{})[c]));
   renderGate(d.perp_live_veto);
-  if((candleTick++)%5===0) COINS.forEach(loadCandles);   // refresh charts every ~15s
- }catch(e){}
+  updateCountdowns();                                  // new close / spot time shows at once (local math)
+  setLink(true);
+  return true;
+ }catch(e){setLink(false); return false;}
+ finally{clearTimeout(to);}
+}
+async function dataLoop(){         // next request is scheduled only after this one settles
+ try{await tick();}finally{setTimeout(dataLoop,DATA_REFRESH_MS);}
 }
 // wire top controls
 document.getElementById("toggleRun").onclick=async()=>{const running=document.getElementById("run").textContent==="RUNNING";await post(running?"pause":"resume");};
 document.querySelectorAll("[data-em]").forEach(b=>b.onclick=async()=>{await post("entry_mode",{value:b.dataset.em});});
 document.querySelectorAll("[data-dir]").forEach(b=>b.onclick=async()=>{await post("direction",{value:b.dataset.dir});});
 document.getElementById("setBank").onclick=async()=>{await post("bankroll",{value:parseFloat(document.getElementById("bank").value)});};
-buildCards(); tick(); setInterval(tick,3000); ping(); setInterval(ping,5000);
+buildCards(); dataLoop(); updateCountdowns();
+setInterval(updateCountdowns,COUNTDOWN_MS);
+setInterval(()=>COINS.forEach(loadCandles),CANDLE_RECONCILE_MS);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden) updateCountdowns();});
+ping(); setInterval(ping,5000);
 </script></body></html>"""
 
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
 
-    def _send(self, obj, code=200, ctype="application/json"):
+    def _send(self, obj, code=200, ctype="application/json", no_store=False):
         body = obj if isinstance(obj, bytes) else json.dumps(obj).encode()
         self.send_response(code); self.send_header("Content-Type", ctype)
+        if no_store:
+            self.send_header("Cache-Control", "no-store")     # dynamic dashboard state: never cached
         self.send_header("Content-Length", str(len(body))); self.end_headers()
         self.wfile.write(body)
 
@@ -1585,16 +1688,18 @@ class Handler(BaseHTTPRequestHandler):
         from urllib.parse import urlparse, parse_qs
         u = urlparse(self.path)
         if u.path == "/data":
-            with LOCK: self._send(json.dumps(STATE).encode())
+            with LOCK:
+                body = json.dumps(STATE).encode()                  # consistent snapshot under the lock...
+            self._send(body, no_store=True)                        # ...socket write outside it
         elif u.path == "/ping":
-            self._send({"t": int(time.time() * 1000)})           # latency round-trip
+            self._send({"t": int(time.time() * 1000)}, no_store=True)   # latency round-trip
         elif u.path == "/candles":
             coin = (parse_qs(u.query).get("coin", ["BTC"])[0]).upper()
             cfg = COINS.get(coin)
             try:
-                self._send(web_candles(cfg["product"]) if cfg else [])
+                self._send(web_candles(cfg["product"]) if cfg else [], no_store=True)
             except Exception as e:
-                self._send({"error": str(e)}, 502)
+                self._send({"error": str(e)}, 502, no_store=True)
         else:
             self._send(PAGE.encode("utf-8"), ctype="text/html; charset=utf-8")
 

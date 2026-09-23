@@ -264,6 +264,22 @@ SUPPORTED PYTHON (Step 6.1)
   strategy constants or functions is. check_perp_deployment.py shows the runtime Python as a
   diagnostic.
 
+DASHBOARD REAL-TIME PASS (presentation only; strategy, telemetry and live veto unchanged)
+  * The watcher still evaluates every POLL_SECONDS (4 s). The page now re-reads the server's local
+    state every ~1 s (self-scheduling, never overlapping, 5 s request timeout, keeps values on a
+    failure and retries ~1/s), so each new result appears sooner. Strategy frequency is unchanged.
+  * Countdown: computed in the browser every 250 ms from the market's absolute close time (r.close);
+    no request. A background tab shows the correct time as soon as it is visible again.
+  * Chart: 60 one-minute bars from /candles at start-up, re-synced every 60 s (was every ~15 s);
+    the newest bar (line point or candle H/L/C) moves with the spot the watcher already observed
+    (r.spot / r.spot_observed_ts), so the browser adds no Coinbase requests.
+  * "spot N s" beside each countdown = age of the last spot observation (amber >= 5 s, red > 10 s);
+    "data live / retrying" in the top bar = the browser's link to the local server. Display only.
+  * /data, /ping, /candles send Cache-Control: no-store; /data is serialised under the lock and
+    written to the socket outside it.
+  Tests:  py test_stage15.py    (or py run_all_tests.py for stages 1-15; the browser behaviour
+          checks run the real page script in node when node is installed, otherwise they are skipped)
+
 PERFORMANCE PASS (behaviour-preserving; no strategy, statistics or safety parameter changed)
   * Tests: "py run_all_tests.py" now runs each stage EXACTLY ONCE (it sets
     KALSHI_MASTER_TEST_RUN=1 so later stages skip their "all previous stages" re-run).

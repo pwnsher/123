@@ -417,7 +417,8 @@ def test_dashboard_publish_and_page():
     if not node:
         print("  (node not found: JS renderer smoke test skipped; Python view checks above still ran)")
         return
-    js = k.PAGE[k.PAGE.index("function renderPerpVol"):k.PAGE.index("let candleTick")]
+    start = k.PAGE.index("function renderPerpVol")
+    js = k.PAGE[start:k.PAGE.index("\n}\n", start) + 3]              # just the renderer function
     harness = ("const els={};const document={getElementById:id=>(els[id]=els[id]||{textContent:'',className:'',title:''})};\n"
                + js + "\nconst out=[];\n"
                "for(const v of [undefined,null,{},{stability:'CAUTION'},{direction:'UP',momentum_z_60s:1.84,vol_regime:'HIGH',"
