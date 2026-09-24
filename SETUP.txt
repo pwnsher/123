@@ -1,13 +1,19 @@
 SETUP
 
-Discord (in kalshi_bot.py, near the top — fine to hardcode, shared with trusted people):
-  BOT_TOKEN          -> paste your bot token (or set $env:DISCORD_BOT_TOKEN)
-  CALLS_CHANNEL_ID   -> calls (with buttons)
-  JOURNAL_CHANNEL_ID -> results + weekly report (0 = use calls channel)
-  EXPLAIN_CHANNEL_ID -> explainer (0 = use calls channel)
+LOCAL-FIRST (Step 1 baseline) — start here. No Discord, no credentials, no orders.
+  py run_local.py            # watcher + local dashboard http://127.0.0.1:8000, structured logs
+  py run_local.py --check    # offline self-check (config + strategy fingerprints)
+  py run_all_tests.py        # stages 1-17
+  See README.md and docs/ (ARCHITECTURE.md, BASELINE.md, ROADMAP.md). Env var names: .env.example
 
-Telegram (optional, in kalshi_dashboard.py — fine to hardcode):
-  TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+Discord (LEGACY, OPTIONAL — only for kalshi_bot.py; nothing else needs it):
+  $env:DISCORD_BOT_TOKEN     -> your bot token (never commit it; the file only holds a placeholder)
+  DISCORD_GUILD_ID / DISCORD_STATUS_CHANNEL_ID / DISCORD_CALLS_CHANNEL_ID /
+  DISCORD_JOURNAL_CHANNEL_ID / DISCORD_EXPLAIN_CHANNEL_ID  -> optional overrides of the IDs in kalshi_bot.py
+  Without discord.py or without a token, kalshi_bot.py exits with a message; use py run_local.py.
+
+Telegram (LEGACY, inactive: TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID are empty literals in
+kalshi_dashboard.py; left untouched because that file is strategy-pinned).
 
 Kalshi API (PRIVATE — keep manual, never share; used only by kalshi_api_learn.py):
   $env:KALSHI_API_KEY_ID       = "your-key-id"
@@ -15,8 +21,9 @@ Kalshi API (PRIVATE — keep manual, never share; used only by kalshi_api_learn.
   $env:KALSHI_ENV              = "prod"   # read-only on your real account
 
 Run:
-  py kalshi_bot.py        # bot + watcher + website (http://localhost:8000)
-  py kalshi_dashboard.py  # website only
+  py run_local.py         # recommended: watcher + website, local logs (no Discord)
+  py kalshi_dashboard.py  # legacy launcher: watcher + website (no Discord)
+  py kalshi_bot.py        # legacy optional: Discord bot + watcher + website
 
 Webhooks are fully removed — all Discord posting now goes through the bot to real channels.
 
@@ -55,7 +62,7 @@ PERP TELEMETRY (Step 1 — passive, read-only research recorder)
   This is unproven research data — nothing here claims perps improve profitability.
 
 TESTS
-  py run_all_tests.py      # stages 1-7
+  py run_all_tests.py      # stages 1-17 (16: baseline regression contract, 17: local-first architecture)
   py test_stage7.py        # perp telemetry only (no network needed)
 
 PERP TELEMETRY — STEP 2 (causal alignment + data quality; still observation only)
@@ -290,3 +297,12 @@ PERFORMANCE PASS (behaviour-preserving; no strategy, statistics or safety parame
   * Telemetry CSV: the header is validated once per file; a file replaced by a different schema
     is still detected and renamed aside.
   * Benchmarks (local, no network):  py bench_perf.py --repo . --out performance_after.json
+
+STEP 1 — LOCAL-FIRST BASELINE (no strategy change; see docs/BASELINE.md)
+  * Strategy frozen: config/strategy_baseline.json (extended AST fingerprint, py -m kalshi_core.baseline --verify)
+    + regression/strategy_cases.json (47 deterministic scenarios, py -m regression.generate --check).
+    The legacy fingerprint (8d94f241...) and step5_baseline_manifest.json are unchanged.
+  * kalshi_core/: SignalDecision (standard decision record), NoCallReason codes, feed-health types, layer
+    interfaces, execution safety boundary (LIVE unavailable), structured logging, env config.
+  * run_local.py: the local entry point; Discord moved to an optional legacy adapter.
+  Tests:  py test_stage16.py / py test_stage17.py   (or py run_all_tests.py for stages 1-17)

@@ -241,7 +241,7 @@ def report(all_trades, days):
 
     dows = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     print("\n  BY DAY OF WEEK")
-    print(f"  {'day':>4} {'trades':>7} {'win%':>6} {'exp\u00a2@85':>9}")
+    print(f"  {'day':>4} {'trades':>7} {'win%':>6} {'exp¢@85':>9}")
     print("  " + "-" * 30)
     best = None
     for i, d in enumerate(dows):

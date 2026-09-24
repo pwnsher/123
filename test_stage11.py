@@ -40,12 +40,17 @@ G = {"min_calendar_days": 7.0, "min_settled_total": 200, "min_tuning_settled": 1
 # Dashboard real-time pass (stage 15): kalshi_dashboard.py changed in the PAGE script (local countdown,
 # 1 s self-scheduling /data loop, live newest chart bar, 60 s history reconcile, data-age display) and in
 # Handler (no-store headers; /data socket write outside LOCK). Strategy pinned as above; see test_stage15.
+# Step 1 local-first baseline pass: kalshi_bot.py (legacy Discord adapter made optional: friendly exit
+# without discord.py, placeholder token refused, channel IDs overridable by env with the same defaults)
+# and kalshi_backtest.py (one report() header literal rewritten so the file parses on Python 3.10/3.11;
+# printed output byte-identical) changed by design. Neither file is part of the live strategy; the
+# strategy is pinned as above plus config/strategy_baseline.json and regression/ (test_stage16).
 STEP4_HASHES = {   # Step 4 output; Step 5 must leave these byte-identical
     "kalshi_dashboard.py": "aa66c7ae1d6cf8b913b746b05bfd6cf64197454d3b7fd00a2ba174749150c595",
     "perp_telemetry.py": "5e1de6d6553032bd2902d0b9766086b826876c632bb41cfcfe52234c90b4d99e",
     "perp_shadow.py": "ba3b3444e83fe384f5556050abc7d543d9c06fbc147a51319a314dddf12794c3",
-    "kalshi_bot.py": "9e064548c21144b00226920e21d114407ff306386fd740272cbd889d7d896d53",
-    "kalshi_backtest.py": "718968348cacd89e07740414ac9567db6a22ba3b3dcd7d8d70cd4c0a0ef631f8",
+    "kalshi_bot.py": "8278bdc4d2adaa117e2fdcce101924181d4bc64d3987b584a69741eeb474cd5d",
+    "kalshi_backtest.py": "19f4bc281701db5234c29cc922b3806b21ac333883df174dcd936385fe9f117f",
     "kalshi_api_learn.py": "7b7bc2dd095cabe391549208a849c612a5465aac9139e8f8e841216cc96a26f6",
     "build_perp_shadow_policy.py": "8003371e9a0dbf657c5b1db5888cbd6e285172a3fab45389385d062c03ea0e38",
     "analyze_perp_shadow.py": "5aa0ae764d417ed5e3118faff78dda747b492695936efeff3d81a1476534d87b",

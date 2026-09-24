@@ -10,7 +10,7 @@ no promotion -> live veto INACTIVE. The bot behaves exactly as it always has.
 -----------------------------------------------------------------------------------------
 LIFECYCLE (each step must succeed before the next; commands are Windows "py")
 -----------------------------------------------------------------------------------------
- 1. Run the bot normally to collect telemetry:        py kalshi_bot.py
+ 1. Run the bot normally to collect telemetry:        py run_local.py   (legacy: py kalshi_bot.py)
  2. Label settled markets (repeat, e.g. hourly):      py label_binary_outcomes.py
  3. Step 3 statistical analysis:                      py analyze_perp_predictive.py
        -> analysis_output/perp_candidate_manifest.json  (often [] — that is a valid result)
@@ -29,8 +29,8 @@ LIFECYCLE (each step must succeed before the next; commands are Windows "py")
 11. Check readiness without activating anything:      py check_perp_deployment.py
        Expect READY_BUT_DISABLED.
 12. Explicitly enable for THIS shell only, then restart the bot:
-       cmd:        set PERP_LIVE_VETO_ENABLED=1 && py kalshi_bot.py
-       PowerShell: $env:PERP_LIVE_VETO_ENABLED = "1"; py kalshi_bot.py
+       cmd:        set PERP_LIVE_VETO_ENABLED=1 && py run_local.py   (or py kalshi_bot.py)
+       PowerShell: $env:PERP_LIVE_VETO_ENABLED = "1"; py run_local.py   (or py kalshi_bot.py)
        Do not add it to permanent system environment variables.
 13. Confirm the startup banner says:
        PERP LIVE VETO: ACTIVE — VETO ONLY

@@ -854,10 +854,14 @@ STRATEGY_FUNCTION_HASHES = {
 # changed by design. Legacy behaviour is still pinned by the per-function strategy hashes, the
 # AST strategy fingerprint (test_stage12/14) and the unchanged behavioural tests; test_stage14
 # additionally proves poller outputs are identical with stressed, normal and disabled telemetry.
+# Step 1 local-first baseline pass: kalshi_bot.py (legacy Discord adapter made optional) and
+# kalshi_backtest.py (report() header literal rewritten so the file parses on Python 3.10/3.11; printed
+# output byte-identical) changed by design. The strategy stays pinned by the per-function hashes above,
+# the AST fingerprints and the behavioural fixtures in regression/ (test_stage16).
 LIVE_HASHES = {   # Step 2 output, byte-identical in Steps 3 and 4
     "perp_telemetry.py": "5e1de6d6553032bd2902d0b9766086b826876c632bb41cfcfe52234c90b4d99e",
-    "kalshi_bot.py": "9e064548c21144b00226920e21d114407ff306386fd740272cbd889d7d896d53",
-    "kalshi_backtest.py": "718968348cacd89e07740414ac9567db6a22ba3b3dcd7d8d70cd4c0a0ef631f8",
+    "kalshi_bot.py": "8278bdc4d2adaa117e2fdcce101924181d4bc64d3987b584a69741eeb474cd5d",
+    "kalshi_backtest.py": "19f4bc281701db5234c29cc922b3806b21ac333883df174dcd936385fe9f117f",
     "kalshi_api_learn.py": "7b7bc2dd095cabe391549208a849c612a5465aac9139e8f8e841216cc96a26f6",
 }
 

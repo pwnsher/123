@@ -2,6 +2,11 @@
 """
 Kalshi Dashboard — Discord control bot (slash commands)
 
+LEGACY, OPTIONAL ADAPTER. Discord is not part of the local-first architecture. The core watcher,
+strategy, dashboard and evaluation tools never import this file or discord.py; run them locally
+with `py run_local.py` (or `py kalshi_dashboard.py`). This adapter is kept, unchanged in
+behaviour, for anyone who still wants the Discord channel posts and slash commands.
+
 Wraps kalshi_dashboard.py so you can run it from Discord with /commands and shows
 an online/offline status by renaming a channel. It is READ-ONLY: it starts,
 stops, reports, and explains the watcher. It never places a trade.
@@ -27,18 +32,24 @@ import threading
 import datetime as dt
 from http.server import ThreadingHTTPServer
 
-import discord
-from discord import app_commands
+try:
+    import discord
+    from discord import app_commands
+except ImportError as _e:                      # optional dependency of this legacy adapter only
+    raise SystemExit("kalshi_bot.py is the OPTIONAL legacy Discord adapter and needs discord.py "
+                     "(pip install -U discord.py).\nTo run locally without Discord:  py run_local.py") from _e
 
 import kalshi_dashboard as k
+from kalshi_core.config import discord_token_usable
 
 # ─────────────────────── CONFIG (fill these in) ───────────────────────
 BOT_TOKEN         = os.environ.get("DISCORD_BOT_TOKEN") or "PASTE_YOUR_BOT_TOKEN_HERE"  # fine to hardcode (shared, trusted)
-GUILD_ID          = 1550200013324288040     # your server ID (int). 0 = global sync (can take ~1 hour)
-STATUS_CHANNEL_ID = 1550274779121192990     # the channel whose NAME flips online/offline
-CALLS_CHANNEL_ID  = 1550200016071823422     # calls post here, with buttons underneath
-JOURNAL_CHANNEL_ID = 0    # results + weekly report; 0 = use the calls channel
-EXPLAIN_CHANNEL_ID = 0    # the how-it-works explainer; 0 = use the calls channel
+# IDs are not secrets; each can be overridden by an environment variable (defaults unchanged).
+GUILD_ID          = int(os.environ.get("DISCORD_GUILD_ID") or 1550200013324288040)     # 0 = global sync (~1 hour)
+STATUS_CHANNEL_ID = int(os.environ.get("DISCORD_STATUS_CHANNEL_ID") or 1550274779121192990)  # NAME flips online/offline
+CALLS_CHANNEL_ID  = int(os.environ.get("DISCORD_CALLS_CHANNEL_ID") or 1550200016071823422)   # calls + buttons
+JOURNAL_CHANNEL_ID = int(os.environ.get("DISCORD_JOURNAL_CHANNEL_ID") or 0)   # results + weekly; 0 = calls channel
+EXPLAIN_CHANNEL_ID = int(os.environ.get("DISCORD_EXPLAIN_CHANNEL_ID") or 0)   # explainer; 0 = calls channel
 ONLINE_NAME       = "🟢-bot-online"    # rename to plain text if you prefer no dot
 OFFLINE_NAME      = "🔴-bot-offline"
 
@@ -270,8 +281,9 @@ async def update(interaction: discord.Interaction):
     await interaction.followup.send(embed=discord.Embed.from_dict(emb), ephemeral=True)
 
 def main():
-    if not BOT_TOKEN:
-        print("Set BOT_TOKEN near the top of kalshi_bot.py first.")
+    if not discord_token_usable(BOT_TOKEN):
+        print("No Discord bot token: set $env:DISCORD_BOT_TOKEN (see .env.example). Discord is optional;\n"
+              "to run locally without it:  py run_local.py")
         return
     bot.run(BOT_TOKEN)
 

@@ -1,0 +1,566 @@
+{
+ "config_classification": {
+  "infrastructure_env": [
+   "KALSHI_PERP_TELEMETRY",
+   "KALSHI_PERP_API_BASE",
+   "KALSHI_PERP_TICKER_<COIN>",
+   "KALSHI_PERP_SHADOW",
+   "PERP_LIVE_VETO_KILL_FILE",
+   "KALSHI_LOG_LEVEL",
+   "KALSHI_LOG_FORMAT",
+   "KALSHI_LOG_FILE",
+   "KALSHI_DECISION_JOURNAL",
+   "KALSHI_DASHBOARD_PORT",
+   "KALSHI_ENV"
+  ],
+  "safety_activation_env": [
+   "PERP_LIVE_VETO_ENABLED"
+  ],
+  "secrets_env": [
+   "DISCORD_BOT_TOKEN",
+   "KALSHI_API_KEY_ID",
+   "KALSHI_PRIVATE_KEY_PATH (path)"
+  ],
+  "strategy_critical": [
+   "ACTIVE_COINS",
+   "BANKROLL",
+   "CHOP_MAX",
+   "COINS",
+   "DIRECTION",
+   "EDGE_THRESH",
+   "ENTRY_COST_CENTS",
+   "ENTRY_MODE",
+   "FEE_CENTS",
+   "GATE_PRICE",
+   "INTERVAL_MIN",
+   "LAST_STOP_MIN",
+   "MAX_ENTRY_MIN",
+   "MIN_CONF",
+   "MIN_PRICE",
+   "POLL_SECONDS",
+   "VOL_LOOKBACK_MIN",
+   "VOL_MULT"
+  ]
+ },
+ "extracted": {
+  "backtest": {
+   "dashboard_builtin": {
+    "BACKTEST_DAYS": 30,
+    "BACKTEST_RECENT_HOURS": 12,
+    "FEE_CENTS": 2.0,
+    "GATE_PRICE": 90.0
+   },
+   "known_discrepancy": "GATE_PRICE is 90.0 in kalshi_dashboard.py but 85.0 in kalshi_backtest.py",
+   "method": "Coinbase 1-min closes; strike = close at the 15-min boundary; first minute in the entry window with conf >= MIN_CONF; entry priced at the model confidence (NOT a real Kalshi ask); stop when the model-priced favoured side <= entry * sl_pct; else settle on close at boundary+15 >= strike. MIN_PRICE, edge and chop gates are NOT applied in either backtest.",
+   "standalone_kalshi_backtest": {
+    "COINBASE_BASE": "https://api.exchange.coinbase.com",
+    "COINS": {
+     "BTC": {
+      "product": "BTC-USD",
+      "sl_pct": 0.75
+     },
+     "ETH": {
+      "product": "ETH-USD",
+      "sl_pct": 0.6
+     },
+     "SOL": {
+      "product": "SOL-USD",
+      "sl_pct": 0.75
+     },
+     "XRP": {
+      "product": "XRP-USD",
+      "sl_pct": 0.65
+     }
+    },
+    "FEE_CENTS": 2.0,
+    "GATE_PRICE": 85.0,
+    "INTERVAL_MIN": 15,
+    "LAST_STOP_MIN": 2.0,
+    "MAX_ENTRY_MIN": 8.0,
+    "MIN_CONF": 80.0,
+    "VOL_LOOKBACK_MIN": 60,
+    "VOL_MULT": 1.15
+   }
+  },
+  "entry_window": {
+   "inclusive_both_ends": true,
+   "interval_minutes": 15,
+   "max_minutes_left": 8.0,
+   "min_minutes_left": 2.0,
+   "source": "kalshi_dashboard.evaluate: in_win = LAST_STOP_MIN <= remain <= MAX_ENTRY_MIN"
+  },
+  "no_call_gates": {
+   "evaluate_data_guard": {
+    "legacy": "BLOCK_STALE_DATA",
+    "reason": "DATA_STALE"
+   },
+   "evaluate_order": [
+    {
+     "legacy": "BLOCK_COIN",
+     "reason": "COIN_DISABLED"
+    },
+    {
+     "legacy": "BLOCK_DIRECTION",
+     "reason": "DIRECTION_DISABLED"
+    },
+    {
+     "legacy": "WAIT_TOO_EARLY",
+     "reason": "OUTSIDE_ENTRY_WINDOW_EARLY"
+    },
+    {
+     "legacy": "WAIT_LATE",
+     "reason": "OUTSIDE_ENTRY_WINDOW_LATE"
+    },
+    {
+     "legacy": "BLOCK_CHOP",
+     "reason": "CHOPPY_MARKET"
+    },
+    {
+     "legacy": "WAIT_LOW_CONFIDENCE",
+     "reason": "CONFIDENCE_BELOW_THRESHOLD"
+    },
+    {
+     "legacy": "WAIT_BAD_PRICE",
+     "reason": "PRICE_BELOW_THRESHOLD"
+    },
+    {
+     "legacy": "WAIT_NO_EDGE",
+     "reason": "INSUFFICIENT_EDGE"
+    }
+   ],
+   "evaluate_status": {
+    "error: ...": "EVALUATION_ERROR",
+    "net error": "DATA_UNAVAILABLE",
+    "no market": "MARKET_UNAVAILABLE"
+   },
+   "poller": [
+    "ALREADY_CALLED_THIS_MARKET",
+    "PERP_VETO_SUPPRESSED",
+    "WATCHER_PAUSED"
+   ]
+  },
+  "perp_overlay": {
+   "alignment_max_lag_s": 8,
+   "alpha_grid": [
+    0.25,
+    0.5,
+    0.75,
+    1.0
+   ],
+   "breaker": {
+    "max_block_fraction": 0.35,
+    "max_consecutive_errors": 3,
+    "max_fail_open_fraction": 0.5,
+    "max_gate_latency_ms": 25.0,
+    "min_window": 30,
+    "rolling_window": 50
+   },
+   "effect": "suppress-only: can remove an already-valid legacy call; never creates, flips or sizes",
+   "kill_file_default": {
+    "_expr": "os.environ.get('PERP_LIVE_VETO_KILL_FILE', 'DISABLE_PERP_LIVE_VETO')",
+    "_expr_sha256": "de09bc5f8f65e1829a577c88365828811cc825699b6f78ef466562c359721aef"
+   },
+   "live_veto_enabled_default": {
+    "_expr": "os.environ.get('PERP_LIVE_VETO_ENABLED', '0') == '1'",
+    "_expr_sha256": "ec786f21d5d14c2a1f25d1fc0e86abf49eebdfc0b5af16074a5c7e52571d9463"
+   },
+   "live_veto_requires": [
+    "valid manual promotion artifact perp_live_promotion.json",
+    "PERP_LIVE_VETO_ENABLED=1 in the environment",
+    "legacy fingerprint == step5_baseline_manifest.json"
+   ],
+   "max_abs_perp_delta": 0.05,
+   "mode": "LIVE_VETO_ONLY",
+   "overlay_version": "step5_overlay_v1",
+   "scope": {
+    "direction_reversal": false,
+    "execution_changes": false,
+    "new_calls": false,
+    "sizing_changes": false,
+    "stop_changes": false,
+    "veto_only": true
+   },
+   "shadow_enabled_default": {
+    "_expr": "os.environ.get('KALSHI_PERP_SHADOW', '1') != '0'",
+    "_expr_sha256": "9b30a73129c43d866366973adb9fd12128f238b4d39aeb8ac251ce52b1a920b1"
+   },
+   "telemetry_enabled_default": {
+    "_expr": "os.environ.get('KALSHI_PERP_TELEMETRY', '1') != '0'",
+    "_expr_sha256": "9a33ac87abddb76b8e5c920e7eda1a8e480e79254956f3b0400df46b06718a76"
+   }
+  },
+  "required_data_feeds": [
+   {
+    "endpoint": "https://external-api.kalshi.com/trade-api/v2/markets?series_ticker=...&status=open",
+    "feed": "kalshi_market",
+    "used_for": "strike (floor_strike|cap_strike|strike), yes/no bid/ask, close_time, ticker"
+   },
+   {
+    "endpoint": "https://api.exchange.coinbase.com/products/{product}/ticker",
+    "feed": "coinbase_spot",
+    "used_for": "spot price"
+   },
+   {
+    "endpoint": "https://api.exchange.coinbase.com/products/{product}/candles?granularity=60",
+    "feed": "coinbase_candles",
+    "used_for": "volatility, chop, display indicators (cached 30 s)"
+   },
+   {
+    "endpoint": "https://external-api.kalshi.com/trade-api/v2/markets/{ticker}",
+    "feed": "kalshi_settlement",
+    "used_for": "market.result for paper settlement"
+   }
+  ],
+  "runtime": {
+   "BANKROLL": 1000.0,
+   "COINBASE_BASE": "https://api.exchange.coinbase.com",
+   "KALSHI_BASE": "https://external-api.kalshi.com/trade-api/v2",
+   "POLL_SECONDS": 4
+  },
+  "settlement": {
+   "ENTRY_MODE_default": "taker",
+   "FEE_CENTS_backtest": 2.0,
+   "fee_model": "kalshi_fee_cents: ceil(0.07 * C * P * (1-P) * 100) cents, min 1 (0 when contracts == 0), P clamped to [0.01, 0.99]",
+   "first_check_after_close_s": 20,
+   "give_up_calls_after_close_min": 30,
+   "give_up_stats_after_close_min": 10,
+   "round_trip_fee": "fee(entry, 1) + fee(exit_price, 1) per contract",
+   "source": "Kalshi GET /markets/{ticker} -> market.result ('yes' = UP won, 'no' = DOWN won)",
+   "unfilled_maker": "a resting maker order whose ask never traded down to the limit is not a trade"
+  },
+  "stops": {
+   "BTC": {
+    "sl_pct": 0.75
+   },
+   "ETH": {
+    "sl_pct": 0.6
+   },
+   "SOL": {
+    "sl_pct": 0.75
+   },
+   "XRP": {
+    "sl_pct": 0.65
+   }
+  },
+  "thresholds": {
+   "CHOP_MAX_crossings": 3,
+   "EDGE_THRESH_cents": 0.0,
+   "ENTRY_COST_CENTS": 2.0,
+   "MIN_CONF_pct": 80.0,
+   "MIN_PRICE_cents": 85.0,
+   "chop_rule": "strike crossings of the last window+1 1-min closes > CHOP_MAX",
+   "chop_window_minutes": 15,
+   "net_edge_rule": "net_edge > 0 AND net_edge >= EDGE_THRESH"
+  },
+  "volatility": {
+   "VOL_LOOKBACK_MIN": 60,
+   "VOL_MULT": 1.15,
+   "candle_granularity_s": 60,
+   "min_completed_closes": 20,
+   "source": "kalshi_dashboard.evaluate / candles (literals inside pinned functions)"
+  },
+  "web_filters": {
+   "ACTIVE_COINS": {
+    "BTC": true,
+    "ETH": true,
+    "SOL": true,
+    "XRP": true
+   },
+   "DIRECTION": "BOTH",
+   "note": "baseline literals; mutable at runtime from the local web page"
+  }
+ },
+ "fingerprints": {
+  "extended_components": {
+   "kalshi_backtest.py": {
+    "classes": {},
+    "constants": {
+     "COINBASE_BASE": "https://api.exchange.coinbase.com",
+     "COINS": {
+      "BTC": {
+       "product": "BTC-USD",
+       "sl_pct": 0.75
+      },
+      "ETH": {
+       "product": "ETH-USD",
+       "sl_pct": 0.6
+      },
+      "SOL": {
+       "product": "SOL-USD",
+       "sl_pct": 0.75
+      },
+      "XRP": {
+       "product": "XRP-USD",
+       "sl_pct": 0.65
+      }
+     },
+     "FEE_CENTS": 2.0,
+     "GATE_PRICE": 85.0,
+     "INTERVAL_MIN": 15,
+     "LAST_STOP_MIN": 2.0,
+     "MAX_ENTRY_MIN": 8.0,
+     "MIN_CONF": 80.0,
+     "VOL_LOOKBACK_MIN": 60,
+     "VOL_MULT": 1.15
+    },
+    "functions": {
+     "_pw": "1df65eaaf06f5eab4609ae55a4d4283f73682ff02ae96f91fb78b4b4c453a1e4",
+     "backtest_coin": "6143e9ceed4f8cfbc5ce0d9a96898a520f782e0904f22891d82ffcc9c57c627c",
+     "block": "3b15fab0ff35dd58fd2f234828f2789b5ea556a1f9272fa9d75197393c60b6d5",
+     "brier": "9e249ebbab6691009097eaa05caad3557d5dbb1d04df087c73515feb9083517b",
+     "conf_side": "817c4c3f7602df27f61ee961a4efe1fca74a85c748b548c4b637538ca4ec1363",
+     "ece": "2be17c6c27c3c68744922a98096cc113bf944bbbbf7e0c529c87631f5961a43a",
+     "fetch_candles": "0923f4ddae42b234cbd1c94b3d69384686800aeea466a3f235d86ebaa6e6883a",
+     "logloss": "70274541c19f1ce6ea2eed1794db14bbbec6dc4cfcce87a55b9a2f9dca5169ce",
+     "norm_cdf": "8e9d66b45d8f78760838aff0ff0a4c50d9d0f9c026b16c9d527629008082df35",
+     "vol_at": "b237ef5f246a8b7931341dbb8d536684f51895bd1a97af8307fbe68a6cf4ddfa"
+    }
+   },
+   "kalshi_dashboard.py": {
+    "classes": {},
+    "constants": {
+     "ACTIVE_COINS": {
+      "BTC": true,
+      "ETH": true,
+      "SOL": true,
+      "XRP": true
+     },
+     "BACKTEST_DAYS": 30,
+     "BACKTEST_RECENT_HOURS": 12,
+     "BANKROLL": 1000.0,
+     "CHOP_MAX": 3,
+     "COINBASE_BASE": "https://api.exchange.coinbase.com",
+     "COINS": {
+      "BTC": {
+       "product": "BTC-USD",
+       "series": "KXBTC15M",
+       "sl_pct": 0.75
+      },
+      "ETH": {
+       "product": "ETH-USD",
+       "series": "KXETH15M",
+       "sl_pct": 0.6
+      },
+      "SOL": {
+       "product": "SOL-USD",
+       "series": "KXSOL15M",
+       "sl_pct": 0.75
+      },
+      "XRP": {
+       "product": "XRP-USD",
+       "series": "KXXRP15M",
+       "sl_pct": 0.65
+      }
+     },
+     "DIRECTION": "BOTH",
+     "EDGE_THRESH": 0.0,
+     "ENTRY_COST_CENTS": 2.0,
+     "ENTRY_MODE": "taker",
+     "FEE_CENTS": 2.0,
+     "GATE_PRICE": 90.0,
+     "INTERVAL_MIN": 15,
+     "KALSHI_BASE": "https://external-api.kalshi.com/trade-api/v2",
+     "LAST_STOP_MIN": 2.0,
+     "MAX_ENTRY_MIN": 8.0,
+     "MIN_CONF": 80.0,
+     "MIN_PRICE": 85.0,
+     "PERP_ALIGNMENT_MAX_LAG_SECONDS": 8,
+     "PERP_LIVE_PROMOTION_FILE": "perp_live_promotion.json",
+     "PERP_LIVE_VETO_ENABLED": {
+      "_expr": "os.environ.get('PERP_LIVE_VETO_ENABLED', '0') == '1'",
+      "_expr_sha256": "ec786f21d5d14c2a1f25d1fc0e86abf49eebdfc0b5af16074a5c7e52571d9463"
+     },
+     "PERP_LIVE_VETO_KILL_FILE": {
+      "_expr": "os.environ.get('PERP_LIVE_VETO_KILL_FILE', 'DISABLE_PERP_LIVE_VETO')",
+      "_expr_sha256": "de09bc5f8f65e1829a577c88365828811cc825699b6f78ef466562c359721aef"
+     },
+     "PERP_SHADOW_ENABLED": {
+      "_expr": "os.environ.get('KALSHI_PERP_SHADOW', '1') != '0'",
+      "_expr_sha256": "9b30a73129c43d866366973adb9fd12128f238b4d39aeb8ac251ce52b1a920b1"
+     },
+     "PERP_STEP5_BASELINE_MANIFEST": "step5_baseline_manifest.json",
+     "PERP_TELEMETRY_ENABLED": {
+      "_expr": "os.environ.get('KALSHI_PERP_TELEMETRY', '1') != '0'",
+      "_expr_sha256": "9a33ac87abddb76b8e5c920e7eda1a8e480e79254956f3b0400df46b06718a76"
+     },
+     "POLL_SECONDS": 4,
+     "VOL_LOOKBACK_MIN": 60,
+     "VOL_MULT": 1.15
+    },
+    "functions": {
+     "_append_paper": "1c4a1b497f7dfd394425ecc0b58a2cbafa5f01e2b363ee0ce0376c7cd56c0363",
+     "_cents": "37af778d4fb153658d4de5316cdc43b88fc4485498b090c8f002f116ae9f8953",
+     "_contracts": "84538df1dbe51f8a9e812afc0b6e0ccd848eb1c3e579962f93daaae1f0953193",
+     "_gate_decision": "0a933db4b1deac095c8d7a95fb6cd65d738844479a7415e762c7214233c8c61f",
+     "_gate_instance": "c8611ea2060f8fcfc4fb60f49238c0ea0270a50cf90f950dd9d807341e92563b",
+     "_get": "7700edad9269ea504c55cc2e652b9c8f56f2d6a2e418a04d90f7b3291c0d5bff",
+     "_limit_price": "8b45bf5dab33752ccc34e0b6d926535aeb90cc50be032bc76603e505e893f1f6",
+     "_size_fraction": "dff50e3a3b7f6e0cbed1020258e4194f8f5b6542f403d6db85dafae5e59ff40c",
+     "_vol_at": "0edbf965e8b6faa6a6c268bbbe59a50edddeee2f65c6a7e4c974cc8d5bcae92d",
+     "apply_control": "e66ffb5a2c45fa5a1dee1330d794b6c9a8eaec90008eeede5caac999ae9206be",
+     "backtest_coin": "9a4bee157ac1ca2a0c97207f82ee328285ccb23e7afb4a21f93b015e41498735",
+     "book_of": "4767c902d7cf6e6e9b9d88cd88690fd8e8182fcffe7ffcb0d7e7f44877ada344",
+     "call_record": "201f3695ba3ce7dc0aa9c42696b603da3436eb1e5398e166a4c8f7a2a650afd6",
+     "candles": "c888653e914793b689f446229b5af4643d1f1c00f270932321bda1e522d4a482",
+     "compute_stats": "942fb64e5d794f1d4e46aa705c908bc375d76880f28706376b92072afbac337e",
+     "conf_side": "817c4c3f7602df27f61ee961a4efe1fca74a85c748b548c4b637538ca4ec1363",
+     "crossings": "8e1763d012d282818552910c9b4d3e45d6ccd625cba3511ab7acf35e142652de",
+     "current_market": "2769ae76f06f33a6f9032b56c20d7f4e07775b7084ddea82bd302dd7e9aefa1a",
+     "evaluate": "46791a249612042afb6084c2070cd676d7867116108b905a8fd63d113b39bf16",
+     "kalshi_fee_cents": "d9066748c082f838ac0365042dcb48bd69202bf343d2a68e7921436fee6851f2",
+     "load_watcher_state": "b6a9e2d2f05e5741b6b79095f4d19cd24b1c6b370924336df5001f7502bca959",
+     "log_call": "8646832c2e4ad26c6e0d6b0029b1fd0c55674025edaa422380e704c3732ea4b4",
+     "market_result": "45f23a1dcb6fa9fb292399a1aca27e40b373ffa9ec3980f667374ade144f71dd",
+     "norm_cdf": "8e9d66b45d8f78760838aff0ff0a4c50d9d0f9c026b16c9d527629008082df35",
+     "paper_enter": "7968fd0dd95e781e0e0fcdc215c78af5d8c70076d14b93720e1bec7d5fc0926b",
+     "parse_range": "c143b048b46c5a5d5710fb45193bb983459284c9f8c6620d8ef3fa82522532b8",
+     "poller": "b16bc0cef8a3f47d48658d05647a2f2e2def74fc75be8c270c38b4e0f6c56889",
+     "run_backtest": "68554595fd9fe74ac49447d14ca6f600039895ee8e0ef2235f10cfe63d832c85",
+     "set_watcher_state": "054e45d2267deb5a8061b752693c53b60dfbc3883205b5dad26ae00ec703d9bd",
+     "settle_calls": "82f0f2485aafe6e1c87120dd167a863ad6b6954221954217dabc664b4b1ebd56",
+     "settle_pending": "f4fcdf1733a9c509b535b32c3634608ca4606f0cf1b4408c02ce7f7bba38a73b",
+     "spot": "2f6307d1a2a9c6ef31bd9f5a3f3fa1827f2a5feb9095e8a225a4e5e740e1005b",
+     "strike_of": "2609a123efd62642d141df59e5ba1973ae37505be504c4b2281755f3d8b1483f"
+    }
+   },
+   "perp_live.py": {
+    "classes": {
+     "LiveVetoGate": "86ba820228c769ed2e645212d47557a03218e377395f626f7e71415878a2eacc"
+    },
+    "constants": {
+     "CONFIRM_PHRASE": "LIVE_VETO_ONLY",
+     "DEFAULT_EXPIRY_DAYS": 14,
+     "LIVE_VETO_MAX_BLOCK_FRACTION": 0.35,
+     "LIVE_VETO_MAX_FAIL_OPEN_FRACTION": 0.5,
+     "LIVE_VETO_MIN_WINDOW": 30,
+     "LIVE_VETO_ROLLING_WINDOW": 50,
+     "MAX_CONSECUTIVE_GATE_ERRORS": 3,
+     "MAX_EXPIRY_DAYS": 30,
+     "MAX_GATE_LATENCY_MS": 25.0,
+     "MODE": "LIVE_VETO_ONLY",
+     "REQUIRED_SCOPE": {
+      "direction_reversal": false,
+      "execution_changes": false,
+      "new_calls": false,
+      "sizing_changes": false,
+      "stop_changes": false,
+      "veto_only": true
+     }
+    },
+    "functions": {
+     "_fav": "89165438dc3f352db14712e1af2ae78a43de17ca63bbdc450998c26bd1475ee4",
+     "validate_promotion": "3365ff2bf839e3c3e042c882e1d8c7732d4513fe120b91ad340ea5526f687211"
+    }
+   },
+   "perp_probability.py": {
+    "classes": {},
+    "constants": {
+     "ALPHA_GRID": [
+      0.25,
+      0.5,
+      0.75,
+      1.0
+     ],
+     "LEGACY_ALPHA": 0.0,
+     "MAX_ABS_PERP_DELTA": 0.05,
+     "OVERLAY_VERSION": "step5_overlay_v1",
+     "P_EPS": 1e-06,
+     "REQUIRED_CONSTANTS": [
+      "MIN_CONF",
+      "MIN_PRICE",
+      "EDGE_THRESH",
+      "ENTRY_COST_CENTS"
+     ]
+    },
+    "functions": {
+     "_finite": "2922226968aad363885161af7bed4385ed318828c90e83035d1b40a9258bb989",
+     "blend": "f0b40b5cad4caf6caf4b879998e9bbdd3140785d4499d3a19330a968bfa0476e",
+     "cap_delta": "3a0e7baeccc675cfd9445401671a7dfb0d0c72e06bf2ac605e3284fcc0dda83b",
+     "check_alpha": "32c03652c0a6cb9062d5f019d805090c3c68371de36f52826807f6887ace3034",
+     "check_constants": "16cf3bc4b4a65a532aeb628f13bd308a9be7c4a80f581dba825f2cd7f0c1261e",
+     "clamp_p": "55d0bca9a064859a052412bb48fa51e46528309042a48e56a5a14270fd83bf43",
+     "decide": "03abe037aea3bc650965681c64c4805d8a9c350827ce4e5eeecad6a7ac5afcbc",
+     "direction_flips": "e3837da7200968b6e92a3eb48707cab3862f41ce67b33b7ea501d5129188b75e",
+     "edges": "4763e7200ffd9d5cdb8f2a0deb6ffeeaea80ecd871112cecf0f8553d4c99d198",
+     "favored": "b1c0c0c793bf4ff27baf59b1d71ac566b0dc2827823c55fd05a399b5a0863365",
+     "integrated_conf": "f8ed3a1fcd3aace92c191d45e489c615c88e9c5499feddff8c884aebc9525d0c",
+     "overlay": "a8a59e4eec2576d929c14bf5cfce4174afe04eba16769f56fd53bb140db97a92",
+     "perp_delta": "58d6fc65f986211f1ef72df3c335bab5122fcde213857b4c92497962c08b6d8f"
+    }
+   },
+   "perp_shadow.py": {
+    "classes": {
+     "FrozenPolicy": "01cf3afc06928e297e467b8334d5f60a54dfce39bdffb746a76bd73fa272f5c4"
+    },
+    "constants": {
+     "MODE": "SHADOW_ONLY"
+    },
+    "functions": {
+     "p_favored": "3836ab2dcfbd72e9720a2e8ba12dbf8ae2bee5968f64f5ba36d1998d73a78112",
+     "validate_policy": "e0f20025ba17cbbb4a44e779874363d6e5e2e9c9d1edbf9ec12e0122054b297a"
+    }
+   }
+  },
+  "extended_format": "1/canonical_ast_v2_sha256/extended_v1",
+  "extended_strategy_fingerprint": "784141876a1b7f4c9f605036ef1358a6a3ea51ef32fced1f80f74045a6adef8c",
+  "legacy_fingerprint_format": "2/canonical_ast_v2_sha256",
+  "legacy_function_hashes": {
+   "_contracts": "84538df1dbe51f8a9e812afc0b6e0ccd848eb1c3e579962f93daaae1f0953193",
+   "_limit_price": "8b45bf5dab33752ccc34e0b6d926535aeb90cc50be032bc76603e505e893f1f6",
+   "_size_fraction": "dff50e3a3b7f6e0cbed1020258e4194f8f5b6542f403d6db85dafae5e59ff40c",
+   "conf_side": "817c4c3f7602df27f61ee961a4efe1fca74a85c748b548c4b637538ca4ec1363",
+   "crossings": "8e1763d012d282818552910c9b4d3e45d6ccd625cba3511ab7acf35e142652de",
+   "evaluate": "46791a249612042afb6084c2070cd676d7867116108b905a8fd63d113b39bf16",
+   "kalshi_fee_cents": "d9066748c082f838ac0365042dcb48bd69202bf343d2a68e7921436fee6851f2",
+   "log_call": "8646832c2e4ad26c6e0d6b0029b1fd0c55674025edaa422380e704c3732ea4b4",
+   "norm_cdf": "8e9d66b45d8f78760838aff0ff0a4c50d9d0f9c026b16c9d527629008082df35",
+   "settle_calls": "82f0f2485aafe6e1c87120dd167a863ad6b6954221954217dabc664b4b1ebd56"
+  },
+  "legacy_manifest": "step5_baseline_manifest.json",
+  "legacy_strategy_config_hash": "5b8a10d1579953e8c56cd6438c723be37484903e1005fb5a8e464446d8ff26b9",
+  "legacy_strategy_fingerprint": "8d94f241e8fc8edadc76058e1f12f430b6e4f499f4c0a30fba1cb5cf07dad82a"
+ },
+ "manifest": "kalshi_strategy_baseline",
+ "manifest_schema_version": 1,
+ "note": "Values under 'extracted' are read from the source by AST. Text under 'description' is hand-written and verified against the code; the code is authoritative.",
+ "regenerate_with": "py -m kalshi_core.baseline --write --i-intend-to-change-the-baseline",
+ "strategy": {
+  "description": {
+   "calibration": "NONE in the live path: the raw model probability is used directly. Calibration is only MEASURED offline (kalshi_backtest.py: Brier, log loss, ECE on the newest 30% of settled backtest trades; kalshi_dashboard.run_backtest: 80/85/90/95 bands).",
+   "confidence": "conf = max(P(UP), 100 - P(UP)) in percent: the model probability of the favoured side.",
+   "direction": "UP if P(UP) >= 50% else DOWN (ties go UP).",
+   "edge": "raw_edge = conf - side_ask (cents, side_ask = ask of the favoured side); net_edge = raw_edge - ENTRY_COST_CENTS.",
+   "prediction_method": "Driftless log-normal (Brownian) model of spot vs strike. sigma = sample stdev of 1-min log returns of the newest VOL_LOOKBACK_MIN+1 COMPLETED Coinbase 1-min closes (the last, possibly partial, candle is dropped) times VOL_MULT. z = ln(spot/strike) / (sigma * sqrt(max(minutes_left, 1e-4))). P(UP) = Phi(z).",
+   "sizing": "Informational only (no orders): quarter-Kelly on (conf - 2)% vs ask, capped at 5% of BANKROLL, 0 when net_edge <= 0.",
+   "stop": "rec_stop = round(side_ask * sl_pct) per coin (display/paper). Paper settlement: a stop triggers when the lowest observed BID of the held side <= stop; exit at min(bid_lo, stop) (gap modelled at the worse price) and the trade is a loss; otherwise settle at 100/0.",
+   "strategy_timing": "The watcher evaluates every coin every POLL_SECONDS; the FIRST signal per market ticker produces the call; later signals for that ticker are ignored."
+  },
+  "markets": {
+   "BTC": {
+    "kalshi_series": "KXBTC15M",
+    "spot_product": "BTC-USD"
+   },
+   "ETH": {
+    "kalshi_series": "KXETH15M",
+    "spot_product": "ETH-USD"
+   },
+   "SOL": {
+    "kalshi_series": "KXSOL15M",
+    "spot_product": "SOL-USD"
+   },
+   "XRP": {
+    "kalshi_series": "KXXRP15M",
+    "spot_product": "XRP-USD"
+   }
+  },
+  "model_id": "legacy_lognormal_strike_cdf_v1",
+  "strategy_version": "legacy-callout-v1 (kalshi_optimized_final + perp research steps 1-6)",
+  "supported_assets": [
+   "BTC",
+   "ETH",
+   "SOL",
+   "XRP"
+  ]
+ },
+ "verify_with": "py -m kalshi_core.baseline --verify"
+}
