@@ -1,0 +1,5934 @@
+{
+ "boundary_findings": [
+  {
+   "finding": "Public descriptions say the settlement is the mean of the CF RTI sampled once per second over the 60 s before close, but not which 60 instants (close-60..close-1 vs close-59..close) nor how a sample is taken. The default convention is an assumption; verify_settlement_resolution evaluates every candidate against Kalshi's expiration_value.",
+   "id": "WINDOW_CONVENTION_UNVERIFIED"
+  },
+  {
+   "finding": "kalshi_backtest.backtest_coin and kalshi_dashboard.backtest_coin key Coinbase 1-min candles by bucket START: the 'strike' is the close at open+1 min and the 'settlement' is the close at close+1 min, not a 60-s CF RTI average before close. Unchanged in Step 2 (strategy-pinned); documented only.",
+   "id": "BACKTEST_PROXY_MISALIGNED"
+  },
+  {
+   "finding": "kalshi_dashboard.evaluate compares Coinbase spot with the strike over the minutes to close; it does not model the CF RTI, the CF-vs-Coinbase basis, or the variance reduction of 60-s averaging. Unchanged (research target for Step 3+).",
+   "id": "PRODUCTION_MODEL_SPOT_NOT_INDEX"
+  },
+  {
+   "finding": "label_binary_outcomes keeps market.result only; expiration_value (the settled index value) is not stored. The new kalshi_markets parser keeps both.",
+   "id": "LABELER_DROPS_EXPIRATION_VALUE"
+  },
+  {
+   "finding": "The telemetry index_price is Kalshi's perp reference_price, 'CF index scaled per contract', sampled every ~4 s. It is loaded only as PROXY_SOURCE and never used for settlement.",
+   "id": "PERP_REFERENCE_IS_A_PROXY"
+  }
+ ],
+ "engine_version": "settlement_engine_v1",
+ "real_data": {
+  "analysis": null,
+  "excluded_synthetic_files": [],
+  "inventory": {
+   "corrupt_examples": [],
+   "event_ts_max_ms": null,
+   "event_ts_min_ms": null,
+   "issue_kinds": {},
+   "observations_by_index": {},
+   "observations_by_source": {},
+   "resolutions_with_expiration_value": 0,
+   "resolutions_with_result": 0,
+   "store": {
+    "corrupt_records": 0,
+    "issues": 0,
+    "markets": 0,
+    "metadata_conflicts": 0,
+    "observations": 0,
+    "published_averages": 0,
+    "resolutions": 0,
+    "sessions": 0
+   }
+  },
+  "store_files": []
+ },
+ "real_data_status": "INSUFFICIENT_DATA",
+ "reconstruction_version": "reconstruction_v1",
+ "report": "settlement_validation",
+ "synthetic_demonstration": {
+  "caveat": "Official values were generated with the default convention BY CONSTRUCTION; agreement demonstrates the tooling only and is NOT evidence about Kalshi's settlement.",
+  "generated_by": "settlement.synthetic.demo_dataset",
+  "is_real_data": false,
+  "markets": 40,
+  "markets_compared_max_over_policies": 39,
+  "minimum_for_statement": 30,
+  "overlap": {
+   "markets": [
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 18.14999999999418,
+       "history_accumulated_mean": 99276.75,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 99294.9,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.46387096773833036,
+       "history_accumulated_mean": 99352.0077419355,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 99352.47161290323,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 99343.00766666667,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 99343.00766666667,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 99343.00766666667,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 99343.00766666667,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211015",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 10.129999999990105,
+       "history_accumulated_mean": 98624.66,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 98634.79,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.4090322580450447,
+       "history_accumulated_mean": 98562.66612903225,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 98562.2570967742,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 98568.56016666668,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 98568.56016666668,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 98568.56016666668,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 98568.56016666668,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211030",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 10.25,
+       "history_accumulated_mean": 98229.5,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 98219.25,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.26548387098591775,
+       "history_accumulated_mean": 98199.87806451612,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 98200.1435483871,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 98164.33333333333,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 98164.33333333333,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 98164.33333333333,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 98164.33333333333,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211045",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 5,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 3.3800000000046566,
+       "history_accumulated_mean": 99195.36,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 99198.74,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.6758064516179729,
+       "history_accumulated_mean": 99317.7235483871,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 99317.04774193549,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 1.6977738095156383,
+       "history_accumulated_mean": 99341.06366666667,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 99339.36589285715,
+       "live_quality": "INSUFFICIENT_COVERAGE",
+       "live_samples_filled": 56,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": null,
+     "history_final": 99341.06366666667,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 5,
+     "instants": [
+      {
+       "abs_error": 22.830000000001746,
+       "grid_ts_ms": 1790002780000,
+       "history_kind": "OBSERVED_EXACT",
+       "history_source_ts_ms": 1790002780000,
+       "live_kind": "ASOF",
+       "live_source_ts_ms": 1790002779000
+      },
+      {
+       "abs_error": null,
+       "grid_ts_ms": 1790002781000,
+       "history_kind": "OBSERVED_EXACT",
+       "history_source_ts_ms": 1790002781000,
+       "live_kind": "MISSING",
+       "live_source_ts_ms": null
+      },
+      {
+       "abs_error": null,
+       "grid_ts_ms": 1790002782000,
+       "history_kind": "OBSERVED_EXACT",
+       "history_source_ts_ms": 1790002782000,
+       "live_kind": "MISSING",
+       "live_source_ts_ms": null
+      },
+      {
+       "abs_error": null,
+       "grid_ts_ms": 1790002783000,
+       "history_kind": "OBSERVED_EXACT",
+       "history_source_ts_ms": 1790002783000,
+       "live_kind": "MISSING",
+       "live_source_ts_ms": null
+      },
+      {
+       "abs_error": null,
+       "grid_ts_ms": 1790002784000,
+       "history_kind": "OBSERVED_EXACT",
+       "history_source_ts_ms": 1790002784000,
+       "live_kind": "MISSING",
+       "live_source_ts_ms": null
+      }
+     ],
+     "live_final": null,
+     "live_quality": "INSUFFICIENT_COVERAGE",
+     "ticker": "KXBTC15M-26SEP211100",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 28.020000000004075,
+       "history_accumulated_mean": 100334.34,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 100362.36,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.15258064515364822,
+       "history_accumulated_mean": 100332.38516129032,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 100332.53774193548,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 100381.54533333333,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 100381.54533333333,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 100381.54533333333,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 100381.54533333333,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211115",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 21.129999999990105,
+       "history_accumulated_mean": 100964.01,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 100942.88,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 1.0745161290396936,
+       "history_accumulated_mean": 100974.9429032258,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 100973.86838709677,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.008333333331393078,
+       "history_accumulated_mean": 101074.14883333333,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101074.1405,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.008333333331393078,
+     "history_final": 101074.14883333333,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 1,
+     "instants": [
+      {
+       "abs_error": 0.5,
+       "grid_ts_ms": 1790004570000,
+       "history_kind": "OBSERVED_EXACT",
+       "history_source_ts_ms": 1790004570000,
+       "live_kind": "OBSERVED_EXACT",
+       "live_source_ts_ms": 1790004570000
+      }
+     ],
+     "live_final": 101074.1405,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211130",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 32.15999999998894,
+       "history_accumulated_mean": 101657.79,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101625.63,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.4658064516115701,
+       "history_accumulated_mean": 101776.66451612904,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101777.13032258065,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101834.10816666667,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101834.10816666667,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101834.10816666667,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101834.10816666667,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211145",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 21.029999999998836,
+       "history_accumulated_mean": 101362.23,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101341.2,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.18580645162728615,
+       "history_accumulated_mean": 101367.13193548386,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101367.31774193549,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101428.12683333334,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101428.12683333334,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101428.12683333334,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101428.12683333334,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211200",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 6.25,
+       "history_accumulated_mean": 101142.76,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101136.51,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.997419354840531,
+       "history_accumulated_mean": 101169.62096774194,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101168.6235483871,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101159.38066666666,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101159.38066666666,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101159.38066666666,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101159.38066666666,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211215",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 11.770000000004075,
+       "history_accumulated_mean": 101817.25,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101805.48,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.7548387096758233,
+       "history_accumulated_mean": 101831.35935483871,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101830.60451612904,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101871.92833333333,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101871.92833333333,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101871.92833333333,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101871.92833333333,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211230",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 31.629999999990105,
+       "history_accumulated_mean": 101898.6,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101930.23,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.029354838698054664,
+       "history_accumulated_mean": 101933.55483870968,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101933.58419354838,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101970.76183333334,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101970.76183333334,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101970.76183333334,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101970.76183333334,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211245",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 2.860000000000582,
+       "history_accumulated_mean": 103318.26,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 103321.12,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.28064516129961703,
+       "history_accumulated_mean": 103285.38806451613,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 103285.66870967743,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 103285.406,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 103285.406,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 103285.406,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 103285.406,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211300",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 27.54000000000815,
+       "history_accumulated_mean": 103489.07,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 103461.53,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.6364516128960531,
+       "history_accumulated_mean": 103417.00741935484,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 103416.37096774194,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 103336.22416666667,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 103336.22416666667,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 103336.22416666667,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 103336.22416666667,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211315",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 26.44000000000233,
+       "history_accumulated_mean": 103519.22,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 103545.66,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.39548387097602244,
+       "history_accumulated_mean": 103455.23064516128,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 103455.62612903226,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 103446.56766666665,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 103446.56766666665,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 103446.56766666665,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 103446.56766666665,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211330",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 32.61999999999534,
+       "history_accumulated_mean": 104137.48,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 104104.86,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.03999999999359716,
+       "history_accumulated_mean": 104196.6393548387,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 104196.5993548387,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 104257.89033333333,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 104257.89033333333,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 104257.89033333333,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 104257.89033333333,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211345",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 11.419999999998254,
+       "history_accumulated_mean": 105129.06,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 105117.64,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.639032258070074,
+       "history_accumulated_mean": 105232.95322580644,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 105233.59225806451,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 105241.44900000001,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 105241.44900000001,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 105241.44900000001,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 105241.44900000001,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211400",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 10.389999999999418,
+       "history_accumulated_mean": 105228.57,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 105238.96,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 1.1645161290362012,
+       "history_accumulated_mean": 105279.1670967742,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 105278.00258064516,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 105287.29566666667,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 105287.29566666667,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 105287.29566666667,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 105287.29566666667,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211415",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 20.330000000001746,
+       "history_accumulated_mean": 106902.48,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 106922.81,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.3206451612932142,
+       "history_accumulated_mean": 106862.83967741935,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 106862.51903225806,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 106818.75266666667,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 106818.75266666667,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 106818.75266666667,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 106818.75266666667,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211430",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 6.779999999998836,
+       "history_accumulated_mean": 106367.59,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 106374.37,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.39935483870794997,
+       "history_accumulated_mean": 106360.81451612903,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 106361.21387096774,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 106415.47783333334,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 106415.47783333334,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 106415.47783333334,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 106415.47783333334,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211445",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 0.6599999999889405,
+       "history_accumulated_mean": 105842.77,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 105843.43,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.2080645161186112,
+       "history_accumulated_mean": 105878.44483870968,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 105878.6529032258,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 105960.19333333333,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 105960.19333333333,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 105960.19333333333,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 105960.19333333333,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211500",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 11.039999999993597,
+       "history_accumulated_mean": 105476.98,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 105465.94,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.4167741935525555,
+       "history_accumulated_mean": 105447.46677419356,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 105447.88354838711,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 105416.96116666666,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 105416.96116666666,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 105416.96116666666,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 105416.96116666666,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211515",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 28.19000000000233,
+       "history_accumulated_mean": 105237.38,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 105209.19,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.2367741935304366,
+       "history_accumulated_mean": 105198.47774193548,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 105198.24096774195,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 105193.26816666666,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 105193.26816666666,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 105193.26816666666,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 105193.26816666666,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211530",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 34.0,
+       "history_accumulated_mean": 104721.86,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 104687.86,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.7600000000093132,
+       "history_accumulated_mean": 104684.94322580646,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 104684.18322580645,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 104722.664,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 104722.664,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 104722.664,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 104722.664,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211545",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 35.91000000000349,
+       "history_accumulated_mean": 104006.61,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 104042.52,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.7754838709661271,
+       "history_accumulated_mean": 104037.69774193548,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 104036.92225806451,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 104084.86783333334,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 104084.86783333334,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 104084.86783333334,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 104084.86783333334,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211600",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 17.110000000000582,
+       "history_accumulated_mean": 104517.66,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 104500.55,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.49677419355430175,
+       "history_accumulated_mean": 104523.00612903226,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 104522.50935483871,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 104515.90133333333,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 104515.90133333333,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 104515.90133333333,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 104515.90133333333,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211615",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 34.470000000001164,
+       "history_accumulated_mean": 103998.14,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 104032.61,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.406129032257013,
+       "history_accumulated_mean": 104003.82387096774,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 104004.23,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 104046.3055,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 104046.3055,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 104046.3055,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 104046.3055,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211630",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 32.74000000000524,
+       "history_accumulated_mean": 103407.58,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 103440.32,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.23774193547433242,
+       "history_accumulated_mean": 103500.90903225807,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 103501.14677419355,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 103567.6195,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 103567.6195,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 103567.6195,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 103567.6195,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211645",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 19.35000000000582,
+       "history_accumulated_mean": 103222.48,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 103241.83,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.17967741934990045,
+       "history_accumulated_mean": 103212.20774193548,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 103212.38741935483,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 103217.87049999999,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 103217.87049999999,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 103217.87049999999,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 103217.87049999999,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211700",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 33.830000000001746,
+       "history_accumulated_mean": 102630.48,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 102596.65,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.9287096774205565,
+       "history_accumulated_mean": 102574.55096774193,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 102573.62225806451,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 102513.81916666667,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 102513.81916666667,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 102513.81916666667,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 102513.81916666667,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211715",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 4.929999999993015,
+       "history_accumulated_mean": 101492.14,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101487.21,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.4783870967803523,
+       "history_accumulated_mean": 101565.43193548388,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101564.9535483871,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101640.56566666668,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101640.56566666668,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101640.56566666668,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101640.56566666668,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211730",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 32.679999999993015,
+       "history_accumulated_mean": 101795.53,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101762.85,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.050967741932254285,
+       "history_accumulated_mean": 101801.03516129032,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101800.98419354839,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101796.38650000001,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101796.38650000001,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101796.38650000001,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101796.38650000001,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211745",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 15.610000000000582,
+       "history_accumulated_mean": 101367.97,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101383.58,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.43967741934466176,
+       "history_accumulated_mean": 101357.91612903225,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101357.4764516129,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101340.18266666666,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101340.18266666666,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101340.18266666666,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101340.18266666666,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211800",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 22.04000000000815,
+       "history_accumulated_mean": 101514.2,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101536.24,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 1.125483870971948,
+       "history_accumulated_mean": 101442.17612903226,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101441.05064516129,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101454.95733333334,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101454.95733333334,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101454.95733333334,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101454.95733333334,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211815",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 4.5899999999965075,
+       "history_accumulated_mean": 101224.59,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101220.0,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 1.0693548387207557,
+       "history_accumulated_mean": 101211.08096774193,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101212.15032258065,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101172.35666666667,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101172.35666666667,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101172.35666666667,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101172.35666666667,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211830",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 31.80999999999767,
+       "history_accumulated_mean": 101393.38,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101425.19,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.43677419354207814,
+       "history_accumulated_mean": 101317.36129032259,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101317.79806451613,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101308.56916666667,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101308.56916666667,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101308.56916666667,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101308.56916666667,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211845",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 8.69999999999709,
+       "history_accumulated_mean": 101652.82,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101661.52,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.4187096774112433,
+       "history_accumulated_mean": 101561.83967741935,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101562.25838709676,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101584.60299999999,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101584.60299999999,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101584.60299999999,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101584.60299999999,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211900",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 14.25,
+       "history_accumulated_mean": 101742.27,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101728.02,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 1.1241935483849375,
+       "history_accumulated_mean": 101660.98419354839,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101659.86,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101614.1195,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101614.1195,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101614.1195,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101614.1195,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211915",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 21.19000000000233,
+       "history_accumulated_mean": 101628.77,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101649.96,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.05322580644860864,
+       "history_accumulated_mean": 101603.16032258065,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101603.2135483871,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101631.00566666666,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101631.00566666666,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101631.00566666666,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101631.00566666666,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211930",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 11.259999999994761,
+       "history_accumulated_mean": 101959.76,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101948.5,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 1.0164516129007097,
+       "history_accumulated_mean": 101988.74548387097,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101989.76193548387,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101991.80083333333,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101991.80083333333,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101991.80083333333,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101991.80083333333,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP211945",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    },
+    {
+     "boundary_disagreements": 0,
+     "checkpoints": [
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 600
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 480
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 360
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 300
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 240
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 180
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 120
+      },
+      {
+       "abs_diff": null,
+       "history_accumulated_mean": null,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 0,
+       "live_accumulated_mean": null,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 0,
+       "seconds_remaining": 90
+      },
+      {
+       "abs_diff": 31.24000000000524,
+       "history_accumulated_mean": 101635.74,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 1,
+       "live_accumulated_mean": 101604.5,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 1,
+       "seconds_remaining": 60
+      },
+      {
+       "abs_diff": 0.37225806452624965,
+       "history_accumulated_mean": 101692.22161290323,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 31,
+       "live_accumulated_mean": 101691.8493548387,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 31,
+       "seconds_remaining": 30
+      },
+      {
+       "abs_diff": 0.0,
+       "history_accumulated_mean": 101672.86850000001,
+       "history_quality": "HEALTHY",
+       "history_samples_filled": 60,
+       "live_accumulated_mean": 101672.86850000001,
+       "live_quality": "HEALTHY",
+       "live_samples_filled": 60,
+       "seconds_remaining": 0
+      }
+     ],
+     "final_abs_diff": 0.0,
+     "history_final": 101672.86850000001,
+     "history_quality": "HEALTHY",
+     "instant_disagreements": 0,
+     "instants": [],
+     "live_final": 101672.86850000001,
+     "live_quality": "HEALTHY",
+     "ticker": "KXBTC15M-26SEP212000",
+     "window_policy": "cf_rti_60s_start_incl_asof_v1"
+    }
+   ],
+   "points": {
+    "common": 36146,
+    "conflicts_within_history": 0,
+    "conflicts_within_live": 0,
+    "exact_matches": 36145,
+    "extra_examples": [],
+    "extra_in_live": 0,
+    "history_points": 36151,
+    "live_points": 36146,
+    "max_abs_error": 0.5,
+    "mean_abs_error": 1.3832789243623083e-05,
+    "median_abs_error": 0.0,
+    "mismatches": 1,
+    "missing_examples": [
+     [
+      "BRTI",
+      1790002780000
+     ],
+     [
+      "BRTI",
+      1790002781000
+     ],
+     [
+      "BRTI",
+      1790002782000
+     ],
+     [
+      "BRTI",
+      1790002783000
+     ],
+     [
+      "BRTI",
+      1790002784000
+     ]
+    ],
+    "missing_in_live": 5,
+    "tolerance": {
+     "abs": 1e-06,
+     "rel": 0.0
+    },
+    "tolerance_matches": 36145,
+    "worst_mismatches": [
+     {
+      "abs_error": 0.5,
+      "event_ts_ms": 1790004570000,
+      "index_id": "BRTI"
+     }
+    ]
+   },
+   "published_vs_live": {
+    "compared": 39,
+    "markets": 40,
+    "max_abs_error": 3.333407221361995e-07,
+    "mean_abs_error": 2.393170665854063e-07,
+    "median_abs_error": 3.333261702209711e-07,
+    "rows": [
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790000100000,
+      "published_value": 99343.007667,
+      "quality": "HEALTHY",
+      "reconstructed_value": 99343.00766666667,
+      "ticker": "KXBTC15M-26SEP211015"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790001000000,
+      "published_value": 98568.560167,
+      "quality": "HEALTHY",
+      "reconstructed_value": 98568.56016666668,
+      "ticker": "KXBTC15M-26SEP211030"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790001900000,
+      "published_value": 98164.333333,
+      "quality": "HEALTHY",
+      "reconstructed_value": 98164.33333333333,
+      "ticker": "KXBTC15M-26SEP211045"
+     },
+     {
+      "abs_diff": null,
+      "published_event_ts_ms": 1790002800000,
+      "published_value": 99341.063667,
+      "quality": "INSUFFICIENT_COVERAGE",
+      "reconstructed_value": null,
+      "ticker": "KXBTC15M-26SEP211100"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790003700000,
+      "published_value": 100381.545333,
+      "quality": "HEALTHY",
+      "reconstructed_value": 100381.54533333333,
+      "ticker": "KXBTC15M-26SEP211115"
+     },
+     {
+      "abs_diff": 0.0,
+      "published_event_ts_ms": 1790004600000,
+      "published_value": 101074.1405,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101074.1405,
+      "ticker": "KXBTC15M-26SEP211130"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790005500000,
+      "published_value": 101834.108167,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101834.10816666667,
+      "ticker": "KXBTC15M-26SEP211145"
+     },
+     {
+      "abs_diff": 3.333407221361995e-07,
+      "published_event_ts_ms": 1790006400000,
+      "published_value": 101428.126833,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101428.12683333334,
+      "ticker": "KXBTC15M-26SEP211200"
+     },
+     {
+      "abs_diff": 3.333407221361995e-07,
+      "published_event_ts_ms": 1790007300000,
+      "published_value": 101159.380667,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101159.38066666666,
+      "ticker": "KXBTC15M-26SEP211215"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790008200000,
+      "published_value": 101871.928333,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101871.92833333333,
+      "ticker": "KXBTC15M-26SEP211230"
+     },
+     {
+      "abs_diff": 3.333407221361995e-07,
+      "published_event_ts_ms": 1790009100000,
+      "published_value": 101970.761833,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101970.76183333334,
+      "ticker": "KXBTC15M-26SEP211245"
+     },
+     {
+      "abs_diff": 0.0,
+      "published_event_ts_ms": 1790010000000,
+      "published_value": 103285.406,
+      "quality": "HEALTHY",
+      "reconstructed_value": 103285.406,
+      "ticker": "KXBTC15M-26SEP211300"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790010900000,
+      "published_value": 103336.224167,
+      "quality": "HEALTHY",
+      "reconstructed_value": 103336.22416666667,
+      "ticker": "KXBTC15M-26SEP211315"
+     },
+     {
+      "abs_diff": 3.333407221361995e-07,
+      "published_event_ts_ms": 1790011800000,
+      "published_value": 103446.567667,
+      "quality": "HEALTHY",
+      "reconstructed_value": 103446.56766666665,
+      "ticker": "KXBTC15M-26SEP211330"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790012700000,
+      "published_value": 104257.890333,
+      "quality": "HEALTHY",
+      "reconstructed_value": 104257.89033333333,
+      "ticker": "KXBTC15M-26SEP211345"
+     },
+     {
+      "abs_diff": 1.4551915228366852e-11,
+      "published_event_ts_ms": 1790013600000,
+      "published_value": 105241.449,
+      "quality": "HEALTHY",
+      "reconstructed_value": 105241.44900000001,
+      "ticker": "KXBTC15M-26SEP211400"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790014500000,
+      "published_value": 105287.295667,
+      "quality": "HEALTHY",
+      "reconstructed_value": 105287.29566666667,
+      "ticker": "KXBTC15M-26SEP211415"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790015400000,
+      "published_value": 106818.752667,
+      "quality": "HEALTHY",
+      "reconstructed_value": 106818.75266666667,
+      "ticker": "KXBTC15M-26SEP211430"
+     },
+     {
+      "abs_diff": 3.333407221361995e-07,
+      "published_event_ts_ms": 1790016300000,
+      "published_value": 106415.477833,
+      "quality": "HEALTHY",
+      "reconstructed_value": 106415.47783333334,
+      "ticker": "KXBTC15M-26SEP211445"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790017200000,
+      "published_value": 105960.193333,
+      "quality": "HEALTHY",
+      "reconstructed_value": 105960.19333333333,
+      "ticker": "KXBTC15M-26SEP211500"
+     },
+     {
+      "abs_diff": 3.333407221361995e-07,
+      "published_event_ts_ms": 1790018100000,
+      "published_value": 105416.961167,
+      "quality": "HEALTHY",
+      "reconstructed_value": 105416.96116666666,
+      "ticker": "KXBTC15M-26SEP211515"
+     },
+     {
+      "abs_diff": 3.333407221361995e-07,
+      "published_event_ts_ms": 1790019000000,
+      "published_value": 105193.268167,
+      "quality": "HEALTHY",
+      "reconstructed_value": 105193.26816666666,
+      "ticker": "KXBTC15M-26SEP211530"
+     },
+     {
+      "abs_diff": 0.0,
+      "published_event_ts_ms": 1790019900000,
+      "published_value": 104722.664,
+      "quality": "HEALTHY",
+      "reconstructed_value": 104722.664,
+      "ticker": "KXBTC15M-26SEP211545"
+     },
+     {
+      "abs_diff": 3.333407221361995e-07,
+      "published_event_ts_ms": 1790020800000,
+      "published_value": 104084.867833,
+      "quality": "HEALTHY",
+      "reconstructed_value": 104084.86783333334,
+      "ticker": "KXBTC15M-26SEP211600"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790021700000,
+      "published_value": 104515.901333,
+      "quality": "HEALTHY",
+      "reconstructed_value": 104515.90133333333,
+      "ticker": "KXBTC15M-26SEP211615"
+     },
+     {
+      "abs_diff": 0.0,
+      "published_event_ts_ms": 1790022600000,
+      "published_value": 104046.3055,
+      "quality": "HEALTHY",
+      "reconstructed_value": 104046.3055,
+      "ticker": "KXBTC15M-26SEP211630"
+     },
+     {
+      "abs_diff": 0.0,
+      "published_event_ts_ms": 1790023500000,
+      "published_value": 103567.6195,
+      "quality": "HEALTHY",
+      "reconstructed_value": 103567.6195,
+      "ticker": "KXBTC15M-26SEP211645"
+     },
+     {
+      "abs_diff": 1.4551915228366852e-11,
+      "published_event_ts_ms": 1790024400000,
+      "published_value": 103217.8705,
+      "quality": "HEALTHY",
+      "reconstructed_value": 103217.87049999999,
+      "ticker": "KXBTC15M-26SEP211700"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790025300000,
+      "published_value": 102513.819167,
+      "quality": "HEALTHY",
+      "reconstructed_value": 102513.81916666667,
+      "ticker": "KXBTC15M-26SEP211715"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790026200000,
+      "published_value": 101640.565667,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101640.56566666668,
+      "ticker": "KXBTC15M-26SEP211730"
+     },
+     {
+      "abs_diff": 1.4551915228366852e-11,
+      "published_event_ts_ms": 1790027100000,
+      "published_value": 101796.3865,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101796.38650000001,
+      "ticker": "KXBTC15M-26SEP211745"
+     },
+     {
+      "abs_diff": 3.333407221361995e-07,
+      "published_event_ts_ms": 1790028000000,
+      "published_value": 101340.182667,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101340.18266666666,
+      "ticker": "KXBTC15M-26SEP211800"
+     },
+     {
+      "abs_diff": 3.333407221361995e-07,
+      "published_event_ts_ms": 1790028900000,
+      "published_value": 101454.957333,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101454.95733333334,
+      "ticker": "KXBTC15M-26SEP211815"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790029800000,
+      "published_value": 101172.356667,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101172.35666666667,
+      "ticker": "KXBTC15M-26SEP211830"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790030700000,
+      "published_value": 101308.569167,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101308.56916666667,
+      "ticker": "KXBTC15M-26SEP211845"
+     },
+     {
+      "abs_diff": 1.4551915228366852e-11,
+      "published_event_ts_ms": 1790031600000,
+      "published_value": 101584.603,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101584.60299999999,
+      "ticker": "KXBTC15M-26SEP211900"
+     },
+     {
+      "abs_diff": 0.0,
+      "published_event_ts_ms": 1790032500000,
+      "published_value": 101614.1195,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101614.1195,
+      "ticker": "KXBTC15M-26SEP211915"
+     },
+     {
+      "abs_diff": 3.333407221361995e-07,
+      "published_event_ts_ms": 1790033400000,
+      "published_value": 101631.005667,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101631.00566666666,
+      "ticker": "KXBTC15M-26SEP211930"
+     },
+     {
+      "abs_diff": 3.333261702209711e-07,
+      "published_event_ts_ms": 1790034300000,
+      "published_value": 101991.800833,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101991.80083333333,
+      "ticker": "KXBTC15M-26SEP211945"
+     },
+     {
+      "abs_diff": 1.4551915228366852e-11,
+      "published_event_ts_ms": 1790035200000,
+      "published_value": 101672.8685,
+      "quality": "HEALTHY",
+      "reconstructed_value": 101672.86850000001,
+      "ticker": "KXBTC15M-26SEP212000"
+     }
+    ]
+   },
+   "summary": {
+    "finals_compared": 39,
+    "markets_compared": 40,
+    "markets_with_boundary_disagreements": 1,
+    "max_final_abs_diff": 0.008333333331393078,
+    "status": "COMPARED"
+   },
+   "window_policy": "cf_rti_60s_start_incl_asof_v1"
+  },
+  "planted_defects": {
+   "history_value_altered_market": "KXBTC15M-26SEP211130",
+   "history_value_altered_ts_ms": 1790004570000,
+   "live_disconnect_market": "KXBTC15M-26SEP211100"
+  },
+  "reconstruction_policy": "strict_v1",
+  "resolution": {
+   "combined": {
+    "convention_verdict": {
+     "best_policies": [
+      "cf_rti_60s_start_incl_asof_v1",
+      "cf_rti_60s_start_incl_bucket_v1",
+      "cf_rti_60s_start_incl_exact_v1"
+     ],
+     "markets_with_expiration_value": 39,
+     "note": "these conventions are indistinguishable on this data (e.g. exact 1-s feeds)",
+     "status": "EVALUATED_TIED",
+     "within_tolerance_by_policy": {
+      "cf_rti_60s_end_incl_asof_v1": 0,
+      "cf_rti_60s_start_incl_asof_v1": 39,
+      "cf_rti_60s_start_incl_bucket_v1": 39,
+      "cf_rti_60s_start_incl_exact_v1": 39
+     }
+    },
+    "disagreement_rows": [],
+    "failure_rows": [
+     {
+      "category": "NO_RECONSTRUCTION",
+      "coverage": 0.9833333333333333,
+      "quality": "CONFLICT",
+      "ticker": "KXBTC15M-26SEP211130",
+      "window_policy": "cf_rti_60s_start_incl_asof_v1"
+     },
+     {
+      "category": "NO_RECONSTRUCTION",
+      "coverage": 0.9833333333333333,
+      "quality": "CONFLICT",
+      "ticker": "KXBTC15M-26SEP211130",
+      "window_policy": "cf_rti_60s_end_incl_asof_v1"
+     },
+     {
+      "category": "NO_RECONSTRUCTION",
+      "coverage": 0.9833333333333333,
+      "quality": "CONFLICT",
+      "ticker": "KXBTC15M-26SEP211130",
+      "window_policy": "cf_rti_60s_start_incl_exact_v1"
+     },
+     {
+      "category": "NO_RECONSTRUCTION",
+      "coverage": 0.9833333333333333,
+      "quality": "CONFLICT",
+      "ticker": "KXBTC15M-26SEP211130",
+      "window_policy": "cf_rti_60s_start_incl_bucket_v1"
+     }
+    ],
+    "policies": {
+     "cf_rti_60s_end_incl_asof_v1": {
+      "agree": 39,
+      "categories": {
+       "AGREE": 39,
+       "NO_RECONSTRUCTION": 1
+      },
+      "compared": 39,
+      "disagree": 0,
+      "disagreements": [],
+      "expiration_value": {
+       "compared": 39,
+       "exact": 0,
+       "max_abs_diff": 6.017999666670221,
+       "mean_abs_diff": 2.1953505042732173,
+       "median_abs_diff": 2.069833000015933,
+       "tolerance": 0.01,
+       "within_tolerance": 0
+      },
+      "insufficient_coverage": 0,
+      "markets": 40,
+      "missing_data": 0,
+      "quality_counts": {
+       "CONFLICT": 1,
+       "HEALTHY": 39
+      },
+      "schema_mismatch": 0,
+      "with_adequate_data": 39,
+      "with_official_result": 40
+     },
+     "cf_rti_60s_start_incl_asof_v1": {
+      "agree": 39,
+      "categories": {
+       "AGREE": 39,
+       "NO_RECONSTRUCTION": 1
+      },
+      "compared": 39,
+      "disagree": 0,
+      "disagreements": [],
+      "expiration_value": {
+       "compared": 39,
+       "exact": 5,
+       "max_abs_diff": 3.333407221361995e-07,
+       "mean_abs_diff": 2.4786389146286706e-07,
+       "median_abs_diff": 3.333261702209711e-07,
+       "tolerance": 0.01,
+       "within_tolerance": 39
+      },
+      "insufficient_coverage": 0,
+      "markets": 40,
+      "missing_data": 0,
+      "quality_counts": {
+       "CONFLICT": 1,
+       "HEALTHY": 39
+      },
+      "schema_mismatch": 0,
+      "with_adequate_data": 39,
+      "with_official_result": 40
+     },
+     "cf_rti_60s_start_incl_bucket_v1": {
+      "agree": 39,
+      "categories": {
+       "AGREE": 39,
+       "NO_RECONSTRUCTION": 1
+      },
+      "compared": 39,
+      "disagree": 0,
+      "disagreements": [],
+      "expiration_value": {
+       "compared": 39,
+       "exact": 5,
+       "max_abs_diff": 3.333407221361995e-07,
+       "mean_abs_diff": 2.4786389146286706e-07,
+       "median_abs_diff": 3.333261702209711e-07,
+       "tolerance": 0.01,
+       "within_tolerance": 39
+      },
+      "insufficient_coverage": 0,
+      "markets": 40,
+      "missing_data": 0,
+      "quality_counts": {
+       "CONFLICT": 1,
+       "HEALTHY": 39
+      },
+      "schema_mismatch": 0,
+      "with_adequate_data": 39,
+      "with_official_result": 40
+     },
+     "cf_rti_60s_start_incl_exact_v1": {
+      "agree": 39,
+      "categories": {
+       "AGREE": 39,
+       "NO_RECONSTRUCTION": 1
+      },
+      "compared": 39,
+      "disagree": 0,
+      "disagreements": [],
+      "expiration_value": {
+       "compared": 39,
+       "exact": 5,
+       "max_abs_diff": 3.333407221361995e-07,
+       "mean_abs_diff": 2.4786389146286706e-07,
+       "median_abs_diff": 3.333261702209711e-07,
+       "tolerance": 0.01,
+       "within_tolerance": 39
+      },
+      "insufficient_coverage": 0,
+      "markets": 40,
+      "missing_data": 0,
+      "quality_counts": {
+       "CONFLICT": 1,
+       "HEALTHY": 39
+      },
+      "schema_mismatch": 0,
+      "with_adequate_data": 39,
+      "with_official_result": 40
+     }
+    }
+   },
+   "history_only": {
+    "convention_verdict": {
+     "best_policies": [
+      "cf_rti_60s_start_incl_asof_v1",
+      "cf_rti_60s_start_incl_bucket_v1",
+      "cf_rti_60s_start_incl_exact_v1"
+     ],
+     "markets_with_expiration_value": 40,
+     "note": "these conventions are indistinguishable on this data (e.g. exact 1-s feeds)",
+     "status": "EVALUATED_TIED",
+     "within_tolerance_by_policy": {
+      "cf_rti_60s_end_incl_asof_v1": 0,
+      "cf_rti_60s_start_incl_asof_v1": 40,
+      "cf_rti_60s_start_incl_bucket_v1": 40,
+      "cf_rti_60s_start_incl_exact_v1": 40
+     }
+    },
+    "disagreement_rows": [],
+    "failure_rows": [],
+    "policies": {
+     "cf_rti_60s_end_incl_asof_v1": {
+      "agree": 40,
+      "categories": {
+       "AGREE": 40
+      },
+      "compared": 40,
+      "disagree": 0,
+      "disagreements": [],
+      "expiration_value": {
+       "compared": 40,
+       "exact": 0,
+       "max_abs_diff": 6.017999666670221,
+       "mean_abs_diff": 2.286262574999637,
+       "median_abs_diff": 2.1260833333435585,
+       "tolerance": 0.01,
+       "within_tolerance": 0
+      },
+      "insufficient_coverage": 0,
+      "markets": 40,
+      "missing_data": 0,
+      "quality_counts": {
+       "HEALTHY": 40
+      },
+      "schema_mismatch": 0,
+      "with_adequate_data": 40,
+      "with_official_result": 40
+     },
+     "cf_rti_60s_start_incl_asof_v1": {
+      "agree": 40,
+      "categories": {
+       "AGREE": 40
+      },
+      "compared": 40,
+      "disagree": 0,
+      "disagreements": [],
+      "expiration_value": {
+       "compared": 40,
+       "exact": 5,
+       "max_abs_diff": 0.008333333331393078,
+       "mean_abs_diff": 0.00020857500057900325,
+       "median_abs_diff": 3.333261702209711e-07,
+       "tolerance": 0.01,
+       "within_tolerance": 40
+      },
+      "insufficient_coverage": 0,
+      "markets": 40,
+      "missing_data": 0,
+      "quality_counts": {
+       "HEALTHY": 40
+      },
+      "schema_mismatch": 0,
+      "with_adequate_data": 40,
+      "with_official_result": 40
+     },
+     "cf_rti_60s_start_incl_bucket_v1": {
+      "agree": 40,
+      "categories": {
+       "AGREE": 40
+      },
+      "compared": 40,
+      "disagree": 0,
+      "disagreements": [],
+      "expiration_value": {
+       "compared": 40,
+       "exact": 5,
+       "max_abs_diff": 0.008333333331393078,
+       "mean_abs_diff": 0.00020857500057900325,
+       "median_abs_diff": 3.333261702209711e-07,
+       "tolerance": 0.01,
+       "within_tolerance": 40
+      },
+      "insufficient_coverage": 0,
+      "markets": 40,
+      "missing_data": 0,
+      "quality_counts": {
+       "HEALTHY": 40
+      },
+      "schema_mismatch": 0,
+      "with_adequate_data": 40,
+      "with_official_result": 40
+     },
+     "cf_rti_60s_start_incl_exact_v1": {
+      "agree": 40,
+      "categories": {
+       "AGREE": 40
+      },
+      "compared": 40,
+      "disagree": 0,
+      "disagreements": [],
+      "expiration_value": {
+       "compared": 40,
+       "exact": 5,
+       "max_abs_diff": 0.008333333331393078,
+       "mean_abs_diff": 0.00020857500057900325,
+       "median_abs_diff": 3.333261702209711e-07,
+       "tolerance": 0.01,
+       "within_tolerance": 40
+      },
+      "insufficient_coverage": 0,
+      "markets": 40,
+      "missing_data": 0,
+      "quality_counts": {
+       "HEALTHY": 40
+      },
+      "schema_mismatch": 0,
+      "with_adequate_data": 40,
+      "with_official_result": 40
+     }
+    }
+   },
+   "live_only": {
+    "convention_verdict": {
+     "best_policies": [
+      "cf_rti_60s_start_incl_asof_v1",
+      "cf_rti_60s_start_incl_bucket_v1",
+      "cf_rti_60s_start_incl_exact_v1"
+     ],
+     "markets_with_expiration_value": 39,
+     "note": "these conventions are indistinguishable on this data (e.g. exact 1-s feeds)",
+     "status": "EVALUATED_TIED",
+     "within_tolerance_by_policy": {
+      "cf_rti_60s_end_incl_asof_v1": 0,
+      "cf_rti_60s_start_incl_asof_v1": 39,
+      "cf_rti_60s_start_incl_bucket_v1": 39,
+      "cf_rti_60s_start_incl_exact_v1": 39
+     }
+    },
+    "disagreement_rows": [],
+    "failure_rows": [
+     {
+      "category": "NO_RECONSTRUCTION",
+      "coverage": 0.9333333333333333,
+      "quality": "INSUFFICIENT_COVERAGE",
+      "ticker": "KXBTC15M-26SEP211100",
+      "window_policy": "cf_rti_60s_start_incl_asof_v1"
+     },
+     {
+      "category": "NO_RECONSTRUCTION",
+      "coverage": 0.9333333333333333,
+      "quality": "INSUFFICIENT_COVERAGE",
+      "ticker": "KXBTC15M-26SEP211100",
+      "window_policy": "cf_rti_60s_end_incl_asof_v1"
+     },
+     {
+      "category": "NO_RECONSTRUCTION",
+      "coverage": 0.9166666666666666,
+      "quality": "INSUFFICIENT_COVERAGE",
+      "ticker": "KXBTC15M-26SEP211100",
+      "window_policy": "cf_rti_60s_start_incl_exact_v1"
+     },
+     {
+      "category": "NO_RECONSTRUCTION",
+      "coverage": 0.9166666666666666,
+      "quality": "INSUFFICIENT_COVERAGE",
+      "ticker": "KXBTC15M-26SEP211100",
+      "window_policy": "cf_rti_60s_start_incl_bucket_v1"
+     }
+    ],
+    "policies": {
+     "cf_rti_60s_end_incl_asof_v1": {
+      "agree": 39,
+      "categories": {
+       "AGREE": 39,
+       "NO_RECONSTRUCTION": 1
+      },
+      "compared": 39,
+      "disagree": 0,
+      "disagreements": [],
+      "expiration_value": {
+       "compared": 39,
+       "exact": 0,
+       "max_abs_diff": 6.017999666670221,
+       "mean_abs_diff": 2.2444359829055314,
+       "median_abs_diff": 2.069833000015933,
+       "tolerance": 0.01,
+       "within_tolerance": 0
+      },
+      "insufficient_coverage": 1,
+      "markets": 40,
+      "missing_data": 0,
+      "quality_counts": {
+       "HEALTHY": 39,
+       "INSUFFICIENT_COVERAGE": 1
+      },
+      "schema_mismatch": 0,
+      "with_adequate_data": 39,
+      "with_official_result": 40
+     },
+     "cf_rti_60s_start_incl_asof_v1": {
+      "agree": 39,
+      "categories": {
+       "AGREE": 39,
+       "NO_RECONSTRUCTION": 1
+      },
+      "compared": 39,
+      "disagree": 0,
+      "disagreements": [],
+      "expiration_value": {
+       "compared": 39,
+       "exact": 6,
+       "max_abs_diff": 3.333407221361995e-07,
+       "mean_abs_diff": 2.393170665854063e-07,
+       "median_abs_diff": 3.333261702209711e-07,
+       "tolerance": 0.01,
+       "within_tolerance": 39
+      },
+      "insufficient_coverage": 1,
+      "markets": 40,
+      "missing_data": 0,
+      "quality_counts": {
+       "HEALTHY": 39,
+       "INSUFFICIENT_COVERAGE": 1
+      },
+      "schema_mismatch": 0,
+      "with_adequate_data": 39,
+      "with_official_result": 40
+     },
+     "cf_rti_60s_start_incl_bucket_v1": {
+      "agree": 39,
+      "categories": {
+       "AGREE": 39,
+       "NO_RECONSTRUCTION": 1
+      },
+      "compared": 39,
+      "disagree": 0,
+      "disagreements": [],
+      "expiration_value": {
+       "compared": 39,
+       "exact": 6,
+       "max_abs_diff": 3.333407221361995e-07,
+       "mean_abs_diff": 2.393170665854063e-07,
+       "median_abs_diff": 3.333261702209711e-07,
+       "tolerance": 0.01,
+       "within_tolerance": 39
+      },
+      "insufficient_coverage": 1,
+      "markets": 40,
+      "missing_data": 0,
+      "quality_counts": {
+       "HEALTHY": 39,
+       "INSUFFICIENT_COVERAGE": 1
+      },
+      "schema_mismatch": 0,
+      "with_adequate_data": 39,
+      "with_official_result": 40
+     },
+     "cf_rti_60s_start_incl_exact_v1": {
+      "agree": 39,
+      "categories": {
+       "AGREE": 39,
+       "NO_RECONSTRUCTION": 1
+      },
+      "compared": 39,
+      "disagree": 0,
+      "disagreements": [],
+      "expiration_value": {
+       "compared": 39,
+       "exact": 6,
+       "max_abs_diff": 3.333407221361995e-07,
+       "mean_abs_diff": 2.393170665854063e-07,
+       "median_abs_diff": 3.333261702209711e-07,
+       "tolerance": 0.01,
+       "within_tolerance": 39
+      },
+      "insufficient_coverage": 1,
+      "markets": 40,
+      "missing_data": 0,
+      "quality_counts": {
+       "HEALTHY": 39,
+       "INSUFFICIENT_COVERAGE": 1
+      },
+      "schema_mismatch": 0,
+      "with_adequate_data": 39,
+      "with_official_result": 40
+     }
+    }
+   }
+  },
+  "status": "EVALUATED"
+ }
+}

@@ -3,7 +3,7 @@ SETUP
 LOCAL-FIRST (Step 1 baseline) — start here. No Discord, no credentials, no orders.
   py run_local.py            # watcher + local dashboard http://127.0.0.1:8000, structured logs
   py run_local.py --check    # offline self-check (config + strategy fingerprints)
-  py run_all_tests.py        # stages 1-17
+  py run_all_tests.py        # stages 1-18
   See README.md and docs/ (ARCHITECTURE.md, BASELINE.md, ROADMAP.md). Env var names: .env.example
 
 Discord (LEGACY, OPTIONAL — only for kalshi_bot.py; nothing else needs it):
@@ -62,7 +62,7 @@ PERP TELEMETRY (Step 1 — passive, read-only research recorder)
   This is unproven research data — nothing here claims perps improve profitability.
 
 TESTS
-  py run_all_tests.py      # stages 1-17 (16: baseline regression contract, 17: local-first architecture)
+  py run_all_tests.py      # stages 1-18 (16: baseline regression, 17: local-first architecture, 18: settlement engine)
   py test_stage7.py        # perp telemetry only (no network needed)
 
 PERP TELEMETRY — STEP 2 (causal alignment + data quality; still observation only)
@@ -306,3 +306,11 @@ STEP 1 — LOCAL-FIRST BASELINE (no strategy change; see docs/BASELINE.md)
     interfaces, execution safety boundary (LIVE unavailable), structured logging, env config.
   * run_local.py: the local entry point; Discord moved to an optional legacy adapter.
   Tests:  py test_stage16.py / py test_stage17.py   (or py run_all_tests.py for stages 1-17)
+
+STEP 2 — SETTLEMENT-DATA / SETTLEMENT-RECONSTRUCTION LAYER (research + observation only)
+  settlement/ models what Kalshi resolves against (60-s average of the CF Benchmarks RTI before close) with an
+  explicit window convention, live incremental accumulator, causal reconstruction, checkpoint datasets (features
+  vs labels), resolution verification, live-vs-history overlap and an offline JSONL store. It never touches calls.
+  No real data was reachable from the build environment: analysis_output/settlement_validation.json says
+  INSUFFICIENT_DATA (0 markets). How to capture data: docs/SETTLEMENT_ENGINE.md section 12.
+  Verify:  py -m settlement.fingerprint --verify      Tests:  py test_stage18.py

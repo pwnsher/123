@@ -26,7 +26,13 @@ kalshi_perp_shadow.csv.*
 kalshi_perp_live_veto.csv
 kalshi_perp_live_veto.csv.*
 kalshi_binary_outcomes.csv
-analysis_output/
+analysis_output/*
+!analysis_output/settlement_validation.json
+!analysis_output/SETTLEMENT_VALIDATION.md
+settlement_data/*
+!settlement_data/README.md
+.mypy_cache/
+.ruff_cache/
 .watcher_state
 .explain_posted
 .weekly_posted

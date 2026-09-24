@@ -1,0 +1,69 @@
+{
+ "engine_version": "settlement_engine_v1",
+ "format": "settlement_fingerprint_v1/canonical_ast_v2_sha256",
+ "modules": {
+  "__init__.py": "86aae833c683ba1f9e69072a98e69b392b1cc4f42d6fb44b0ccc4355d03cd844",
+  "accumulator.py": "4e1fdfb38497cea79a2de6dea72fa8bd10652a9b236d7f483c731de0082b9301",
+  "assets.py": "0dcdf8851945f772cc04926ad4bb9263a59b79c3059200f6d4532c651333d071",
+  "cache.py": "ff698bfb135f62064387c8f10aee4cc089c326107bcc9f11a149d4e3bd223476",
+  "cf_history.py": "50e37f0dd6966a27fbba29d49c8a01dea20b28aacf92e5c17585261b250d567a",
+  "cf_live.py": "9dfc049eeb984a969b7c61eb600baa27d45b53652b6398401318573706f6bd91",
+  "checkpoints.py": "6d4871d4fcca170cb4203c15bf9ffd515296882cba0c1524093d929428d4898f",
+  "engine.py": "c947bcf55c396f26434141795c766a7d981a6804237d1fff564e2c7752ef23f5",
+  "fingerprint.py": "a1b979bd446869291ae7c9af04d7a3eed30992d39679f38b86e33c8c30e69df0",
+  "kalshi_markets.py": "5bef3f75982d3c177503614ef98201e8b6a5bb3dee3b6236e438fbe457cb5d17",
+  "overlap.py": "6c1d628be4a33407f64e2961ff523a8e80ca0102ab294c405578c7137e9e215e",
+  "policy.py": "395119e5eb26141c99c8070da09235984d6278201d52c0f745599aee212d8e55",
+  "proxy.py": "369db361b2756bce341eeba74fa57d1f913e92c39367870fe141f4b9a585ce22",
+  "quality.py": "a57cb7252980b69b2adbbc5c40cc53b2cfc0ecf0ef90f3c9d71e49e3ae3d38d5",
+  "reconstruction.py": "7cd271dfc45fccbf9c5dc3512ad4379719f2793ffe768a233c4861a2907c063d",
+  "resolution.py": "7ef432d495f9fbbda0af6d7eaa377743e4784849a3d29d15ce476f919709ae99",
+  "schemas.py": "48417287feb7b5f5feeb7544ffaa117d5dd355654c470e4693675be6dc0fc77b",
+  "synthetic.py": "3995f47302206410106805f2a710f72f1c4df39efd44f2f21c31fe118f56ae0a",
+  "types.py": "68ecfe026b36342f722f2910ae7a23db9bf8b3e16755ac9fa319ab0750aec65b"
+ },
+ "note": "Research/observation code only; independent of the Step-1 strategy baseline.",
+ "policies": {
+  "reconstruction": {
+   "research_interpolate_v1": "ce7302dae2a77583ce0ee2d5d5cf60729499b90360f9de82656bcbfabd17103e",
+   "research_partial_v1": "90f29ca70d5861f2f06097c5b6324f08bbc5584466b660b77d035b9046135179",
+   "strict_v1": "267bffcead047d80846405c2dd7697b0e5ce664337df82b32cc629b929fd6ff7",
+   "test_synthetic_v1": "5115d8482747fdb32063ed4ca3a25f084cf9d25572672b118fea433be6cca9d5"
+  },
+  "window": {
+   "cf_rti_60s_end_incl_asof_v1": "408612fc49a9bb714aa0de8881f3873ee07743b21210011e95fba138de401082",
+   "cf_rti_60s_start_incl_asof_v1": "21655c58eafdf77694638426dd0dcff68f1cc03e044b31e7163404ae73bfc23a",
+   "cf_rti_60s_start_incl_bucket_v1": "d0b2f574fc37ef49f9d1fe17d0df005780f6814ab741689d89892db64a987594",
+   "cf_rti_60s_start_incl_exact_v1": "8c5e038b3650d25dfc6bfff4ae33928ef25afe931e9f900e3afd158dad4213c1"
+  }
+ },
+ "reconstruction_version": "reconstruction_v1",
+ "record_schema_version": 1,
+ "schemas": {
+  "cfb_rest_historical_values": {
+   "verification": "UNVERIFIED_FROM_PUBLIC_DOC_DESCRIPTIONS",
+   "version": 1
+  },
+  "cfb_rest_historical_values.element": {
+   "verification": "UNVERIFIED_FROM_PUBLIC_DOC_DESCRIPTIONS",
+   "version": 1
+  },
+  "cfb_ws_value": {
+   "verification": "UNVERIFIED_FROM_PUBLIC_DOC_DESCRIPTIONS",
+   "version": 1
+  },
+  "kalshi_market": {
+   "verification": "VERIFIED_AGAINST_REPOSITORY_CODE",
+   "version": 2
+  },
+  "kalshi_perp_telemetry_csv": {
+   "verification": "VERIFIED_AGAINST_REPOSITORY_CODE",
+   "version": 3
+  },
+  "kalshi_ws_cfbenchmarks_value": {
+   "verification": "UNVERIFIED_FROM_PUBLIC_DOC_DESCRIPTIONS",
+   "version": 1
+  }
+ },
+ "settlement_fingerprint": "b665778b47cc1d497208b1be36e553d5f54b63a70ed1b00c024840e2dfe4ca05"
+}

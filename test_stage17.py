@@ -408,7 +408,7 @@ def test_interfaces_and_runner():
                  "RiskManager", "DecisionStore", "LegacyStrategy"):
         assert hasattr(itf, name)
     src = open(os.path.join(HERE, "run_all_tests.py")).read()
-    assert "range(1, 18)" in src
+    assert "range(1, 19)" in src                                         # Step 2 added stage 18
     for f in ("test_stage16.py", "test_stage17.py"):
         s = open(os.path.join(HERE, f)).read()
         fn = s[s.index("def test_previous_stages"):].split("\ndef ")[0]

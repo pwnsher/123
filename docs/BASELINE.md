@@ -139,6 +139,9 @@ Measured on this container with `run_all_tests.py` (per-suite result) and a per-
 | CPython 3.11.15 | 11/15 suites; 223 passed, 3 failed (stages 3, 7, 8, 12 red) | 17/17 suites, 275 passed, 0 failed, 1 skipped (stage 12 6.1a: no `type_params` field before 3.12) |
 | CPython 3.10.20 | 11/15 suites (same 4 red) | 17/17 suites, 275 passed, 0 failed, 1 skipped (same) |
 
+Step 2 (settlement layer added): 18/18 suites, 297 checks passed, 0 failed on CPython 3.10.20, 3.11.15, 3.12.3 and 3.13.12
+(1 skip on 3.10/3.11, the same version-guarded AST check). Before Step 2 on 3.11/3.12: 17/17 suites, 275 checks.
+
 Why 3.10/3.11 were red before: `kalshi_backtest.py` used a backslash inside an f-string expression
 (legal only from Python 3.12, PEP 701). It could not even be imported, and stages 7/8 failed because
 they re-run stage 3. Stage 12 test 6.1 assumed `FunctionDef.type_params`, an AST field that only
@@ -184,3 +187,16 @@ no issues. `compileall`: clean on 3.10–3.13.
 | Date | Phase | What changed | Evidence |
 |---|---|---|---|
 | 2026-09-24 | Step 1 | initial baseline (no behaviour change) | stages 1–17 green; fixtures identical on 3.10–3.13 |
+| 2026-09-24 | Step 2 | **none**: settlement research layer added beside the strategy; no Step-1 artifact rewritten | Step-1 artifacts byte-identical (stage 18 test 1); 47 fixtures MATCH; stages 1–18 green on 3.10–3.13 (297 checks) |
+
+### Step 2 notes
+
+* Added `settlement/`, `scripts/`, `config/settlement_baseline.json` (its own fingerprint) and
+  `test_stage18.py`. The only edits to existing files are the runner range (1–18), stage 13's `last = 18`,
+  stage 17's runner assertion, `.gitignore`, and docs. `kalshi_dashboard.py`,
+  `config/strategy_baseline.json`, `step5_baseline_manifest.json` and `regression/strategy_cases.json`
+  are unchanged.
+* **Missing-ask defect (fixture E19) intentionally NOT fixed.** The `TypeError` is raised inside the
+  fingerprinted `evaluate()` and caught inside the fingerprinted `poller()`. No outer adapter or input
+  normalisation can turn it into a clean production NO_CALL without fabricating an ask or editing pinned
+  code. It still fails closed (`status: error: …`, no call). Fix it only in a deliberate re-baseline.

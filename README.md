@@ -5,6 +5,7 @@ It **places no orders**. Discord is optional and legacy. Everything runs locally
 
 * How it works: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 * Frozen strategy behaviour, thresholds, test baseline: [`docs/BASELINE.md`](docs/BASELINE.md)
+* Settlement research layer (Step 2): [`docs/SETTLEMENT_ENGINE.md`](docs/SETTLEMENT_ENGINE.md)
 * Future phases (not implemented): [`docs/ROADMAP.md`](docs/ROADMAP.md)
 * Perp research steps, runbook: `SETUP.txt`, `PRODUCTION_RUNBOOK.txt`
 
@@ -21,7 +22,7 @@ No Docker. No credentials are needed for anything below.
 # one-time
 py -m pip install requests
 
-# tests: every stage suite once, each in its own process (1-17)
+# tests: every stage suite once, each in its own process (1-18)
 py run_all_tests.py
 py test_stage16.py            # one stage alone (re-runs the earlier stages once each)
 
@@ -45,6 +46,16 @@ py analyze_perp_quality.py
 py analyze_perp_predictive.py
 py analyze_perp_shadow.py
 py check_perp_deployment.py
+
+# settlement research (Step 2; offline, observation only - see docs/SETTLEMENT_ENGINE.md)
+py -m settlement.fingerprint --verify                              # settlement code/policies vs config/settlement_baseline.json
+py scripts/settlement_import.py --kind kalshi-markets-json --input settled.json   # captured data -> settlement_data/
+py scripts/settlement_import.py --kind kalshi-ws-jsonl --input capture.jsonl --inspect
+py scripts/verify_settlement_resolution.py                         # reconstructed vs official Kalshi outcome
+py scripts/compare_settlement_overlap.py                           # live vs historical CF observations
+py scripts/build_settlement_checkpoints.py --out analysis_output/settlement_checkpoints.csv
+py scripts/settlement_validation_report.py                         # analysis_output/settlement_validation.json + .md
+py scripts/bench_settlement.py                                     # latency / throughput
 
 # legacy optional Discord adapter
 py -m pip install -U discord.py

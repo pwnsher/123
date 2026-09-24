@@ -116,7 +116,7 @@ def test_master_runner_runs_each_stage_once():
     d = tempfile.mkdtemp()
     shutil.copy(os.path.join(HERE, "run_all_tests.py"), d)
     log = os.path.join(d, "calls.log")
-    last = 17                                        # run_all_tests.py runs stages 1..17 (16: baseline regression, 17: local-first)
+    last = 18                                        # run_all_tests.py runs stages 1..18 (16: baseline, 17: local-first, 18: settlement)
     for i in range(1, last + 1):
         body = (f"import os, subprocess, sys\nopen({log!r}, 'a').write('stage{i}\\n')\n"
                 f"if os.environ.get('KALSHI_MASTER_TEST_RUN') != '1':\n"

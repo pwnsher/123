@@ -164,7 +164,19 @@ Dependency rules (enforced in stage 17): prediction/signal/evaluation code never
 `kalshi_core.execution` or `kalshi_api_learn`, and no file other than `kalshi_api_learn.py`
 references an order endpoint.
 
-## 10. Future boundaries (not implemented)
+## 10. Settlement research layer (Step 2, observation only)
+
+`settlement/` models what Kalshi resolves against: the 60-s average of the CF Benchmarks RTI before
+close. It has an explicit window convention, a live incremental accumulator, causal historical
+reconstruction, checkpoint datasets with features and labels kept apart, resolution verification
+against Kalshi's `result` / `expiration_value`, a live-vs-history overlap comparison, and an
+append-only store for offline replay. Scripts are in `scripts/`; see `docs/SETTLEMENT_ENGINE.md`.
+
+It is not wired into the watcher. Production code never imports it, and it imports no production,
+network, Discord or execution module (stage 18). Its read-only `SettlementState` is the intended
+Step 3+ input; in Step 2 it is not allowed to influence any call.
+
+## 11. Future boundaries (not implemented)
 
 ```
 Market Data → Feature Engine → Prediction Model → Calibration → Signal Engine
@@ -178,7 +190,7 @@ Market Data → Feature Engine → Prediction Model → Calibration → Signal E
   plus an approving `RiskDecision` within its contract limit. In this build every engine refuses,
   and LIVE cannot be constructed.
 
-## 11. Failure handling (existing behaviour, unchanged)
+## 12. Failure handling (existing behaviour, unchanged)
 
 * The poller catches every per-coin exception and records it as a status (`net error`,
   `error: …`); the loop continues.
