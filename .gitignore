@@ -31,6 +31,8 @@ analysis_output/*
 !analysis_output/SETTLEMENT_VALIDATION.md
 !analysis_output/market_data_performance.json
 !analysis_output/market_data_mutation_results.json
+!analysis_output/perp_data_performance.json
+!analysis_output/perp_data_mutation_results.json
 settlement_data/*
 !settlement_data/README.md
 market_data_sessions/

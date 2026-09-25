@@ -43,7 +43,8 @@ manually promoted, inactive-by-default live veto.
 | Research tools | `label_binary_outcomes.py`, `analyze_perp_quality.py`, `analyze_perp_predictive.py`, `build_perp_shadow_policy.py`, `analyze_perp_shadow.py`, `build_perp_integration_experiment.py`, `analyze_perp_integration.py`, `promote_perp_integration.py`, `check_perp_deployment.py` |
 | Integrity | `py strategy_fingerprint.py --verify step5_baseline_manifest.json`, `py -m kalshi_core.baseline --verify`, `py -m regression.generate --check` |
 | Research data capture (Step 3) | `py collect_market_data.py [--dry-run]` (read-only collector + status page on 127.0.0.1:8766), `scripts/replay_market_data.py`, `scripts/build_market_features.py`, `scripts/bench_market_data.py`, `scripts/mutation_test_market_data.py`, `py -m market_data.fingerprint --verify` |
-| Tests | `py run_all_tests.py` (stages 1–19, each in its own process) |
+| Perp research data (Step 4) | `py collect_research_data.py [--dry-run]` (Step 3 + Step 4 read-only, one session), `scripts/replay_perp_data.py`, `scripts/build_research_dataset.py`, `scripts/bench_perp_data.py`, `scripts/mutation_test_perp_data.py`, `py -m perp_data.fingerprint --verify` |
+| Tests | `py run_all_tests.py` (stages 1–20, each in its own process) |
 
 ## 4. Prediction and signal path (per coin, every `POLL_SECONDS` = 4 s)
 
@@ -196,7 +197,30 @@ It is not wired into the watcher. `kalshi_dashboard`, `kalshi_core`, `run_local`
 read-only requests, and has its own fingerprint (`config/market_data_baseline.json`). Stage 19
 checks all of this. Its status page is a separate localhost port. See `docs/HIGH_RESOLUTION_DATA.md`.
 
-## 12. Future boundaries (not implemented)
+## 12. Expanded perpetual-futures telemetry (Step 4, observation only)
+
+`perp_data/` captures Binance USDⓈ-M, Bybit linear and OKX swaps (websockets plus GET-only REST), Kalshi
+perps (public REST) and a USDT/USD rate. It normalizes them into `PerpEvent`s, which use the same
+timestamps as Step 3. Raw messages are stored in `<session>/perp/`, reusing Step 3's store. It replays
+deterministically (raw → normalization is reproducible) and builds 980 status-masked research features in
+ten FAMILIES:
+
+* per venue: price, basis, funding, OI, liquidations, flow, CVD, book;
+* cross-exchange aggregates;
+* perp-vs-spot and perp-vs-CF divergence.
+
+`perp_data.dataset` joins them with the Step-3 features at the same checkpoint T under `receive_ts <= T`
+(features, labels and provenance in separate files).
+
+It is a NEW research dataset beside the existing Kalshi-perp research → shadow → overlay → promotion →
+live-veto chain (§5), which is unchanged and pinned. It never feeds that chain:
+* nothing production, veto, settlement or market_data imports `perp_data`;
+* `perp_data` imports none of them.
+
+Stage 20 checks this, along with a separate fingerprint (`config/perp_data_baseline.json`, which also
+records the veto chain's hashes). See `docs/PERP_HIGH_RESOLUTION_DATA.md`.
+
+## 13. Future boundaries (not implemented)
 
 ```
 Market Data → Feature Engine → Prediction Model → Calibration → Signal Engine
@@ -210,7 +234,7 @@ Market Data → Feature Engine → Prediction Model → Calibration → Signal E
   plus an approving `RiskDecision` within its contract limit. In this build every engine refuses,
   and LIVE cannot be constructed.
 
-## 13. Failure handling (existing behaviour, unchanged)
+## 14. Failure handling (existing behaviour, unchanged)
 
 * The poller catches every per-coin exception and records it as a status (`net error`,
   `error: …`); the loop continues.

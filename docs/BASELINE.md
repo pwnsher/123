@@ -146,6 +146,10 @@ Step 3 (market-data layer added): before, 18/18 suites and 297 checks (re-verifi
 19/19 suites, 329 checks passed, 0 failed on CPython 3.10.20, 3.11.15, 3.12.3 and 3.13.12 (the same 1 skip on 3.10/3.11).
 `scripts/mutation_test_market_data.py`: 7/7 causal-rule mutations caught (as-is and with the engine guards disabled).
 
+Step 4 (perp-data layer added): before, 19/19 suites and 329 checks (re-verified on 3.11 from the delivered Step-3 ZIP). After,
+20/20 suites, 355 checks passed, 0 failed on CPython 3.10.20, 3.11.15, 3.12.3 and 3.13.12 (the same 1 skip on 3.10/3.11).
+`scripts/mutation_test_perp_data.py`: 9/9 mutations caught (as-is and with the perp engine guards disabled).
+
 Why 3.10/3.11 were red before: `kalshi_backtest.py` used a backslash inside an f-string expression
 (legal only from Python 3.12, PEP 701). It could not even be imported, and stages 7/8 failed because
 they re-run stage 3. Stage 12 test 6.1 assumed `FunctionDef.type_params`, an AST field that only
@@ -193,6 +197,7 @@ no issues. `compileall`: clean on 3.10–3.13.
 | 2026-09-24 | Step 1 | initial baseline (no behaviour change) | stages 1–17 green; fixtures identical on 3.10–3.13 |
 | 2026-09-24 | Step 2 | **none**: settlement research layer added beside the strategy; no Step-1 artifact rewritten | Step-1 artifacts byte-identical (stage 18 test 1); 47 fixtures MATCH; stages 1–18 green on 3.10–3.13 (297 checks) |
 | 2026-09-25 | Step 3 | **none** for the strategy. The separate settlement baseline was rewritten only to record the documented CF index-id provenance (OLD/NEW/WHY in SETTLEMENT_ENGINE.md); a new, separate `config/market_data_baseline.json` | Step-1 artifacts and perp/production files byte-identical (stage 19 test 1); 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…` unchanged; stages 1–19 green on 3.10–3.13 (329 checks) |
+| 2026-09-25 | Step 4 | **none** for the strategy, the settlement engine, the Step-3 engine and the EXISTING perp veto chain (14 files byte-identical; fingerprint `499c1e16…`). New, separate `config/perp_data_baseline.json` | Step-1 artifacts identical (stage 20 test 1); 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…` unchanged; settlement and market-data fingerprints verify unchanged; stages 1–20 green on 3.10–3.13 (355 checks) |
 
 ### Step 2 notes
 
@@ -224,4 +229,25 @@ no issues. `compileall`: clean on 3.10–3.13.
   60-minute volatility are untouched. No new feature can create, veto or change a call. Nothing imports
   `market_data` except its own tools and tests.
 * The Missing-ask defect (fixture E19) is still intentionally not fixed (see Step 2 notes).
+
+### Step 4 notes
+
+* Added:
+  * `perp_data/` (venue adapters, collector, poller, store/replay on Step 3's infrastructure, causal perp
+    feature engine with families, joint Step-3 + Step-4 dataset, synthetic generator, fingerprint);
+  * `collect_research_data.py`;
+  * four scripts (`replay_perp_data.py`, `build_research_dataset.py`, `bench_perp_data.py`,
+    `mutation_test_perp_data.py`);
+  * `config/perp_data_baseline.json`, `test_stage20.py` and `docs/PERP_HIGH_RESOLUTION_DATA.md`.
+
+  Results are in `analysis_output/perp_data_performance.json` and
+  `analysis_output/perp_data_mutation_results.json`.
+* Edits to existing files:
+  * the runner range (1–20), stage 13's `last = 20` and stage 17's runner assertion;
+  * `.gitignore` (the two new result files are kept);
+  * docs.
+* No existing module changed: `market_data/` and `settlement/` are untouched (their fingerprints verify), and
+  so are all perp-veto chain files and `kalshi_dashboard.py`. No OLD/NEW/WHY re-baseline was needed.
+* The new perp features never enter the existing veto. The veto keeps its own features, statistics,
+  thresholds, promotion state (INACTIVE) and strategy fingerprint binding.
 

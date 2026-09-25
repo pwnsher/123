@@ -1,0 +1,258 @@
+{
+ "note": "Each mutation breaks one rule in a temporary copy; CAUGHT = the Stage-20 tests fail.",
+ "controls": {
+  "unmutated": {
+   "caught": false,
+   "returncode": 0,
+   "seconds": 20.0,
+   "failed_test": null,
+   "passed_tests": [
+    "2 EXISTING perp research / shadow / promotion / live-veto chain ",
+    "3 production isolation: nothing production imports perp_data; re",
+    "4 perp trade normalization + aggressor side (maker flag inverted",
+    "6 open interest: native + coin units, OI change / pct / notional",
+    "7 liquidation side semantics per venue + aggregation; unobserved",
+    "8 aggressive flow, trade / count imbalance, CVD (+ slope, accel)",
+    "11 cross-exchange aggregation: medians, disagreement, unusual ve",
+    "16 backfill: BACKFILLED, event time kept, visible only from retr",
+    "17 receive-time causality + guards",
+    "18 LEAKAGE: future / delayed liquidation, OI, funding, trade, bo",
+    "21 joint Step-3 + Step-4 dataset == batch paths; features / labe",
+    "22 label isolation"
+   ]
+  },
+  "guards_disabled_only": {
+   "caught": false,
+   "returncode": 0,
+   "seconds": 19.1,
+   "failed_test": null,
+   "passed_tests": [
+    "2 EXISTING perp research / shadow / promotion / live-veto chain ",
+    "3 production isolation: nothing production imports perp_data; re",
+    "4 perp trade normalization + aggressor side (maker flag inverted",
+    "6 open interest: native + coin units, OI change / pct / notional",
+    "7 liquidation side semantics per venue + aggregation; unobserved",
+    "8 aggressive flow, trade / count imbalance, CVD (+ slope, accel)",
+    "11 cross-exchange aggregation: medians, disagreement, unusual ve",
+    "16 backfill: BACKFILLED, event time kept, visible only from retr",
+    "18 LEAKAGE: future / delayed liquidation, OI, funding, trade, bo",
+    "21 joint Step-3 + Step-4 dataset == batch paths; features / labe",
+    "22 label isolation"
+   ]
+  }
+ },
+ "mutations": [
+  {
+   "id": "P1",
+   "mutation": "receive timestamps ignored (perp availability decided by event time)",
+   "tests": [
+    "causality",
+    "leakage"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 6.0,
+    "failed_test": "FAIL  18 LEAKAGE: future / delayed liquidation, OI, funding, trade, book, backfill, post-close, labels; canaries: CausalityError: features at 1790000940000 requested after ingesting data received at 1790001060500",
+    "passed_tests": [
+     "17 receive-time causality + guards"
+    ]
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 6.2,
+    "failed_test": "FAIL  18 LEAKAGE: future / delayed liquidation, OI, funding, trade, book, backfill, post-close, labels; canaries: AssertionError: 1790000940000",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "P2",
+   "mutation": "future liquidations become visible",
+   "tests": [
+    "leakage",
+    "liquidations"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 5.7,
+    "failed_test": "FAIL  18 LEAKAGE: future / delayed liquidation, OI, funding, trade, book, backfill, post-close, labels; canaries: CausalityError: features at 1790000940000 requested after ingesting data received at 1790000989846",
+    "passed_tests": [
+     "7 liquidation side semantics per venue + aggregation; unobserved"
+    ]
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 6.4,
+    "failed_test": "FAIL  18 LEAKAGE: future / delayed liquidation, OI, funding, trade, book, backfill, post-close, labels; canaries: AssertionError: 1790000940000",
+    "passed_tests": [
+     "7 liquidation side semantics per venue + aggregation; unobserved"
+    ]
+   }
+  },
+  {
+   "id": "P3",
+   "mutation": "future open-interest updates become visible",
+   "tests": [
+    "leakage",
+    "oi"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 5.8,
+    "failed_test": "FAIL  18 LEAKAGE: future / delayed liquidation, OI, funding, trade, book, backfill, post-close, labels; canaries: CausalityError: features at 1790000940000 requested after ingesting data received at 1790001099068",
+    "passed_tests": [
+     "6 open interest: native + coin units, OI change / pct / notional"
+    ]
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 6.2,
+    "failed_test": "FAIL  18 LEAKAGE: future / delayed liquidation, OI, funding, trade, book, backfill, post-close, labels; canaries: AssertionError: 1790000940000",
+    "passed_tests": [
+     "6 open interest: native + coin units, OI change / pct / notional"
+    ]
+   }
+  },
+  {
+   "id": "P4",
+   "mutation": "backfilled trades become historically visible (receive time := event time)",
+   "tests": [
+    "backfill",
+    "trades"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 6.0,
+    "failed_test": "FAIL  16 backfill: BACKFILLED, event time kept, visible only from retrieval; exact id recovery: AssertionError: ",
+    "passed_tests": [
+     "4 perp trade normalization + aggressor side (maker flag inverted"
+    ]
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 6.0,
+    "failed_test": "FAIL  16 backfill: BACKFILLED, event time kept, visible only from retrieval; exact id recovery: AssertionError: ",
+    "passed_tests": [
+     "4 perp trade normalization + aggressor side (maker flag inverted"
+    ]
+   }
+  },
+  {
+   "id": "P5",
+   "mutation": "missing liquidation volume becomes zero",
+   "tests": [
+    "liquidations"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  7 liquidation side semantics per venue + aggregation; unobserved is MISSING, not 0: AssertionError: ",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  7 liquidation side semantics per venue + aggregation; unobserved is MISSING, not 0: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "P6",
+   "mutation": "maker side interpreted as taker side (Binance aggTrade m)",
+   "tests": [
+    "trades",
+    "flow"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  4 perp trade normalization + aggressor side (maker flag inverted, taker fields, OKX contracts): AssertionError: ",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  4 perp trade normalization + aggressor side (maker flag inverted, taker fields, OKX contracts): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "P7",
+   "mutation": "raw contract OI compared across venues without normalization",
+   "tests": [
+    "oi",
+    "cross"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  6 open interest: native + coin units, OI change / pct / notional / accel, no raw contract mixing: AssertionError: ",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  6 open interest: native + coin units, OI change / pct / notional / accel, no raw contract mixing: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "P8",
+   "mutation": "settlement labels enter the perp features (official result merged into the row)",
+   "tests": [
+    "dataset",
+    "labels"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 6.3,
+    "failed_test": "FAIL  21 joint Step-3 + Step-4 dataset == batch paths; features / labels / provenance (families) separate: AssertionError: 1790000640000",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 6.3,
+    "failed_test": "FAIL  21 joint Step-3 + Step-4 dataset == batch paths; features / labels / provenance (families) separate: AssertionError: 1790000640000",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "P9",
+   "mutation": "the existing perp veto imports Step-4 features",
+   "tests": [
+    "veto",
+    "isolation"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  2 EXISTING perp research / shadow / promotion / live-veto chain byte-identical; veto INACTIVE: AssertionError: EXISTING PERP VETO CHAIN CHANGED: perp_live.py",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  2 EXISTING perp research / shadow / promotion / live-veto chain byte-identical; veto INACTIVE: AssertionError: EXISTING PERP VETO CHAIN CHANGED: perp_live.py",
+    "passed_tests": []
+   }
+  }
+ ],
+ "all_caught_and_controls_pass": true
+}

@@ -7,6 +7,7 @@ It **places no orders**. Discord is optional and legacy. Everything runs locally
 * Frozen strategy behaviour, thresholds, test baseline: [`docs/BASELINE.md`](docs/BASELINE.md)
 * Settlement research layer (Step 2): [`docs/SETTLEMENT_ENGINE.md`](docs/SETTLEMENT_ENGINE.md)
 * High-resolution market data + research features (Step 3): [`docs/HIGH_RESOLUTION_DATA.md`](docs/HIGH_RESOLUTION_DATA.md)
+* Expanded perpetual-futures telemetry (Step 4): [`docs/PERP_HIGH_RESOLUTION_DATA.md`](docs/PERP_HIGH_RESOLUTION_DATA.md)
 * Future phases (not implemented): [`docs/ROADMAP.md`](docs/ROADMAP.md)
 * Perp research steps, runbook: `SETUP.txt`, `PRODUCTION_RUNBOOK.txt`
 
@@ -23,7 +24,7 @@ No Docker. No credentials are needed for anything below.
 # one-time
 py -m pip install requests
 
-# tests: every stage suite once, each in its own process (1-19)
+# tests: every stage suite once, each in its own process (1-20)
 py run_all_tests.py
 py test_stage16.py            # one stage alone (re-runs the earlier stages once each)
 
@@ -67,6 +68,15 @@ py scripts/build_market_features.py market_data_sessions\<session> --assets BTC 
 py scripts/bench_market_data.py
 py scripts/mutation_test_market_data.py
 py -m market_data.fingerprint --verify
+
+# perpetual-futures research telemetry (Step 4; read-only; never feeds the existing perp veto)
+py collect_research_data.py --dry-run                              # Step 3 + Step 4 plan, no network
+py collect_research_data.py --assets BTC,ETH,SOL,XRP --cf --coinbase --secondary --kalshi --perps --duration 3600
+py scripts/replay_perp_data.py market_data_sessions\<session> --digest --renormalize
+py scripts/build_research_dataset.py market_data_sessions\<session> --assets BTC --out analysis_output\research_btc
+py scripts/bench_perp_data.py
+py scripts/mutation_test_perp_data.py
+py -m perp_data.fingerprint --verify
 
 # legacy optional Discord adapter
 py -m pip install -U discord.py

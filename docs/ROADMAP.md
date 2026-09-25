@@ -14,8 +14,8 @@ Step 1 (this baseline) froze the legacy strategy. Every later phase must:
 |---|---|---|---|
 | 1 | Settlement engine improvement | model the real CF Benchmarks settlement (RTI average) instead of Coinbase proxies; settlement-aware labels | **foundation built (Step 2, research only)**: `settlement/`, docs/SETTLEMENT_ENGINE.md; awaiting real captured data to verify the window convention |
 | 2 | High-resolution spot pipeline | sub-minute / streaming spot with explicit data-health states; connect to `settlement.SettlementAccumulator` / `SettlementState` (see SETTLEMENT_ENGINE.md) | **built (Step 3, research only)**: `market_data/`, `collect_market_data.py`, docs/HIGH_RESOLUTION_DATA.md; CF RTI + Coinbase + Kraken + Kalshi capture, causal replay, 452 status-masked features; awaiting real captured sessions |
-| 3 | Expanded perp telemetry | more of the perp book if the API exposes it; still observation-first | not started |
-| 4 | Spot/perp microstructure | research features only | not started |
+| 3 | Expanded perp telemetry | more of the perp book if the API exposes it; still observation-first | **built (Step 4, research only)**: `perp_data/`, `collect_research_data.py`, docs/PERP_HIGH_RESOLUTION_DATA.md; Binance / Bybit / OKX / Kalshi perps: funding, OI, liquidations, basis, aggressive flow, CVD, book; joint dataset with Step 3; the existing perp veto untouched; awaiting real sessions |
+| 4 | Spot/perp microstructure | research features only | next (Step 5): deeper books / order-flow toxicity / queue dynamics on spot, perp and the Kalshi binary book (see the Step-4 report) |
 | 5 | Feature research | offline, walk-forward, pre-declared tests | inputs ready (Step 3 feature datasets with provenance); research not started |
 | 6 | Prediction ensemble | only against the legacy model as baseline | not started |
 | 7 | Regime detection | research → validated → gated | not started |

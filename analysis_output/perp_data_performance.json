@@ -1,0 +1,48 @@
+{
+ "assets": [
+  "BTC",
+  "ETH",
+  "SOL",
+  "XRP"
+ ],
+ "collect_joint": {
+  "flush_ms_p50": 5.53,
+  "flush_ms_p99": 7.98,
+  "liquidation_events": 2560,
+  "perp_bytes_compressed": 8907549,
+  "perp_bytes_per_event": 122.7,
+  "perp_events": 72568,
+  "perp_flushes": 280,
+  "perp_msgs_per_s_incl_step3": 4635,
+  "perp_raw": 53062,
+  "seconds": 17.12,
+  "step3_raw": 26288
+ },
+ "joint_dataset": {
+  "rows": 16,
+  "seconds": 1.365
+ },
+ "memory": {
+  "current_mb_traced": 195.9,
+  "peak_mb_traced": 352.1,
+  "what": "load both stores + one perp engine over them (separate pass)"
+ },
+ "note": "SYNTHETIC workload; machine-specific; not a production latency claim",
+ "perp_feature_engine": {
+  "events_ingested": 101256,
+  "features_at_ms_max": 71.83,
+  "features_at_ms_p50": 42.91,
+  "features_at_ms_p99": 70.27,
+  "rows": 140,
+  "total_s_incl_rows": 6.298
+ },
+ "perp_features_per_asset": 980,
+ "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39",
+ "python": "3.11.15",
+ "replay": {
+  "iterate_events_per_s": 3496364,
+  "load_both_s": 7.934,
+  "perp_events": 72568
+ },
+ "synthetic_minutes": 10.0
+}
