@@ -1,0 +1,104 @@
+{
+ "assets": [
+  "BTC",
+  "ETH",
+  "SOL",
+  "XRP"
+ ],
+ "book_update_latency_us": {
+  "n": 80210,
+  "p50": 9.42,
+  "p99": 143.49
+ },
+ "collection": {
+  "events": 80210,
+  "events_per_s_processed": 262.1,
+  "note": "includes the Step-3 / Step-4 synthetic collectors running in the same loop",
+  "raw_messages": 80516,
+  "raw_msgs_per_s_processed": 263.1,
+  "synthetic_msgs_by_venue": {
+   "binance_usdm_book": 12000,
+   "bybit_linear_book": 12000,
+   "coinbase_l2": 6301,
+   "kalshi_ws": 33414,
+   "kraken_book": 4801,
+   "okx_swap_book": 12000
+  },
+  "wall_seconds": 306.06
+ },
+ "disk": {
+  "bytes_per_raw_message": 452.3,
+  "compression_levels": {
+   "1": {
+    "bytes": 44416968,
+    "ratio": 7.045098733438986,
+    "write_seconds": 9.641
+   },
+   "6": {
+    "bytes": 36394743,
+    "ratio": 8.597997930635202,
+    "write_seconds": 13.046
+   },
+   "9": {
+    "bytes": 33870459,
+    "ratio": 9.238786076090673,
+    "write_seconds": 25.447
+   }
+  },
+  "micro_store_bytes": 36420248,
+  "projection_with_assumed_real_rates": {
+   "binance_usdm_book": {
+    "assumed_msgs_per_s_per_symbol": 10.0,
+    "projected_gib_per_day_all_assets": 1.189,
+    "synthetic_bytes_per_msg_on_disk": 369.5
+   },
+   "bybit_linear_book": {
+    "assumed_msgs_per_s_per_symbol": 10.0,
+    "projected_gib_per_day_all_assets": 1.182,
+    "synthetic_bytes_per_msg_on_disk": 367.2
+   },
+   "coinbase_l2": {
+    "assumed_msgs_per_s_per_symbol": 15.0,
+    "projected_gib_per_day_all_assets": 13.32,
+    "synthetic_bytes_per_msg_on_disk": 2759.0
+   },
+   "kalshi_ws": {
+    "assumed_msgs_per_s_per_symbol": 2.0,
+    "projected_gib_per_day_all_assets": 0.033,
+    "synthetic_bytes_per_msg_on_disk": 51.3
+   },
+   "kraken_book": {
+    "assumed_msgs_per_s_per_symbol": 10.0,
+    "projected_gib_per_day_all_assets": 2.347,
+    "synthetic_bytes_per_msg_on_disk": 729.1
+   },
+   "okx_swap_book": {
+    "assumed_msgs_per_s_per_symbol": 10.0,
+    "projected_gib_per_day_all_assets": 1.335,
+    "synthetic_bytes_per_msg_on_disk": 414.9
+   }
+  },
+  "synthetic_bytes_per_hour": 437042976
+ },
+ "feature_ingest_events_per_s": 14175.7,
+ "feature_row_latency_ms": {
+  "features_per_row": 615,
+  "n": 121,
+  "p50": 42.31,
+  "p99": 53.1
+ },
+ "memory": {
+  "collection_peak_mib": 29.7,
+  "engine_peak_mib": 9.5
+ },
+ "note": "SYNTHETIC session (microstructure.synthetic) - NOT market data. Real message rates / sizes differ; the projection multiplies synthetic bytes-per-message by ASSUMED real rates and is an order-of-magnitude guide.",
+ "python": "3.11.15",
+ "replay": {
+  "events": 80210,
+  "load_seconds": 17.87,
+  "rebuild_events_per_s": 30169.1,
+  "rebuild_seconds": 2.66
+ },
+ "seconds_simulated": 300,
+ "synthetic": true
+}

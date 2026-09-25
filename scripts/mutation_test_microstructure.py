@@ -62,7 +62,7 @@ MUTATIONS = [
      ["kalshi"]),
     ("M8", "a missing book becomes zero imbalance",
      [(ENG, 'row.set(f"{p}.imbalance_{lv}", _imb(B, A) if lvl == S.READY else None, lvl)',
-       'row.set(f"{p}.imbalance_{lv}", _imb(B, A) if lvl == S.READY else 0.0, S.READY)', 1)],
+       'row.set(f"{p}.imbalance_{lv}", _imb(B, A) if lvl == S.READY else 0.0, S.READY)', 2)],
      ["missing"]),
     ("M9", "a crossed book is accepted as healthy",
      [(REC, "        if tr.book.crossed():", "        if False and tr.book.crossed():", 1)],
