@@ -6,6 +6,7 @@ It **places no orders**. Discord is optional and legacy. Everything runs locally
 * How it works: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 * Frozen strategy behaviour, thresholds, test baseline: [`docs/BASELINE.md`](docs/BASELINE.md)
 * Settlement research layer (Step 2): [`docs/SETTLEMENT_ENGINE.md`](docs/SETTLEMENT_ENGINE.md)
+* High-resolution market data + research features (Step 3): [`docs/HIGH_RESOLUTION_DATA.md`](docs/HIGH_RESOLUTION_DATA.md)
 * Future phases (not implemented): [`docs/ROADMAP.md`](docs/ROADMAP.md)
 * Perp research steps, runbook: `SETUP.txt`, `PRODUCTION_RUNBOOK.txt`
 
@@ -22,7 +23,7 @@ No Docker. No credentials are needed for anything below.
 # one-time
 py -m pip install requests
 
-# tests: every stage suite once, each in its own process (1-18)
+# tests: every stage suite once, each in its own process (1-19)
 py run_all_tests.py
 py test_stage16.py            # one stage alone (re-runs the earlier stages once each)
 
@@ -56,6 +57,16 @@ py scripts/compare_settlement_overlap.py                           # live vs his
 py scripts/build_settlement_checkpoints.py --out analysis_output/settlement_checkpoints.csv
 py scripts/settlement_validation_report.py                         # analysis_output/settlement_validation.json + .md
 py scripts/bench_settlement.py                                     # latency / throughput
+
+# high-resolution market data (Step 3; read-only research capture - see docs/HIGH_RESOLUTION_DATA.md)
+py collect_market_data.py --dry-run                                # plan + offline checks, no network
+py collect_market_data.py --assets BTC,ETH,SOL,XRP --duration 3600 # CF needs KALSHI_API_KEY_ID + key (+ cryptography)
+#   research status page: http://127.0.0.1:8766/  (separate from the production dashboard)
+py scripts/replay_market_data.py market_data_sessions\<session> --digest
+py scripts/build_market_features.py market_data_sessions\<session> --assets BTC --out analysis_output\features_btc
+py scripts/bench_market_data.py
+py scripts/mutation_test_market_data.py
+py -m market_data.fingerprint --verify
 
 # legacy optional Discord adapter
 py -m pip install -U discord.py

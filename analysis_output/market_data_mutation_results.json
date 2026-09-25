@@ -1,0 +1,207 @@
+{
+ "note": "Each mutation breaks one causal rule in a temporary copy; CAUGHT = the Stage-19 tests fail.",
+ "controls": {
+  "unmutated": {
+   "caught": false,
+   "returncode": 0,
+   "seconds": 4.5,
+   "failed_test": null,
+   "passed_tests": [
+    "5 Coinbase adapter: aggressor from maker side, BBO, he",
+    "6 Kraken adapter: taker side, snapshot=BACKFILLED, tic",
+    "7 Kalshi adapter: market state, book (cents/dollars), ",
+    "9 the causal rule: usable at T iff receive_ts <= T; gu",
+    "17 backfill: BACKFILLED, event time kept, visible only",
+    "19 single-pass dataset == batch compute_at at every ch",
+    "20 window bounds (T-w, T], feature values on known inp",
+    "21 missing -> None + status mask, never 0 (engine, dat",
+    "23 LEAKAGE: delayed trade / amended CF / late book / f",
+    "24 labels never features; settlement features == Step-",
+    "25 cross-exchange features use only received data (no "
+   ]
+  },
+  "guards_disabled_only": {
+   "caught": false,
+   "returncode": 0,
+   "seconds": 5.1,
+   "failed_test": null,
+   "passed_tests": [
+    "5 Coinbase adapter: aggressor from maker side, BBO, he",
+    "6 Kraken adapter: taker side, snapshot=BACKFILLED, tic",
+    "7 Kalshi adapter: market state, book (cents/dollars), ",
+    "17 backfill: BACKFILLED, event time kept, visible only",
+    "19 single-pass dataset == batch compute_at at every ch",
+    "20 window bounds (T-w, T], feature values on known inp",
+    "21 missing -> None + status mask, never 0 (engine, dat",
+    "23 LEAKAGE: delayed trade / amended CF / late book / f",
+    "24 labels never features; settlement features == Step-",
+    "25 cross-exchange features use only received data (no "
+   ]
+  }
+ },
+ "mutations": [
+  {
+   "id": "M1",
+   "mutation": "receive timestamps ignored (availability decided by event time)",
+   "tests": [
+    "alignment",
+    "leakage",
+    "cross",
+    "windows"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  9 the causal rule: usable at T iff receive_ts <= T; guards: AssertionError: ",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 1.6,
+    "failed_test": "FAIL  23 LEAKAGE: delayed trade / amended CF / late book / future price / post-close / late gap; canaries: AssertionError: 1790000880000",
+    "passed_tests": [
+     "20 window bounds (T-w, T], feature values on known inp"
+    ]
+   }
+  },
+  {
+   "id": "M2",
+   "mutation": "future visible (dataset checkpoints emitted after 5 s of later data were ingested)",
+   "tests": [
+    "equivalence",
+    "leakage"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 1.7,
+    "failed_test": "FAIL  19 single-pass dataset == batch compute_at at every checkpoint and instant: CausalityError: features at 1790000640000 requested after ingesting data received at 1790000645000",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 1.7,
+    "failed_test": "FAIL  19 single-pass dataset == batch compute_at at every checkpoint and instant: AssertionError: ('KXBTC15M-26SEP211030', 360)",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "M3",
+   "mutation": "missing values become zeros",
+   "tests": [
+    "missing"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  21 missing -> None + status mask, never 0 (engine, dataset, CSV): AssertionError: ",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  21 missing -> None + status mask, never 0 (engine, dataset, CSV): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "M4",
+   "mutation": "backfilled data treated as live (visible from its event time instead of its retrieval time)",
+   "tests": [
+    "backfill",
+    "coinbase",
+    "kraken",
+    "kalshi"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  5 Coinbase adapter: aggressor from maker side, BBO, heartbeat, backfill, failures: AssertionError: ",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  5 Coinbase adapter: aggressor from maker side, BBO, heartbeat, backfill, failures: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "M5",
+   "mutation": "rolling windows include the future (upper bound T + 5 s)",
+   "tests": [
+    "windows"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  20 window bounds (T-w, T], feature values on known inputs, arbitrary windows: AssertionError: ",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  20 window bounds (T-w, T], feature values on known inputs, arbitrary windows: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "M6",
+   "mutation": "cross-exchange quotes aligned by event time (a delayed venue quote used before it arrived)",
+   "tests": [
+    "cross",
+    "leakage"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 1.7,
+    "failed_test": "FAIL  23 LEAKAGE: delayed trade / amended CF / late book / future price / post-close / late gap; canaries: CausalityError: features at 1790000880000 requested after ingesting data received at 1790000880027",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 1.6,
+    "failed_test": "FAIL  23 LEAKAGE: delayed trade / amended CF / late book / future price / post-close / late gap; canaries: AssertionError: 1790000880000",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "M7",
+   "mutation": "settlement features computed in LABEL mode (final reconstruction instead of as-of T)",
+   "tests": [
+    "labels",
+    "leakage"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 3.6,
+    "failed_test": "FAIL  24 labels never features; settlement features == Step-2 reconstruction as of T: AssertionError: ",
+    "passed_tests": [
+     "23 LEAKAGE: delayed trade / amended CF / late book / f"
+    ]
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 3.5,
+    "failed_test": "FAIL  24 labels never features; settlement features == Step-2 reconstruction as of T: AssertionError: ",
+    "passed_tests": [
+     "23 LEAKAGE: delayed trade / amended CF / late book / f"
+    ]
+   }
+  }
+ ],
+ "all_caught_and_controls_pass": true
+}

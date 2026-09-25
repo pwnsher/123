@@ -4,7 +4,7 @@
  "modules": {
   "__init__.py": "86aae833c683ba1f9e69072a98e69b392b1cc4f42d6fb44b0ccc4355d03cd844",
   "accumulator.py": "4e1fdfb38497cea79a2de6dea72fa8bd10652a9b236d7f483c731de0082b9301",
-  "assets.py": "0dcdf8851945f772cc04926ad4bb9263a59b79c3059200f6d4532c651333d071",
+  "assets.py": "d204178f86565729143b9b7fbc7cf38770de7135595bb13db48c188b2ec41af9",
   "cache.py": "ff698bfb135f62064387c8f10aee4cc089c326107bcc9f11a149d4e3bd223476",
   "cf_history.py": "50e37f0dd6966a27fbba29d49c8a01dea20b28aacf92e5c17585261b250d567a",
   "cf_live.py": "9dfc049eeb984a969b7c61eb600baa27d45b53652b6398401318573706f6bd91",
@@ -65,5 +65,5 @@
    "version": 1
   }
  },
- "settlement_fingerprint": "b665778b47cc1d497208b1be36e553d5f54b63a70ed1b00c024840e2dfe4ca05"
+ "settlement_fingerprint": "3eba791cfe8163cc17406ecdbd0c0e04abfe178afb7b6695565a3484318ff2be"
 }

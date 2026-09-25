@@ -29,8 +29,11 @@ kalshi_binary_outcomes.csv
 analysis_output/*
 !analysis_output/settlement_validation.json
 !analysis_output/SETTLEMENT_VALIDATION.md
+!analysis_output/market_data_performance.json
+!analysis_output/market_data_mutation_results.json
 settlement_data/*
 !settlement_data/README.md
+market_data_sessions/
 .mypy_cache/
 .ruff_cache/
 .watcher_state

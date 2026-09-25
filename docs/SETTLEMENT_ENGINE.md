@@ -73,8 +73,11 @@ How unexpected payloads are handled:
 * The engine never falls back to Coinbase spot. If CF data is missing, the quality is `MISSING`, or
   `PROXY_SOURCE` when only the perp proxy exists.
 
-Asset → index ids: BTC→BRTI, ETH→ETHUSD_RTI, SOL→SOLUSD_RTI, XRP→XRPUSD_RTI (`assets.py`). The
-non-BTC ids are assumed. A wrong id yields `MISSING`, never a wrong value.
+Asset → index ids: BTC→BRTI, ETH→ETHUSD_RTI, SOL→SOLUSD_RTI, XRP→XRPUSD_RTI (`assets.py`).
+**Documented since Step 3**: Kalshi's CF Benchmarks Value Feed documentation lists these `index_ids`,
+and CF Benchmarks publishes index pages under the same ids. Provenance is in
+`assets.INDEX_ID_PROVENANCE`. Every captured frame is still checked: a mismatch yields `MISSING`, never a
+wrong value. This documents the mapping only, not the window convention.
 
 ## 4. Settlement-window convention (`settlement/policy.py`, `SettlementWindowPolicy`)
 
@@ -291,12 +294,16 @@ store → reconstruct → checkpoints → verify → overlap. It runs it twice a
    policy `verified=True` in a new policy version, and re-baseline with
    `py -m settlement.fingerprint --write --i-intend-to-change-the-settlement-baseline`.
 
-No capture client is included: it would need Kalshi API credentials, which this step does not add.
+Step 2 included no capture client. **Step 3 adds one:** `py collect_market_data.py --cf --kalshi`
+(read-only; see docs/HIGH_RESOLUTION_DATA.md). It appends live CF observations, Kalshi-published
+averages, market metadata and settled results to `settlement_data/capture-<session>.jsonl`, a store
+in exactly this format, so steps 2 and 4 above apply to it directly. Items 1 and 3 are still useful for
+back-history. The collector never marks a convention verified.
 
 ## 13. Limitations (specific)
 
-* No real data has been processed. The default convention, the non-BTC index ids and the CF / Kalshi
-  feed schemas are **unverified**.
+* No real data has been processed. The default convention and the CF / Kalshi feed payload schemas
+  are **unverified**. The index ids are documented as of Step 3 (see §3).
 * 1-s as-of sampling of a 200 ms feed is an assumption. Bucket and exact variants are provided for
   comparison.
 * Historical data has no receive times. Causality for history rests on the explicit
@@ -323,3 +330,4 @@ No capture client is included: it would need Kalshi API credentials, which this 
 | Date | What changed | Why |
 |---|---|---|
 | 2026-09-24 | initial settlement baseline | Step 2 |
+| 2026-09-25 | `assets.py`: `INDEX_ID_PROVENANCE` added; the docstring now marks the asset→index mapping as DOCUMENTED. Mapping values are unchanged, and window policies stay `verified=False`. OLD `b665778b47cc1d49…` → NEW `3eba791cfe8163cc…` | Step 3: the index ids are confirmed by Kalshi documentation (owner-supplied, corroborated by search). The only source change is the added provenance constant; no settlement behaviour changed. |

@@ -42,7 +42,8 @@ manually promoted, inactive-by-default live veto.
 | `py kalshi_backtest.py --days N` | Standalone backtest + calibration report (network: Coinbase candles). |
 | Research tools | `label_binary_outcomes.py`, `analyze_perp_quality.py`, `analyze_perp_predictive.py`, `build_perp_shadow_policy.py`, `analyze_perp_shadow.py`, `build_perp_integration_experiment.py`, `analyze_perp_integration.py`, `promote_perp_integration.py`, `check_perp_deployment.py` |
 | Integrity | `py strategy_fingerprint.py --verify step5_baseline_manifest.json`, `py -m kalshi_core.baseline --verify`, `py -m regression.generate --check` |
-| Tests | `py run_all_tests.py` (stages 1–17, each in its own process) |
+| Research data capture (Step 3) | `py collect_market_data.py [--dry-run]` (read-only collector + status page on 127.0.0.1:8766), `scripts/replay_market_data.py`, `scripts/build_market_features.py`, `scripts/bench_market_data.py`, `scripts/mutation_test_market_data.py`, `py -m market_data.fingerprint --verify` |
+| Tests | `py run_all_tests.py` (stages 1–19, each in its own process) |
 
 ## 4. Prediction and signal path (per coin, every `POLL_SECONDS` = 4 s)
 
@@ -176,7 +177,26 @@ It is not wired into the watcher. Production code never imports it, and it impor
 network, Discord or execution module (stage 18). Its read-only `SettlementState` is the intended
 Step 3+ input; in Step 2 it is not allowed to influence any call.
 
-## 11. Future boundaries (not implemented)
+## 11. High-resolution market data + research features (Step 3, observation only)
+
+`market_data/` captures, normalizes, stores and causally replays high-resolution data. The sources
+are the CF RTI (via Kalshi or direct), Coinbase and Kraken websockets, and Kalshi public REST. It
+builds 452 research features, each with a status mask, under one rule: **an event is usable at T iff
+`receive_ts <= T`**. Checkpoint datasets keep features, labels and provenance in separate files.
+
+```
+collect_market_data.py ─ runner.py (one thread per source, backoff, feed states)
+   └─ sources/*.py (raw text → MarketEvent) ─ collector.py ─ storage.py (gzip JSONL + manifest)
+                                                          └─ settlement_data/capture-*.jsonl (Step-2 store)
+replay.py ─ features/engine.py (causal, incremental) ─ features/dataset.py (features | labels | provenance)
+```
+
+It is not wired into the watcher. `kalshi_dashboard`, `kalshi_core`, `run_local`, the perp code and
+`settlement` never import it. It imports no strategy, execution or Discord module, makes only
+read-only requests, and has its own fingerprint (`config/market_data_baseline.json`). Stage 19
+checks all of this. Its status page is a separate localhost port. See `docs/HIGH_RESOLUTION_DATA.md`.
+
+## 12. Future boundaries (not implemented)
 
 ```
 Market Data → Feature Engine → Prediction Model → Calibration → Signal Engine
@@ -190,7 +210,7 @@ Market Data → Feature Engine → Prediction Model → Calibration → Signal E
   plus an approving `RiskDecision` within its contract limit. In this build every engine refuses,
   and LIVE cannot be constructed.
 
-## 12. Failure handling (existing behaviour, unchanged)
+## 13. Failure handling (existing behaviour, unchanged)
 
 * The poller catches every per-coin exception and records it as a status (`net error`,
   `error: …`); the loop continues.

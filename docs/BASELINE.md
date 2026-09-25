@@ -142,6 +142,10 @@ Measured on this container with `run_all_tests.py` (per-suite result) and a per-
 Step 2 (settlement layer added): 18/18 suites, 297 checks passed, 0 failed on CPython 3.10.20, 3.11.15, 3.12.3 and 3.13.12
 (1 skip on 3.10/3.11, the same version-guarded AST check). Before Step 2 on 3.11/3.12: 17/17 suites, 275 checks.
 
+Step 3 (market-data layer added): before, 18/18 suites and 297 checks (re-verified on 3.11 and 3.12). After,
+19/19 suites, 329 checks passed, 0 failed on CPython 3.10.20, 3.11.15, 3.12.3 and 3.13.12 (the same 1 skip on 3.10/3.11).
+`scripts/mutation_test_market_data.py`: 7/7 causal-rule mutations caught (as-is and with the engine guards disabled).
+
 Why 3.10/3.11 were red before: `kalshi_backtest.py` used a backslash inside an f-string expression
 (legal only from Python 3.12, PEP 701). It could not even be imported, and stages 7/8 failed because
 they re-run stage 3. Stage 12 test 6.1 assumed `FunctionDef.type_params`, an AST field that only
@@ -188,6 +192,7 @@ no issues. `compileall`: clean on 3.10–3.13.
 |---|---|---|---|
 | 2026-09-24 | Step 1 | initial baseline (no behaviour change) | stages 1–17 green; fixtures identical on 3.10–3.13 |
 | 2026-09-24 | Step 2 | **none**: settlement research layer added beside the strategy; no Step-1 artifact rewritten | Step-1 artifacts byte-identical (stage 18 test 1); 47 fixtures MATCH; stages 1–18 green on 3.10–3.13 (297 checks) |
+| 2026-09-25 | Step 3 | **none** for the strategy. The separate settlement baseline was rewritten only to record the documented CF index-id provenance (OLD/NEW/WHY in SETTLEMENT_ENGINE.md); a new, separate `config/market_data_baseline.json` | Step-1 artifacts and perp/production files byte-identical (stage 19 test 1); 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…` unchanged; stages 1–19 green on 3.10–3.13 (329 checks) |
 
 ### Step 2 notes
 
@@ -200,3 +205,23 @@ no issues. `compileall`: clean on 3.10–3.13.
   fingerprinted `evaluate()` and caught inside the fingerprinted `poller()`. No outer adapter or input
   normalisation can turn it into a clean production NO_CALL without fabricating an ask or editing pinned
   code. It still fails closed (`status: error: …`, no call). Fix it only in a deliberate re-baseline.
+
+### Step 3 notes
+
+* Added `market_data/` (collector, sources, transports, storage, replay, causal feature engine,
+  dataset), `collect_market_data.py`, four scripts (`replay_market_data.py`, `build_market_features.py`,
+  `bench_market_data.py`, `mutation_test_market_data.py`), `config/market_data_baseline.json`,
+  `test_stage19.py` and `docs/HIGH_RESOLUTION_DATA.md`. Results: `analysis_output/market_data_performance.json`
+  and `analysis_output/market_data_mutation_results.json`.
+* Edits to existing files:
+  * the runner range (1–19), stage 13's `last = 19` and stage 17's runner assertion;
+  * `.gitignore` (session data ignored; the two result files kept) and `.env.example` (collector
+    variable names, empty);
+  * docs;
+  * `settlement/assets.py`: the index-id provenance (constants only; mapping values unchanged), with
+    its logged settlement re-baseline.
+* `kalshi_dashboard.py`, the production probability, calls, thresholds, entry window, stops and the
+  60-minute volatility are untouched. No new feature can create, veto or change a call. Nothing imports
+  `market_data` except its own tools and tests.
+* The Missing-ask defect (fixture E19) is still intentionally not fixed (see Step 2 notes).
+

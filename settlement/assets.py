@@ -1,11 +1,16 @@
 """
 Asset -> CF Benchmarks index mapping and Kalshi ticker / close-time consistency checks.
 
-The index ids follow CF Benchmarks' RTI naming (BRTI for bitcoin, <COIN>USD_RTI otherwise). They
-are an ASSUMPTION until confirmed by a real capture (Kalshi's cfbenchmarks_value channel supports an
-"indexlist" action; the importer records whatever id each frame carries, and reconstruction only
-uses observations whose id equals the market's index_id, so a wrong mapping yields MISSING, never a
-wrong value).
+The index ids (BTC->BRTI, ETH->ETHUSD_RTI, SOL->SOLUSD_RTI, XRP->XRPUSD_RTI) are DOCUMENTED:
+Kalshi's "CF Benchmarks Value Feed" documentation lists them as the index_ids of the
+cfbenchmarks_value channel, and CF Benchmarks publishes index pages under the same ids (see
+INDEX_ID_PROVENANCE; confirmed in Step 3, 2026-09-25). They are still cross-checked against every
+captured frame: reconstruction only uses observations whose id equals the market's index_id, so a
+future change yields MISSING, never a wrong value. Only the four supported assets are mapped; no
+other asset is added without the same evidence.
+
+What is documented is the MAPPING, not the settlement grid: the window convention stays an
+unverified candidate framework (policy.py) until captured data and expiration values demonstrate it.
 
 Kalshi tickers such as KXBTC15M-25DEC220415 encode the close in US Eastern time (YY MON DD HH MM).
 The authoritative close is the API's close_time (UTC ISO); the ticker is only a cross-check, done
@@ -18,6 +23,15 @@ import re
 ASSET_INDEX = {"BTC": "BRTI", "ETH": "ETHUSD_RTI", "SOL": "SOLUSD_RTI", "XRP": "XRPUSD_RTI"}
 SERIES_ASSET = {"KXBTC15M": "BTC", "KXETH15M": "ETH", "KXSOL15M": "SOL", "KXXRP15M": "XRP"}
 INDEX_ASSET = {v: k for k, v in ASSET_INDEX.items()}
+INDEX_ID_PROVENANCE = {
+    "status": "DOCUMENTED",
+    "sources": ("Kalshi API documentation: CF Benchmarks Value Feed (websockets/cfbenchmarks-value), index_ids",
+                "CF Benchmarks index pages: BRTI, ETHUSD_RTI, SOLUSD_RTI, XRPUSD_RTI"),
+    "confirmed_in": "Step 3 (2026-09-25): stated by the project owner from current Kalshi documentation and "
+                    "corroborated by public search summaries; the pages were not fetchable from the build environment",
+    "previous_status": "ASSUMED (Step 2)",
+    "scope": "asset -> CF index id mapping only; NOT the settlement window convention",
+}
 MARKET_TZ = "America/New_York"
 
 _TICKER = re.compile(r"^(?P<series>[A-Z0-9]+)-(?P<yy>\d{2})(?P<mon>[A-Z]{3})(?P<dd>\d{2})(?P<hh>\d{2})(?P<mi>\d{2})(?:-.*)?$")

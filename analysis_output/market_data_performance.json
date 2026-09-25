@@ -1,0 +1,48 @@
+{
+ "assets": [
+  "BTC",
+  "ETH",
+  "SOL",
+  "XRP"
+ ],
+ "collector": {
+  "bytes_compressed": 4704756,
+  "bytes_per_event": 82.0,
+  "events": 57392,
+  "flush_ms_max": 18.456,
+  "flush_ms_p50": 3.268,
+  "flush_ms_p99": 6.099,
+  "flushes": 241,
+  "mean_us_per_message": 151.5,
+  "messages_per_s": 6599,
+  "raw_messages": 52592,
+  "seconds": 7.97
+ },
+ "dataset": {
+  "rows": 60,
+  "seconds": 0.973
+ },
+ "feature_engine": {
+  "events_ingested": 57392,
+  "features_at_calls": 839,
+  "features_at_ms_max": 21.376,
+  "features_at_ms_p50": 7.974,
+  "features_at_ms_p99": 13.808,
+  "total_s_incl_features": 7.084
+ },
+ "memory": {
+  "current_mb_traced": 78.5,
+  "peak_mb_traced": 227.4,
+  "what": "load session + one incremental engine over it"
+ },
+ "note": "SYNTHETIC data; machine-specific",
+ "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39",
+ "python": "3.11.15",
+ "replay": {
+  "events": 57392,
+  "iterate_events_per_s": 3918177,
+  "load_events_per_s": 18882,
+  "load_s": 3.04
+ },
+ "synthetic_minutes": 20.0
+}
