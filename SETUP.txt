@@ -3,7 +3,8 @@ SETUP
 LOCAL-FIRST (Step 1 baseline) — start here. No Discord, no credentials, no orders.
   py run_local.py            # watcher + local dashboard http://127.0.0.1:8000, structured logs
   py run_local.py --check    # offline self-check (config + strategy fingerprints)
-  py run_all_tests.py        # stages 1-20
+  py run_all_tests.py        # stages 1-21
+  py collect_research_data.py --dry-run --all-research # Step 5 microstructure research (read-only); docs/MICROSTRUCTURE.md
   py collect_research_data.py --dry-run # Step 4 perp research telemetry (read-only); docs/PERP_HIGH_RESOLUTION_DATA.md
   py collect_market_data.py --dry-run   # Step 3 research data capture (read-only); docs/HIGH_RESOLUTION_DATA.md
   See README.md and docs/ (ARCHITECTURE.md, BASELINE.md, ROADMAP.md). Env var names: .env.example
@@ -28,6 +29,11 @@ Run:
   py kalshi_bot.py        # legacy optional: Discord bot + watcher + website
 
 Webhooks are fully removed — all Discord posting now goes through the bot to real channels.
+
+NOTE (Step 5 of the staged project): the separate research package microstructure/ (collect_research_data.py --micro /
+--all-research, docs/MICROSTRUCTURE.md) rebuilds spot / perp / Kalshi order books for research features only. It does NOT
+feed, change or replace any production call or anything in the perp veto chain below. Its Kalshi websocket source uses
+the same read-only API key as the CF-via-Kalshi feed (disabled without it); every other source is public.
 
 NOTE (Step 4 of the staged project): the separate research package perp_data/ (collect_research_data.py,
 docs/PERP_HIGH_RESOLUTION_DATA.md) records Binance / Bybit / OKX / Kalshi perp data for a NEW research dataset.
@@ -68,9 +74,9 @@ PERP TELEMETRY (Step 1 — passive, read-only research recorder)
   This is unproven research data — nothing here claims perps improve profitability.
 
 TESTS
-  py run_all_tests.py      # stages 1-20 (16: baseline regression, 17: local-first architecture, 18: settlement engine,
+  py run_all_tests.py      # stages 1-21 (16: baseline regression, 17: local-first architecture, 18: settlement engine,
                            #              19: high-resolution market data + causal research features,
-                           #              20: expanded perpetual-futures telemetry)
+                           #              20: expanded perpetual-futures telemetry, 21: market microstructure)
   py test_stage7.py        # perp telemetry only (no network needed)
 
 PERP TELEMETRY — STEP 2 (causal alignment + data quality; still observation only)

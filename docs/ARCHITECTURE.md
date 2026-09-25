@@ -44,7 +44,8 @@ manually promoted, inactive-by-default live veto.
 | Integrity | `py strategy_fingerprint.py --verify step5_baseline_manifest.json`, `py -m kalshi_core.baseline --verify`, `py -m regression.generate --check` |
 | Research data capture (Step 3) | `py collect_market_data.py [--dry-run]` (read-only collector + status page on 127.0.0.1:8766), `scripts/replay_market_data.py`, `scripts/build_market_features.py`, `scripts/bench_market_data.py`, `scripts/mutation_test_market_data.py`, `py -m market_data.fingerprint --verify` |
 | Perp research data (Step 4) | `py collect_research_data.py [--dry-run]` (Step 3 + Step 4 read-only, one session), `scripts/replay_perp_data.py`, `scripts/build_research_dataset.py`, `scripts/bench_perp_data.py`, `scripts/mutation_test_perp_data.py`, `py -m perp_data.fingerprint --verify` |
-| Tests | `py run_all_tests.py` (stages 1–20, each in its own process) |
+| Microstructure research (Step 5) | `py collect_research_data.py --all-research [--dry-run]` (Steps 3 + 4 + 5, one session), `scripts/replay_microstructure.py`, `scripts/build_micro_dataset.py`, `scripts/lead_lag_analysis.py`, `scripts/prune_sessions.py`, `scripts/bench_microstructure.py`, `scripts/mutation_test_microstructure.py`, `py -m microstructure.fingerprint --verify` |
+| Tests | `py run_all_tests.py` (stages 1–21, each in its own process) |
 
 ## 4. Prediction and signal path (per coin, every `POLL_SECONDS` = 4 s)
 
@@ -220,7 +221,35 @@ live-veto chain (§5), which is unchanged and pinned. It never feeds that chain:
 Stage 20 checks this, along with a separate fingerprint (`config/perp_data_baseline.json`, which also
 records the veto chain's hashes). See `docs/PERP_HIGH_RESOLUTION_DATA.md`.
 
-## 13. Future boundaries (not implemented)
+## 13. Market microstructure (Step 5, observation only)
+
+`microstructure/` maintains deterministic PRICE-LEVEL local books (no queue positions) for six venues:
+
+* Coinbase Advanced Trade `level2`;
+* Kraken v2 `book` (checksummed);
+* Binance diff depth + GET snapshots;
+* Bybit `orderbook`;
+* OKX `books`;
+* the Kalshi `orderbook_delta` / `trade` websocket (stored in YES terms).
+
+Each venue has its own sequence policy. One `BookReconstructor` is used live (a gap forces a resnapshot) and
+in replay. Books have explicit states (WARMING_UP / READY / STALE / INVALID / NEEDS_RESNAPSHOT) and
+append-only valid intervals, so there is no retroactive repair.
+
+`microstructure.features` builds 615 status-masked features in ten families (book, liquidity, order flow,
+trade intensity, sweeps, replenishment, toxicity, cross-venue), all on the receive-time axis.
+`microstructure.dataset` joins Steps 2 + 3 + 4 + 5 at the same checkpoint. POST-EVENT price-impact labels,
+the offline lead-lag tool and the sub-second grids are separate modules.
+
+Isolation:
+
+* nothing production, veto, settlement, market_data or perp_data imports `microstructure`;
+* it has its own fingerprint (`config/microstructure_baseline.json`, which also pins the veto chain and the
+  production files).
+
+Stage 21 checks this. See `docs/MICROSTRUCTURE.md`.
+
+## 14. Future boundaries (not implemented)
 
 ```
 Market Data → Feature Engine → Prediction Model → Calibration → Signal Engine

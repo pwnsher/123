@@ -150,6 +150,9 @@ Step 4 (perp-data layer added): before, 19/19 suites and 329 checks (re-verified
 20/20 suites, 355 checks passed, 0 failed on CPython 3.10.20, 3.11.15, 3.12.3 and 3.13.12 (the same 1 skip on 3.10/3.11).
 `scripts/mutation_test_perp_data.py`: 9/9 mutations caught (as-is and with the perp engine guards disabled).
 
+Step 5 (microstructure layer added): before, 20/20 suites and 355 checks (re-verified on 3.11 from the delivered Step-4 ZIP,
+plus every fingerprint and the 47 fixtures). After, STEP5_RESULTS_PLACEHOLDER
+
 Why 3.10/3.11 were red before: `kalshi_backtest.py` used a backslash inside an f-string expression
 (legal only from Python 3.12, PEP 701). It could not even be imported, and stages 7/8 failed because
 they re-run stage 3. Stage 12 test 6.1 assumed `FunctionDef.type_params`, an AST field that only
@@ -198,6 +201,7 @@ no issues. `compileall`: clean on 3.10–3.13.
 | 2026-09-24 | Step 2 | **none**: settlement research layer added beside the strategy; no Step-1 artifact rewritten | Step-1 artifacts byte-identical (stage 18 test 1); 47 fixtures MATCH; stages 1–18 green on 3.10–3.13 (297 checks) |
 | 2026-09-25 | Step 3 | **none** for the strategy. The separate settlement baseline was rewritten only to record the documented CF index-id provenance (OLD/NEW/WHY in SETTLEMENT_ENGINE.md); a new, separate `config/market_data_baseline.json` | Step-1 artifacts and perp/production files byte-identical (stage 19 test 1); 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…` unchanged; stages 1–19 green on 3.10–3.13 (329 checks) |
 | 2026-09-25 | Step 4 | **none** for the strategy, the settlement engine, the Step-3 engine and the EXISTING perp veto chain (14 files byte-identical; fingerprint `499c1e16…`). New, separate `config/perp_data_baseline.json` | Step-1 artifacts identical (stage 20 test 1); 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…` unchanged; settlement and market-data fingerprints verify unchanged; stages 1–20 green on 3.10–3.13 (355 checks) |
+| 2026-09-25 | Step 5 | **none** for the strategy, settlement, market-data, perp-data engines and the EXISTING perp veto chain (fingerprints unchanged). New, separate `config/microstructure_baseline.json` (`ce91fcd5…`, also pinning the veto chain and production files) | Step-1 artifacts identical (stage 21 test 1); 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…` unchanged; settlement `3eba791c…`, market-data `969cec83…`, perp-data `90543ddf…`, perp veto `499c1e16…` verify unchanged; stages 1–21 green on 3.10–3.13 |
 
 ### Step 2 notes
 
@@ -248,6 +252,30 @@ no issues. `compileall`: clean on 3.10–3.13.
   * docs.
 * No existing module changed: `market_data/` and `settlement/` are untouched (their fingerprints verify), and
   so are all perp-veto chain files and `kalshi_dashboard.py`. No OLD/NEW/WHY re-baseline was needed.
+
+### Step 5 notes
+
+* Added:
+  * `microstructure/` (deterministic local books + per-venue sequence policies, adapters for Coinbase level2,
+    Kraken v2 book, Binance diff depth, Bybit orderbook, OKX books and the Kalshi websocket, collector, snapshot
+    poller, storage controls, replay, causal feature engine with ten families, post-event labels, lead-lag,
+    sub-second grids, joint Step 2-5 dataset, synthetic generator, fingerprint);
+  * six scripts (`replay_microstructure.py`, `build_micro_dataset.py`, `lead_lag_analysis.py`,
+    `prune_sessions.py`, `bench_microstructure.py`, `mutation_test_microstructure.py`);
+  * `config/microstructure_baseline.json`, `test_stage21.py` and `docs/MICROSTRUCTURE.md`.
+
+  Results are in `analysis_output/microstructure_performance.json` (SYNTHETIC) and
+  `analysis_output/microstructure_mutation_results.json`.
+* Edits to existing files (OLD / NEW / WHY):
+  * `run_all_tests.py`: `range(1, 21)` → `range(1, 22)` (runs the new stage 21);
+  * `test_stage13.py`: `last = 20` → `last = 21` (its runner test mirrors the stage count);
+  * `test_stage17.py`: asserts `"range(1, 21)"` → `"range(1, 22)"` (same pin);
+  * `collect_research_data.py`: new `--micro`, `--micro-venues`, depth, `--compression-level`, `--segment-mb`,
+    `--segment-minutes` and `--all-research` flags plus the Step-5 runners (existing flags and behaviour
+    unchanged; no source flag now also enables `--micro`);
+  * `.gitignore` (the two new result files are kept) and docs.
+* No existing module changed: `market_data/`, `settlement/`, `perp_data/`, every perp-veto chain file and
+  `kalshi_dashboard.py` are byte-identical; their fingerprints verify. No re-baseline of any earlier layer.
 * The new perp features never enter the existing veto. The veto keeps its own features, statistics,
   thresholds, promotion state (INACTIVE) and strategy fingerprint binding.
 
