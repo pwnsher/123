@@ -475,7 +475,8 @@ as-is and with the engine guards disabled:
 10. a Step-5 feature imported by production
 11. a Step-5 feature imported by the existing perp veto
 
-MUTATION_PLACEHOLDER
+Result (`analysis_output/microstructure_mutation_results.json`): **11 / 11 caught**, both as-is and with the
+guards disabled. Controls (unmutated; guards disabled only) pass.
 
 The separate fingerprint lives in `config/microstructure_baseline.json` (`py -m microstructure.fingerprint --verify`).
 It pins:

@@ -1,0 +1,280 @@
+{
+ "note": "Each mutation breaks one rule in a temporary copy; CAUGHT = the Stage-21 tests fail.",
+ "controls": {
+  "unmutated": {
+   "caught": false,
+   "returncode": 0,
+   "seconds": 63.9,
+   "failed_test": null,
+   "passed_tests": [
+    "2 EXISTING perp veto chain byte-identical, INACTIVE, never impor",
+    "3 production isolation: nothing production / earlier-layer impor",
+    "6 book states: NO_BOOK / AWAITING / WARMING_UP / READY / STALE /",
+    "7 sequence policies: Coinbase / Kalshi chains, Binance U/u/pu al",
+    "8 Kalshi YES / NO bid-ask helpers with explicit units; adapter +",
+    "11 injected faults per venue detected + recovered; replay == liv",
+    "15 OFI (L1, 5-level), depth added / removed, net change, cancel ",
+    "19 missing book -> None + MISSING (never 0), warm-up, stale, OKX",
+    "20 receive-time causality; streaming == batch; guards",
+    "21 no retroactive repair after a resnapshot",
+    "26 joint Step 2-5 dataset == batch paths; earlier features uncha"
+   ]
+  },
+  "guards_disabled_only": {
+   "caught": false,
+   "returncode": 0,
+   "seconds": 64.1,
+   "failed_test": null,
+   "passed_tests": [
+    "2 EXISTING perp veto chain byte-identical, INACTIVE, never impor",
+    "3 production isolation: nothing production / earlier-layer impor",
+    "6 book states: NO_BOOK / AWAITING / WARMING_UP / READY / STALE /",
+    "7 sequence policies: Coinbase / Kalshi chains, Binance U/u/pu al",
+    "8 Kalshi YES / NO bid-ask helpers with explicit units; adapter +",
+    "11 injected faults per venue detected + recovered; replay == liv",
+    "15 OFI (L1, 5-level), depth added / removed, net change, cancel ",
+    "19 missing book -> None + MISSING (never 0), warm-up, stale, OKX",
+    "21 no retroactive repair after a resnapshot",
+    "26 joint Step 2-5 dataset == batch paths; earlier features uncha"
+   ]
+  }
+ },
+ "mutations": [
+  {
+   "id": "M1",
+   "mutation": "event time used instead of receive time (availability decided by the venue's event timestamp)",
+   "tests": [
+    "causality"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  20 receive-time causality; streaming == batch; guards: CausalityError: features at 10000 requested after ingesting data received at 10300",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  20 receive-time causality; streaming == batch; guards: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "M2",
+   "mutation": "a future book update becomes visible (ingested before the checkpoint is emitted)",
+   "tests": [
+    "dataset"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 33.2,
+    "failed_test": "FAIL  26 joint Step 2-5 dataset == batch paths; earlier features unchanged; labels separate: AssertionError: 1790000640000",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 33.4,
+    "failed_test": "FAIL  26 joint Step 2-5 dataset == batch paths; earlier features unchanged; labels separate: AssertionError: 1790000640000",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "M3",
+   "mutation": "sequence gaps ignored (chain / prevSeqId / pu checks disabled)",
+   "tests": [
+    "sequence",
+    "faults"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  7 sequence policies: Coinbase / Kalshi chains, Binance U/u/pu alignment, OKX prevSeqId, Kraken checksum, Bybit: AssertionError: ",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  7 sequence policies: Coinbase / Kalshi chains, Binance U/u/pu alignment, OKX prevSeqId, Kraken checksum, Bybit: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "M4",
+   "mutation": "a resnapshot retroactively repairs history (the old valid interval is re-opened)",
+   "tests": [
+    "retro",
+    "states"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  6 book states: NO_BOOK / AWAITING / WARMING_UP / READY / STALE / INVALID; reset + resnapshot: AssertionError: ",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  6 book states: NO_BOOK / AWAITING / WARMING_UP / READY / STALE / INVALID; reset + resnapshot: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "M5",
+   "mutation": "all removed liquidity labelled cancellation (trades not subtracted)",
+   "tests": [
+    "ofi"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  15 OFI (L1, 5-level), depth added / removed, net change, cancel ESTIMATE: AssertionError: ",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  15 OFI (L1, 5-level), depth added / removed, net change, cancel ESTIMATE: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "M6",
+   "mutation": "future price impact leaks into the features (post-event labels merged into the row)",
+   "tests": [
+    "dataset"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 33.9,
+    "failed_test": "FAIL  26 joint Step 2-5 dataset == batch paths; earlier features unchanged; labels separate: AssertionError: 1790000640000",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 34.3,
+    "failed_test": "FAIL  26 joint Step 2-5 dataset == batch paths; earlier features unchanged; labels separate: AssertionError: 1790000640000",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "M7",
+   "mutation": "Kalshi YES / NO conversion reversed (a NO bid used as the YES ask without 100 - p)",
+   "tests": [
+    "kalshi"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  8 Kalshi YES / NO bid-ask helpers with explicit units; adapter + engine in YES terms: AssertionError: ",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  8 Kalshi YES / NO bid-ask helpers with explicit units; adapter + engine in YES terms: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "M8",
+   "mutation": "a missing book becomes zero imbalance",
+   "tests": [
+    "missing"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  19 missing book -> None + MISSING (never 0), warm-up, stale, OKX unverified units: AssertionError: ",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  19 missing book -> None + MISSING (never 0), warm-up, stale, OKX unverified units: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "M9",
+   "mutation": "a crossed book is accepted as healthy",
+   "tests": [
+    "states",
+    "faults"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  6 book states: NO_BOOK / AWAITING / WARMING_UP / READY / STALE / INVALID; reset + resnapshot: AssertionError: ",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  6 book states: NO_BOOK / AWAITING / WARMING_UP / READY / STALE / INVALID; reset + resnapshot: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "M10",
+   "mutation": "a Step-5 feature is imported by production",
+   "tests": [
+    "isolation"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  3 production isolation: nothing production / earlier-layer imports microstructure; read-only; LIVE refused: AssertionError: Step-5 feature imported by run_local.py: ['microstructure.features.engine']",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  3 production isolation: nothing production / earlier-layer imports microstructure; read-only; LIVE refused: AssertionError: Step-5 feature imported by run_local.py: ['microstructure.features.engine']",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "M11",
+   "mutation": "a Step-5 feature is imported by the existing perp veto",
+   "tests": [
+    "veto",
+    "isolation"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  2 EXISTING perp veto chain byte-identical, INACTIVE, never imports microstructure: AssertionError: EXISTING PERP VETO CHAIN CHANGED: perp_live.py",
+    "passed_tests": []
+   },
+   "guards_disabled": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  2 EXISTING perp veto chain byte-identical, INACTIVE, never imports microstructure: AssertionError: EXISTING PERP VETO CHAIN CHANGED: perp_live.py",
+    "passed_tests": []
+   }
+  }
+ ],
+ "all_caught_and_controls_pass": true
+}
