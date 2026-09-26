@@ -151,7 +151,8 @@ Step 4 (perp-data layer added): before, 19/19 suites and 329 checks (re-verified
 `scripts/mutation_test_perp_data.py`: 9/9 mutations caught (as-is and with the perp engine guards disabled).
 
 Step 5 (microstructure layer added): before, 20/20 suites and 355 checks (re-verified on 3.11 from the delivered Step-4 ZIP,
-plus every fingerprint and the 47 fixtures). After, STEP5_RESULTS_PLACEHOLDER
+plus every fingerprint and the 47 fixtures). After, 21/21 suites, 387 checks passed, 0 failed on CPython 3.10.20, 3.11.15, 3.12.3 and 3.13.12 (the same 1 skip on 3.10/3.11).
+`scripts/mutation_test_microstructure.py`: 11/11 mutations caught (as-is and with the micro engine guards disabled).
 
 Why 3.10/3.11 were red before: `kalshi_backtest.py` used a backslash inside an f-string expression
 (legal only from Python 3.12, PEP 701). It could not even be imported, and stages 7/8 failed because
