@@ -711,7 +711,7 @@ def test_bybit_depths():
     assert crd.parse_args(["--micro", "--bybit-book-depth", "1000"]).bybit_book_depth == 1000
     q = subprocess.run([sys.executable, "collect_research_data.py", "--dry-run", "--micro", "--bybit-book-depth", "500"], cwd=HERE,
                        capture_output=True, text=True)
-    assert q.returncode == 2 and "invalid choice: 500" in q.stderr
+    assert q.returncode == 2 and ("invalid choice: 500" in q.stderr or "invalid choice: '500'" in q.stderr), q.stderr[-300:]  # 3.13 quotes
     p = subprocess.run([sys.executable, "collect_research_data.py", "--dry-run", "--assets", "BTC", "--micro", "--micro-venues",
                         "bybit_linear_book", "--bybit-book-depth", "1000"], cwd=HERE, capture_output=True, text=True)
     assert p.returncode == 0 and "orderbook.1000.BTCUSDT" in p.stdout, p.stdout[-800:] + p.stderr[-400:]
