@@ -430,26 +430,26 @@ Storage behaviour:
 
 Setup: 4 assets (BTC, ETH, SOL, XRP), 300 simulated seconds, all six books, with the Step-3 / Step-4
 synthetic collectors in the same loop, on CPython 3.11.15. These are **synthetic** numbers: real message
-rates and sizes differ.
+rates and sizes differ. Re-measured after Step 5.1; the exact-decimal Kraken book adds a small cost.
 
 Throughput and latency:
 
 | Measure | Result |
 |---|---|
-| Collector (parse + raw store + live reconstruction, including the Step-3 / Step-4 collectors) | 263 raw msg/s, 262 events/s |
-| Book-update latency (reconstructor apply) | p50 9.42 µs, p99 143.49 µs (80210 events) |
-| Feature row, 615 features | p50 42.31 ms, p99 53.1 ms |
-| Feature-engine ingest | 14176 events/s |
-| Replay | load 17.87 s; rebuild 30169 events/s |
-| Peak Python memory | collection 29.7 MiB; feature engine 9.5 MiB |
+| Collector (parse + raw store + live reconstruction, including the Step-3 / Step-4 collectors) | 224 raw msg/s, 223 events/s |
+| Book-update latency (reconstructor apply) | p50 10.19 µs, p99 439.32 µs (80210 events) |
+| Feature row, 615 features | p50 44.84 ms, p99 73.11 ms |
+| Feature-engine ingest | 11212 events/s |
+| Replay | load 22.28 s; rebuild 19330 events/s |
+| Peak Python memory | collection 29.9 MiB; feature engine 9.5 MiB |
 
 Disk:
 
-* 452.3 B per raw message stored (raw + event, gzip level 6);
-* compression ratio 7.0 / 8.6 / 9.2 at levels 1 / 6 / 9.
+* 476.8 B per raw message stored (raw + event, gzip level 6);
+* compression ratio 6.9 / 8.4 / 9.0 at levels 1 / 6 / 9.
 
 Projection with ASSUMED real rates (10–15 msg/s per symbol for the exchange books, 2 for Kalshi; 4 assets):
-**about 19 GiB/day**.
+**about 20 GiB/day**.
 
 * Coinbase dominates (the synthetic Coinbase messages carry a timestamp per level).
 * Use `--micro-venues`, depth, `--compression-level 9` and `scripts/prune_sessions.py` to bound it.
