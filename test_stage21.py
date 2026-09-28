@@ -25,6 +25,8 @@ import subprocess
 import sys
 import tempfile
 import time
+import zlib
+from decimal import Decimal as D
 from itertools import count
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -39,7 +41,8 @@ from market_data.storage import read_session                                    
 from market_data.types import AggressorSemantics, EventType, MarketEvent                         # noqa: E402
 from microstructure import MICRO_FEATURE_SET_VERSION, fingerprint as mfp                         # noqa: E402
 from microstructure import kalshi as K                                                           # noqa: E402
-from microstructure.book import LocalBook, NegativeLevel, kraken_checksum                        # noqa: E402
+from microstructure.book import (ExactBook, LocalBook, NegativeLevel, exact_decimal, kraken_checksum,  # noqa: E402
+                                 kraken_checksum_string)
 from microstructure.collector import MicroCollector, ResnapshotRequired                          # noqa: E402
 from microstructure.dataset import KEY_COLS, build_joint_dataset, write_joint_dataset            # noqa: E402
 from microstructure.features.definitions import (FAMILIES, FEATURE_NAMES, FEATURES,              # noqa: E402
@@ -156,6 +159,19 @@ def snap(src, sym, r, bids, asks, uid=None, prev=None, chain=None, depth=None, c
 def delta(src, sym, r, changes, uid=None, prev=None, first=None, chain=None, checksum=None, asset="BTC", ets=None):
     return mev(src, MT.BOOK_DELTA, sym, r, dict(book=sym, changes=[list(c) for c in changes], update_id=uid, prev_update_id=prev,
                                                first_update_id=first, checksum=checksum, chain=chain, **units(src)), asset, ets)
+
+
+def ksnap(r, bids, asks, checksum, depth=10, sym="BTC/USD"):
+    """A Kraken snapshot carrying exact wire decimals (strings) beside the float feature book."""
+    return mev("kraken_book", MT.BOOK_SNAPSHOT, sym, r, dict(
+        book=sym, bids=[[float(p), float(q)] for p, q in bids], asks=[[float(p), float(q)] for p, q in asks], update_id=None,
+        depth=depth, checksum=checksum, exact_bids=[list(x) for x in bids], exact_asks=[list(x) for x in asks], **units("kraken_book")))
+
+
+def kdelta(r, changes, checksum, sym="BTC/USD"):
+    return mev("kraken_book", MT.BOOK_DELTA, sym, r, dict(
+        book=sym, changes=[[sd, float(p), float(q), "abs"] for sd, p, q in changes], update_id=None, prev_update_id=None,
+        first_update_id=None, checksum=checksum, exact_changes=[list(c) for c in changes], **units("kraken_book")))
 
 
 def reset(src, r, book="*", reason="DISCONNECT"):
@@ -408,20 +424,25 @@ def test_sequence_policies():
     assert rc.apply(delta(OK_, OS, 1100, [("bid", 100.0, 4.0, "abs")], uid=11, prev=10)).kind == "delta"
     assert rc.apply(delta(OK_, OS, 1200, [], uid=11, prev=11)).kind == "delta"        # no-change update: prev == seq
     assert rc.apply(delta(OK_, OS, 1300, [("bid", 100.0, 3.0, "abs")], uid=14, prev=13)).kind == "gap"
-    # --- Kraken checksum: verified with instrument precisions, mismatch INVALID, unknown precision flagged ---
+    # --- Kraken checksum: verified (exact decimals) with instrument precisions, mismatch INVALID, unknown precision flagged ---
     KR, KS = "kraken_book", "BTC/USD"
-    lb = LocalBook()
-    lb.load([(100.1, 1.5), (100.0, 2.0)], [(100.2, 0.5)])
-    good = kraken_checksum(lb, 1, 8)
+    xb = ExactBook()
+    xb.load([(D("100.1"), D("1.5")), (D("100.0"), D("2.0"))], [(D("100.2"), D("0.5"))])
+    good = kraken_checksum(xb, 1, 8)
     rc = BookReconstructor(warmup_ms=0)
-    rc.apply(snap(KR, KS, 1000, [(100.1, 1.5), (100.0, 2.0)], [(100.2, 0.5)], depth=10, checksum=good))
+    rc.apply(ksnap(1000, [("100.1", "1.5"), ("100.0", "2.0")], [("100.2", "0.5")], good))
     assert "CHECKSUM_UNVERIFIED" in rc.tracks[(KR, KS)].flags and rc.status((KR, KS), 1000) == BS.READY
     rc.apply(mev(KR, MT.INSTRUMENT, KS, 1050, {"book": KS, "info": {"price_precision": 1, "qty_precision": 8}}))
-    lb.set_level("ask", 100.3, 1.0)
-    rc.apply(delta(KR, KS, 1100, [("ask", 100.3, 1.0, "abs")], checksum=kraken_checksum(lb, 1, 8)))
+    xb.set_level("ask", D("100.3"), D("1.0"))
+    rc.apply(kdelta(1100, [("ask", "100.3", "1.0")], kraken_checksum(xb, 1, 8)))
     assert rc.tracks[(KR, KS)].counts["checksum_ok"] == 1 and "CHECKSUM_UNVERIFIED" not in rc.tracks[(KR, KS)].flags
-    rc.apply(delta(KR, KS, 1200, [("ask", 100.4, 1.0, "abs")], checksum=12345))
+    rc.apply(kdelta(1200, [("ask", "100.4", "1.0")], 12345))
     assert rc.status((KR, KS), 1200) == BS.INVALID and rc.tracks[(KR, KS)].reason == "CHECKSUM_MISMATCH"
+    # a Kraken event WITHOUT exact decimals is never checksum-verified from floats
+    rc = BookReconstructor(warmup_ms=0)
+    rc.apply(mev(KR, MT.INSTRUMENT, KS, 900, {"book": KS, "info": {"price_precision": 1, "qty_precision": 8}}))
+    rc.apply(snap(KR, KS, 1000, [(100.1, 1.5)], [(100.2, 0.5)], depth=10, checksum=good))
+    assert "CHECKSUM_UNVERIFIED" in rc.tracks[(KR, KS)].flags and rc.tracks[(KR, KS)].counts["checksum_ok"] == 0
     # --- Bybit: monotonic ids only; restart snapshot resets ---
     Y, YS = "bybit_linear_book", "BTCUSDT"
     rc = BookReconstructor(warmup_ms=0)
@@ -521,6 +542,191 @@ def test_adapters_parse_native_messages():
             bad_depth[0](["BTC"], depth=bad_depth[1]); raise AssertionError("invalid depth accepted")
         except ValueError:
             pass
+
+
+# ═══════════════════ Step 5.1: Kraken exact-decimal checksums, Bybit depths ═══════════════════
+# Kraken's published WebSocket v2 book example (BTC/USD snapshot), verbatim; its documented checksum is 3310070434.
+KRAKEN_OFFICIAL_SNAPSHOT = (
+    '{"channel":"book","type":"snapshot","data":[{"symbol":"BTC/USD","bids":['
+    '{"price":45283.5,"qty":0.10000000},{"price":45283.4,"qty":1.54582015},{"price":45282.1,"qty":0.10000000},'
+    '{"price":45281.0,"qty":0.10000000},{"price":45280.3,"qty":1.54592586},{"price":45279.0,"qty":0.07990000},'
+    '{"price":45277.6,"qty":0.03310103},{"price":45277.5,"qty":0.30000000},{"price":45277.3,"qty":1.54602737},'
+    '{"price":45276.6,"qty":0.15445238}],"asks":['
+    '{"price":45285.2,"qty":0.00100000},{"price":45286.4,"qty":1.54571953},{"price":45286.6,"qty":1.54571109},'
+    '{"price":45289.6,"qty":1.54560911},{"price":45290.2,"qty":0.15890660},{"price":45291.8,"qty":1.54553491},'
+    '{"price":45294.7,"qty":0.04454749},{"price":45296.1,"qty":0.35380000},{"price":45297.5,"qty":0.09945542},'
+    '{"price":45299.5,"qty":0.18772827}],"checksum":3310070434}]}')
+KRAKEN_OFFICIAL_CHECKSUM = 3310070434
+
+
+def kraken_instrument(sym, pp, qp):
+    return json.dumps({"channel": "instrument", "type": "snapshot", "data": {"assets": [], "pairs": [
+        {"symbol": sym, "price_precision": pp, "qty_precision": qp, "price_increment": 10 ** -pp, "qty_increment": 10 ** -qp}]}})
+
+
+def ref_fmt(txt, prec):
+    """Reference formatting on the WIRE TEXT only (pure string operations: no float, no Decimal)."""
+    ip, _, fp = txt.partition(".")
+    assert len(fp) <= prec, (txt, prec)
+    return (ip + fp.ljust(prec, "0")).lstrip("0")
+
+
+def ref_checksum(bids, asks, pp, qp):
+    """bids / asks: [(price_text, qty_text)] best first. Returns (crc32, checksum string)."""
+    s = "".join(ref_fmt(p, pp) + ref_fmt(q, qp) for p, q in asks[:10]) + "".join(ref_fmt(p, pp) + ref_fmt(q, qp) for p, q in bids[:10])
+    return zlib.crc32(s.encode()) & 0xFFFFFFFF, s
+
+
+def kraken_raw_snapshot(bids, asks, checksum, sym="BTC/USD"):
+    """A raw Kraken v2 snapshot whose numbers are written as the given literal texts."""
+    lv = lambda xs: ",".join('{"price":%s,"qty":%s}' % (p, q) for p, q in xs)  # noqa: E731
+    return '{"channel":"book","type":"snapshot","data":[{"symbol":"%s","bids":[%s],"asks":[%s],"checksum":%d}]}' % (
+        sym, lv(bids), lv(asks), checksum)
+
+
+def kraken_pipeline(texts, depth=10):
+    """raw JSON -> KrakenBookAdapter -> normalized MicroEvents -> BookReconstructor (checksum validation)."""
+    ad = KrakenBookAdapter(["BTC"], depth=depth)
+    rc = BookReconstructor(warmup_ms=0)
+    n = count(1)
+    evs = []
+    for i, t in enumerate(texts):
+        res = ad.parse(t, MicroCtx("s", lambda: next(n), C + i, None, None, "ws", 1))
+        assert not res.failures, res.failures
+        for ev in res.events:
+            evs.append(ev)
+            rc.apply(ev)
+    return rc, evs
+
+
+def test_kraken_official_checksum():
+    rc, evs = kraken_pipeline([kraken_instrument("BTC/USD", 1, 8), KRAKEN_OFFICIAL_SNAPSHOT])
+    tr = rc.tracks[("kraken_book", "BTC/USD")]
+    snap_ev = [e for e in evs if e.event_type == MT.BOOK_SNAPSHOT][0]
+    assert snap_ev.payload["checksum"] == KRAKEN_OFFICIAL_CHECKSUM
+    assert snap_ev.payload["exact_bids"][0] == ["45283.5", "0.10000000"]        # the wire digits, trailing zeros kept
+    assert snap_ev.payload["exact_asks"][0] == ["45285.2", "0.00100000"]
+    assert tr.last_checksum == KRAKEN_OFFICIAL_CHECKSUM and tr.counts["checksum_ok"] == 1 and tr.counts["checksum_fail"] == 0
+    assert rc.status(("kraken_book", "BTC/USD"), C + 10) == BS.READY and "CHECKSUM_UNVERIFIED" not in tr.flags
+    # the checksum state is Decimal-only and separate from the float feature book
+    assert all(type(p) is D and type(q) is D for p, q in tr.exact.top("bid", 50) + tr.exact.top("ask", 50))
+    assert all(type(p) is float for p, _ in tr.book.top("bid", 50)) and tr.exact is not tr.book
+    d = json.loads(KRAKEN_OFFICIAL_SNAPSHOT)["data"][0]
+    txt = KRAKEN_OFFICIAL_SNAPSHOT
+    import re
+    lv = lambda key: re.findall(r'\{"price":([0-9.]+),"qty":([0-9.]+)\}', txt.split('"%s":[' % key)[1].split("]")[0])  # noqa: E731
+    ref, ref_s = ref_checksum(lv("bids"), lv("asks"), 1, 8)
+    assert ref == KRAKEN_OFFICIAL_CHECKSUM and kraken_checksum_string(tr.exact, 1, 8) == ref_s
+    assert ref_s.startswith("452852100000") and len(d["bids"]) == 10
+    # one changed digit on the wire -> mismatch -> INVALID (never repaired)
+    bad = KRAKEN_OFFICIAL_SNAPSHOT.replace('"qty":0.15445238', '"qty":0.15445239')
+    rc2, _ = kraken_pipeline([kraken_instrument("BTC/USD", 1, 8), bad])
+    t2 = rc2.tracks[("kraken_book", "BTC/USD")]
+    assert rc2.status(("kraken_book", "BTC/USD"), C + 10) == BS.INVALID and t2.reason == "CHECKSUM_MISMATCH"
+    # an update on top of the official book, checksum from the string reference
+    bids, asks = lv("bids"), lv("asks")
+    asks2 = [("45285.1", "0.50000000")] + asks                                # a new best ask
+    bids2 = [b for b in bids if b[0] != "45282.1"]                             # a deleted bid level
+    cs2, _ = ref_checksum(bids2, asks2, 1, 8)
+    upd = ('{"channel":"book","type":"update","data":[{"symbol":"BTC/USD","bids":[{"price":45282.1,"qty":0}],'
+           '"asks":[{"price":45285.1,"qty":0.50000000}],"checksum":%d,"timestamp":"2026-09-21T10:00:00.000000Z"}]}' % cs2)
+    rc3, _ = kraken_pipeline([kraken_instrument("BTC/USD", 1, 8), KRAKEN_OFFICIAL_SNAPSHOT, upd])
+    t3 = rc3.tracks[("kraken_book", "BTC/USD")]
+    assert t3.counts["checksum_ok"] == 2 and t3.last_checksum == cs2
+    # the same path through the collector, the store and a replay (exact decimals survive storage as strings)
+    clock = FakeClock(C)
+    ad = KrakenBookAdapter(["BTC"], depth=10)
+    col = MicroCollector(tmpdir(), ["BTC"], {"kraken_book": ad}, clock, fsync=False)
+    col.on_connect(ad, clock.wall_ms())
+    for t in (kraken_instrument("BTC/USD", 1, 8), KRAKEN_OFFICIAL_SNAPSHOT, upd):
+        clock.advance(10)
+        col.on_message(ad, t, clock.wall_ms(), clock.mono_ns())
+    col.close()
+    assert col.recon.tracks[("kraken_book", "BTC/USD")].counts["checksum_ok"] == 2
+    stored = [MicroEvent.from_dict(dd) for k, dd in read_session(col.dir).records if k == "event"]
+    rb = rebuild_books(stored)
+    assert rb.tracks[("kraken_book", "BTC/USD")].last_checksum == cs2 and rb.tracks[("kraken_book", "BTC/USD")].counts["checksum_fail"] == 0
+
+
+KRAKEN_ADVERSARIAL = [
+    ("trailing zeroes", 1, 8, [("45281.0", "1.50000000"), ("45280.0", "2.00000000"), ("45279.5", "0.10000000")],
+     [("45282.0", "3.00000000"), ("45283.0", "0.50000000")]),
+    ("tiny quantities", 1, 8, [("45281.1", "0.00000001"), ("45281.0", "0.00000010")],
+     [("45281.2", "0.00000100"), ("45281.3", "0.00001000")]),
+    ("maximum supported precision", 10, 10, [("0.0000123456", "123456789.1234567891"), ("0.0000123455", "0.0000000001")],
+     [("0.0000123457", "0.0000000002"), ("0.0000123458", "99999999.9999999999")]),
+    ("many meaningful digits", 10, 8, [("1234567.1234567891", "987654321.98765432"), ("1234567.1234567881", "12345678.12345678")],
+     [("1234567.1234567899", "876543210.87654321"), ("1234567.1234567911", "0.12345678")]),
+    ("binary-float-vulnerable decimals", 3, 8, [("2.675", "0.30000000"), ("1.005", "0.10000000"), ("0.070", "0.20000000")],
+     [("2.680", "0.70000000"), ("3.015", "1.15000000"), ("4.350", "0.29000000")]),
+]
+
+
+def test_kraken_decimal_adversarial():
+    float_differs = []
+    for name, pp, qp, bids, asks in KRAKEN_ADVERSARIAL:
+        cs, ref_s = ref_checksum(bids, asks, pp, qp)
+        rc, evs = kraken_pipeline([kraken_instrument("BTC/USD", pp, qp), kraken_raw_snapshot(bids, asks, cs)])
+        tr = rc.tracks[("kraken_book", "BTC/USD")]
+        assert tr.counts["checksum_ok"] == 1 and tr.last_checksum == cs, (name, tr.reason)
+        assert kraken_checksum_string(tr.exact, pp, qp) == ref_s, name
+        exact = dict(tr.exact.top("bid", 50) + tr.exact.top("ask", 50))
+        for p, q in bids + asks:                                             # the exact wire digits, exponent included
+            assert exact[D(p)].as_tuple() == D(q).as_tuple(), (name, p, q, exact[D(p)])
+        # the pre-5.1 float path (float(wire) formatted with the precision) is not exact for these inputs
+        old = "".join(f"{float(p):.{pp}f}".replace(".", "").lstrip("0") + f"{float(q):.{qp}f}".replace(".", "").lstrip("0")
+                      for p, q in asks[:10] + bids[:10])
+        if old != ref_s:
+            float_differs.append(name)
+    assert "many meaningful digits" in float_differs and "maximum supported precision" in float_differs, float_differs
+    # a scientific-notation literal is still the same exact decimal
+    cs, _ = ref_checksum([("45281.1", "0.00000001")], [("45281.2", "0.00000100")], 1, 8)
+    rc, _ = kraken_pipeline([kraken_instrument("BTC/USD", 1, 8), kraken_raw_snapshot([("45281.1", "1e-8")], [("45281.2", "0.00000100")], cs)])
+    assert rc.tracks[("kraken_book", "BTC/USD")].counts["checksum_ok"] == 1
+    # more decimals on the wire than the instrument precision -> INVALID, never silently rounded
+    rc, _ = kraken_pipeline([kraken_instrument("BTC/USD", 1, 8), kraken_raw_snapshot([("45281.1", "0.123456789")], [("45281.2", "0.1")], 1)])
+    assert rc.status(("kraken_book", "BTC/USD"), C + 10) == BS.INVALID and "CHECKSUM_PRECISION" in rc.tracks[("kraken_book", "BTC/USD")].reason
+    # floats are refused anywhere on the checksum path
+    for bad in (lambda: exact_decimal(0.1), lambda: ExactBook().set_level("bid", 1.0, D("1")), lambda: kraken_checksum(LocalBook(), 1, 8)):
+        try:
+            bad(); raise AssertionError("a float reached the checksum path")
+        except TypeError:
+            pass
+    assert exact_decimal("0.10000000").as_tuple() == D("0.10000000").as_tuple() and exact_decimal(7) == D(7)
+
+
+def test_bybit_depths():
+    spec = VENUES["bybit_linear_book"]
+    assert spec.depth_options == (1, 50, 200, 1000) and 500 not in spec.depth_options
+    for bad in (500, 25, 400):
+        try:
+            BybitBookAdapter(["BTC"], depth=bad); raise AssertionError(f"Bybit depth {bad} accepted")
+        except ValueError:
+            pass
+    ad = BybitBookAdapter(["BTC", "ETH"], depth=1000)
+    subs = [a for m in ad.subscribe_messages() for a in json.loads(m)["args"]]
+    assert subs == ["orderbook.1000.BTCUSDT", "orderbook.1000.ETHUSDT"]
+    assert [a for m in BybitBookAdapter(["BTC"]).subscribe_messages() for a in json.loads(m)["args"]] == ["orderbook.200.BTCUSDT"]
+    import collect_research_data as crd
+    assert crd.parse_args(["--micro", "--bybit-book-depth", "1000"]).bybit_book_depth == 1000
+    q = subprocess.run([sys.executable, "collect_research_data.py", "--dry-run", "--micro", "--bybit-book-depth", "500"], cwd=HERE,
+                       capture_output=True, text=True)
+    assert q.returncode == 2 and "invalid choice: 500" in q.stderr
+    p = subprocess.run([sys.executable, "collect_research_data.py", "--dry-run", "--assets", "BTC", "--micro", "--micro-venues",
+                        "bybit_linear_book", "--bybit-book-depth", "1000"], cwd=HERE, capture_output=True, text=True)
+    assert p.returncode == 0 and "orderbook.1000.BTCUSDT" in p.stdout, p.stdout[-800:] + p.stderr[-400:]
+    # the synthetic feed follows the configured depth and the adapter parses it
+    from market_data.synthetic import World
+    from perp_data.synthetic import PerpWorld
+    w = World(["BTC"], C - 100_000, C + 100_000)
+    f = VenueFeed("bybit_linear_book", ["BTC"], w, PerpWorld(w), 5, depth=1000)
+    msgs = f.connect(C - 50_000, 1) + f.step(C - 49_900)
+    assert all(json.loads(m)["topic"] == "orderbook.1000.BTCUSDT" for m in msgs)
+    n = count(1)
+    res = [BybitBookAdapter(["BTC"], depth=1000).parse(m, MicroCtx("s", lambda: next(n), C, None, None, "ws", 1)) for m in msgs]
+    assert all(r.events and not r.failures for r in res)
+    doc = open(os.path.join(HERE, "docs", "MICROSTRUCTURE.md"), encoding="utf-8").read()
+    assert "orderbook.{1,50,200,1000}" in doc and "orderbook.{1,50,200,500}" not in doc
 
 
 # ═══════════════════ 10-12 collector, faults, replay ═══════════════════
@@ -1062,6 +1268,10 @@ def test_microstructure_fingerprint():
     ok, problems = mfp.verify()
     assert ok, problems
     stored = json.load(open(mfp.BASELINE_PATH))
+    # Step 5.1 changed microstructure code (Bybit depths, exact-decimal Kraken checksums): the pre-5.1 Step-5 fingerprint
+    # must no longer be the active one
+    assert stored["microstructure_fingerprint"] != "ce91fcd52941b588a706ed90a034b9d14b3945ed1fc071aeee66ab5fd5706f4b"
+    assert stored["microstructure_fingerprint"] == mfp.build()["microstructure_fingerprint"]
     assert stored["feature_count"] == len(FEATURES) and stored["micro_feature_set_version"] == MICRO_FEATURE_SET_VERSION
     assert stored["production_files"] == mfp.production_hashes()
     tmp = tmpdir()
@@ -1090,7 +1300,8 @@ def test_docs_and_outputs():
     perf = json.load(open(os.path.join(HERE, "analysis_output", "microstructure_performance.json")))
     assert perf["synthetic"] is True and "SYNTHETIC" in perf["note"]
     mut = json.load(open(os.path.join(HERE, "analysis_output", "microstructure_mutation_results.json")))
-    assert mut["all_caught_and_controls_pass"] is True and len(mut["mutations"]) == 11
+    assert mut["all_caught_and_controls_pass"] is True and len(mut["mutations"]) >= 13
+    assert {m["id"] for m in mut["mutations"]} >= {f"M{i}" for i in range(1, 14)}
 
 
 def test_performance_smoke():
@@ -1131,6 +1342,9 @@ TESTS = [
     ("sequence", "7 sequence policies: Coinbase / Kalshi chains, Binance U/u/pu alignment, OKX prevSeqId, Kraken checksum, Bybit", test_sequence_policies),
     ("kalshi", "8 Kalshi YES / NO bid-ask helpers with explicit units; adapter + engine in YES terms", test_kalshi_conventions),
     ("adapters", "9 native message parsing for all six venues; failures recorded, never guessed", test_adapters_parse_native_messages),
+    ("kraken_official", "8a Kraken official v2 example: raw JSON -> adapter -> event -> reconstruction -> checksum 3310070434", test_kraken_official_checksum),
+    ("kraken_decimal", "8b Kraken exact decimals: trailing zeroes, tiny sizes, max precision, many digits, float-vulnerable values", test_kraken_decimal_adversarial),
+    ("bybit_depth", "8c Bybit linear depths 1 / 50 / 200 / 1000: 500 rejected, 1000 accepted -> orderbook.1000.<symbol>", test_bybit_depths),
     ("collector", "10 collector: raw first, connection numbers, resnapshot on gap, BOOK_RESET, GET-only snapshots, overload recorded", test_collector_resnapshot_and_raw_first),
     ("faults", "11 injected faults per venue detected + recovered; replay == live; renormalize identical", test_fault_injection_and_recovery),
     ("replay", "12 deterministic replay (digests) + RAW -> normalization reproducible", test_replay_deterministic),

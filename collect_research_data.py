@@ -11,7 +11,7 @@ collect_research_data.py — Step-3 + Step-4 + Step-5 READ-ONLY research collect
 Step-3 sources (flags as in collect_market_data.py): --cf [--cf-source kalshi|direct|both] --coinbase --secondary --kalshi
 Step-4 sources: --perps [--perp-venues binance_usdm,bybit_linear,okx_swap,kalshi_perp] [--no-usdt] [--book-depth 5|10|20]
 Step-5 sources: --micro [--micro-venues coinbase_l2,kraken_book,binance_usdm_book,bybit_linear_book,okx_swap_book,kalshi_ws]
-    [--binance-book-depth 1000] [--kraken-book-depth 25] [--bybit-book-depth 200]
+    [--binance-book-depth 1000] [--kraken-book-depth 25] [--bybit-book-depth 1|50|200|1000]
     storage: [--compression-level 1..9] [--segment-mb 64] [--segment-minutes N]   (retention: scripts/prune_sessions.py)
     With no source flag at all (or --all-research), everything is enabled. The USDT/USD rate (Coinbase USDT-USD) is
     collected with --perps unless --no-usdt, because USDT-quoted perps are converted before comparing with USD spot / CF.
@@ -64,9 +64,10 @@ def parse_args(argv=None):
     ap.add_argument("--book-depth", type=int, default=10, choices=(5, 10, 20))
     ap.add_argument("--micro", action="store_true", help="Step-5 order books (+ Kalshi websocket)")
     ap.add_argument("--micro-venues", default=",".join(BOOK_VENUES))
-    ap.add_argument("--binance-book-depth", type=int, default=1000, choices=(5, 10, 20, 50, 100, 500, 1000))
-    ap.add_argument("--kraken-book-depth", type=int, default=25, choices=(10, 25, 100, 500, 1000))
-    ap.add_argument("--bybit-book-depth", type=int, default=200, choices=(1, 50, 200, 500))
+    ap.add_argument("--binance-book-depth", type=int, default=1000, choices=BOOK_SPECS["binance_usdm_book"].depth_options)
+    ap.add_argument("--kraken-book-depth", type=int, default=25, choices=BOOK_SPECS["kraken_book"].depth_options)
+    ap.add_argument("--bybit-book-depth", type=int, default=200, choices=BOOK_SPECS["bybit_linear_book"].depth_options,
+                    help="Bybit linear depths: 1 / 50 / 200 / 1000")
     ap.add_argument("--compression-level", type=int, default=6, choices=range(1, 10), metavar="1..9")
     ap.add_argument("--segment-mb", type=int, default=64)
     ap.add_argument("--segment-minutes", type=float, default=0, help="also rotate segments every N minutes (0 = size only)")

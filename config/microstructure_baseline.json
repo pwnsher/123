@@ -46,10 +46,10 @@
  "format": "microstructure_fingerprint_v1/canonical_ast_v2_sha256",
  "micro_feature_set_version": "micro_features_v1",
  "micro_schema_version": 1,
- "microstructure_fingerprint": "ce91fcd52941b588a706ed90a034b9d14b3945ed1fc071aeee66ab5fd5706f4b",
+ "microstructure_fingerprint": "695d8e7741287c0bbac40ae9835148e4a0fbcd0e517669784aae647a8dcb0799",
  "modules": {
   "__init__.py": "a425d9b1c8431cc78e16464297dd6ac529d01e52bda05c6b34a75d14b0a34853",
-  "book.py": "5eeb8c21a2c120c7d98773893a796ca42242ce5eec755024f85923f53f0485ae",
+  "book.py": "93c4207be188d70f07887eb46bbb5b1d4c6f9fcaab00d01cf069e09546ad08bf",
   "collector.py": "38d11f5a1cd819a8fb1ece73ca4c858f5d80f076d857a0b25c457785d91a73d4",
   "dataset.py": "1faf90a27d04037a01268d9faa5aacba251a68db77a80bea092bad7c5428ddae",
   "features/__init__.py": "764e958d2ecccfb9d2637e09637764f6d90f173f764e27e8ed04ab297ed7a6eb",
@@ -62,7 +62,7 @@
   "leadlag.py": "da35c4dd40ced26af1c7c9bef67cbea5a895545afee94fd8fbdf5dd9eef8dc43",
   "manifest.py": "6cc23beab572f7d4dea15904c67894a6b32ad61fe4321a782c4fd24b9534d1ee",
   "poller.py": "756c8ab715724c3ad292c7bee12f240257d9a249d20257a996c77377f754782c",
-  "reconstruction.py": "978c8133ddd4f7ece6b9aba8d1e2652e6e76d1682008241e842eca2ca19f6866",
+  "reconstruction.py": "826958b34bba5fbf2d57d0b2acb11c99daad098d926f61b8b2c1e1c3075b21f4",
   "replay.py": "ca1aedc3b3ac9ed9e24be62870aac9ada3dd15fd8784ae9d493893b09b8bb9e4",
   "sources/__init__.py": "764e958d2ecccfb9d2637e09637764f6d90f173f764e27e8ed04ab297ed7a6eb",
   "sources/base.py": "cd9f9f8c7fb87f09707150509c3ea35dfd20edd598e5a0187e56ef0f54076415",
@@ -70,13 +70,13 @@
   "sources/bybit_book.py": "fe2b5596c56640df48bcca5cb93cd8d24b4bbcd23e3447b328439f3577bf4003",
   "sources/coinbase_l2.py": "2b52b8b909028fcc022e1d7f0882965b84f0bb605e63256a8ab84e2c81b90664",
   "sources/kalshi_ws.py": "125f7eb2260fbcee370f286cdc9668bde188c7d5186fec39bf9bd600705bd7d3",
-  "sources/kraken_book.py": "9545426b4062b19b6544e1b8fd79aacb3bffdaaf7c9ff062d406b277602e0f7a",
+  "sources/kraken_book.py": "1f6e77edaa44f188bb6c01e9cfffd8b5c9654f86ac7981f6d4ee395ea56226d1",
   "sources/okx_books.py": "ae0161f75402ddf0a0347fc5e91a680dd7b6f4f72be99c034b1272a2ba6061d1",
   "storage.py": "ec7890f39c23f1e1c40207ba078f947c83f0c168e50a7ed3274b902e437715f4",
-  "synthetic.py": "326cbca9bb44045bae73067369bf25507af3deecd2f3d2d8528ea314a169af4c",
+  "synthetic.py": "9c53c0e8470f3917f198641c71c9d255c3927c70b2b32aad3de57dbe145f1467",
   "transport.py": "78214a649d16a7012811e8fabe098da1a238a630ef366518d940b8a7d77c89e1",
   "types.py": "be2d9ed02fd33c98f88ea7f076ffd0febaf3687b5c660e8ea61dd03da847e053",
-  "venues.py": "52933a092af9e9cbe0fcd6e3e879954980476a5b59e71d82def4ece3a3c7da17"
+  "venues.py": "121c10342879d781e840074571cc0ffcf899f3841af486dc22d3f037ec0dd75e"
  },
  "note": "Research/observation code only; independent of the strategy, settlement, market-data and perp-data baselines. existing_perp_veto_* and production_files record files Step 5 must leave byte-identical.",
  "production_files": {
@@ -86,5 +86,5 @@
   "run_local.py": "0749c2a83b3c219ed63dc5d994253883983f9b6b4ebc81a2b72f46b067e53044",
   "strategy_fingerprint.py": "4b8a3383d08d75f896fc36c0f0032f780ac37736f923b2186c5c6d11f6256eec"
  },
- "venues_sha256": "2b363de3d8dedf200ae0949d8dbc42be1ffbb86c1c46418abb4afd5bfe082b8d"
+ "venues_sha256": "09aba65d02eb5f2fdb796c22745584aa064df1a71947aeb1093cb12ad3b328fc"
 }

@@ -10,10 +10,12 @@ levels, the top N and the rank of a price are cheap.
     rank(side, px)             number of strictly better levels on that side (0 = best)
 
 Prices are floats parsed from the venue's strings (the same string always gives the same float); Kalshi prices
-are YES cents rounded to 1e-6.
+are YES cents rounded to 1e-6. That float book serves the FEATURES only. A venue checksum (Kraken) is computed
+from ExactBook, a parallel Decimal-only book fed with the exact wire decimals: no float ever reaches it.
 """
 import bisect
 import zlib
+from decimal import ROUND_HALF_EVEN, Context, Decimal
 
 EPS = 1e-12
 
@@ -101,11 +103,67 @@ class LocalBook:
         return self.top("bid", n), self.top("ask", n)
 
 
+class ExactBook(LocalBook):
+    """A Decimal-ONLY price-level book: the state a venue checksum is computed from (Kraken). Prices and sizes are
+    the exact decimals received on the wire; a float is refused, so no binary-float round trip can reach the
+    checksum. (The generic float LocalBook is kept beside it for the feature engine.)"""
+    __slots__ = ()
+
+    def set_level(self, side, px, qty):
+        if type(px) is not Decimal or type(qty) is not Decimal:
+            raise TypeError(f"ExactBook accepts Decimal only, got {type(px).__name__} / {type(qty).__name__}")
+        return super().set_level(side, px, qty)
+
+    def add_level(self, side, px, dq):
+        raise TypeError("ExactBook holds ABSOLUTE sizes only")
+
+    def load(self, bids, asks):
+        for px, q in list(bids) + list(asks):
+            if type(px) is not Decimal or type(q) is not Decimal:
+                raise TypeError("ExactBook accepts Decimal only")
+        super().load(bids, asks)
+
+
+_CTX = Context(prec=80, rounding=ROUND_HALF_EVEN)
+
+
+def exact_decimal(v, name="value"):
+    """Wire value -> Decimal without any binary-float step. Accepts Decimal (json parse_float=Decimal), int and str;
+    a float has already lost the wire digits and is refused."""
+    if isinstance(v, bool) or v is None:
+        raise TypeError(f"{name}: not a number: {v!r}")
+    if isinstance(v, float):
+        raise TypeError(f"{name}: float on the checksum path (decimal exactness lost): {v!r}")
+    d = v if isinstance(v, Decimal) else Decimal(str(v) if isinstance(v, int) else v)
+    if not d.is_finite() or d < 0:
+        raise ValueError(f"{name}: not a finite non-negative decimal: {v!r}")
+    return d
+
+
+class ChecksumPrecisionError(ValueError):
+    pass
+
+
+def _fmt_exact(x, prec):
+    """Exact decimal formatted with `prec` decimals, '.' removed, leading zeros stripped. Only zero PADDING is ever
+    applied: a wire value with more decimals than the instrument precision raises (never rounded silently)."""
+    q = x.quantize(Decimal(1).scaleb(-prec), context=_CTX)
+    if q.compare(x, context=_CTX) != 0:
+        raise ChecksumPrecisionError(f"{x} has more than {prec} decimals")
+    return format(q, "f").replace(".", "").lstrip("0")
+
+
+def kraken_checksum_string(book, price_precision, qty_precision):
+    """Kraken v2 book checksum input: top 10 asks (low -> high) then top 10 bids (high -> low); every price and qty
+    formatted with the pair's precision, '.' removed, leading zeros stripped, concatenated. `book` must be an
+    ExactBook (Decimal state)."""
+    if not isinstance(book, ExactBook):
+        raise TypeError("the Kraken checksum is computed from the exact-decimal book only")
+    s = "".join(_fmt_exact(p, price_precision) + _fmt_exact(q, qty_precision) for p, q in book.top("ask", 10))
+    s += "".join(_fmt_exact(p, price_precision) + _fmt_exact(q, qty_precision) for p, q in book.top("bid", 10))
+    return s
+
+
 def kraken_checksum(book, price_precision, qty_precision):
-    """Kraken v2 book checksum: top 10 asks (low -> high) then top 10 bids (high -> low); each price and qty
-    formatted with the pair's precision, '.' removed, leading zeros stripped, concatenated; CRC32 (unsigned)."""
-    def fmt(x, prec):
-        return f"{x:.{prec}f}".replace(".", "").lstrip("0")
-    s = "".join(fmt(p, price_precision) + fmt(q, qty_precision) for p, q in book.top("ask", 10))
-    s += "".join(fmt(p, price_precision) + fmt(q, qty_precision) for p, q in book.top("bid", 10))
-    return zlib.crc32(s.encode()) & 0xFFFFFFFF
+    """CRC32 (unsigned 32-bit) of kraken_checksum_string."""
+    return zlib.crc32(kraken_checksum_string(book, price_precision, qty_precision).encode()) & 0xFFFFFFFF

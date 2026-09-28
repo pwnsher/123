@@ -14,12 +14,20 @@ Messages
                     precisions let the reconstructor verify the CRC32 checksum of the top 10 levels.
     heartbeat / status / method acks   control
 There are no sequence numbers: continuity rests on the checksum.
+
+EXACT DECIMALS. The checksum is defined on the decimal digits of the prices and quantities, so the message is parsed
+with json parse_float=Decimal (the literal digits, never a binary float). Every book event carries the exact wire
+decimals as strings (exact_bids / exact_asks / exact_changes, format 'f': trailing zeros kept); the reconstructor
+keeps a separate Decimal-only ExactBook from them for the checksum. The float bids / asks / changes are derived from
+the same Decimals and feed the generic feature engine only.
 """
 import json
 import os
+from decimal import Decimal
 
-from market_data.normalization import iso_ms
-from microstructure.sources.base import MicroAdapter, new_result, num
+from market_data.normalization import NormalizationError, iso_ms
+from microstructure.book import exact_decimal
+from microstructure.sources.base import MicroAdapter, new_result
 from microstructure.types import MicroEventType as MT
 
 WS_URL = os.environ.get("KRAKEN_WS_V2_URL", "wss://ws.kraken.com/v2")
@@ -45,8 +53,10 @@ class KrakenBookAdapter(MicroAdapter):
 
     def parse(self, text, ctx):
         res = new_result()
-        m = self.load(text, ctx, res)
-        if m is None:
+        try:
+            m = json.loads(text, parse_float=Decimal) if isinstance(text, (str, bytes)) else text
+        except ValueError as e:
+            self.fail(res, ctx, f"invalid JSON: {e}", text)
             return res
         if not isinstance(m, dict):
             self.fail(res, ctx, "message is not an object", text)
@@ -59,7 +69,7 @@ class KrakenBookAdapter(MicroAdapter):
                 if sym in self.by_symbol:
                     def ins(pr=pr, sym=sym):
                         info = {"price_precision": int(pr["price_precision"]), "qty_precision": int(pr["qty_precision"]),
-                                "price_increment": pr.get("price_increment"), "qty_increment": pr.get("qty_increment")}
+                                "price_increment": _txt(pr.get("price_increment")), "qty_increment": _txt(pr.get("qty_increment"))}
                         res.events.append(self.event(ctx, asset=self.by_symbol[sym], event_type=MT.INSTRUMENT, symbol=sym,
                                                      event_ts_ms=None, payload={"book": sym, "info": info}))
                     self.guarded(res, ctx, pr, ins)
@@ -74,20 +84,46 @@ class KrakenBookAdapter(MicroAdapter):
                 asset = self.by_symbol.get(sym)
                 if asset is None:
                     raise KeyError(f"unexpected symbol {sym}")
-                bids = [[num(x["price"], "price", True), num(x["qty"], "qty")] for x in d.get("bids") or []]
-                asks = [[num(x["price"], "price", True), num(x["qty"], "qty")] for x in d.get("asks") or []]
+                xb = [(_exact(x["price"], "price", True), _exact(x["qty"], "qty")) for x in d.get("bids") or []]
+                xa = [(_exact(x["price"], "price", True), _exact(x["qty"], "qty")) for x in d.get("asks") or []]
+                bids = [[float(p), float(q)] for p, q in xb]          # feature book only
+                asks = [[float(p), float(q)] for p, q in xa]
                 ts = iso_ms(d["timestamp"], "timestamp") if d.get("timestamp") else None
                 cs = d.get("checksum")
                 if typ == "snapshot":
                     res.events.append(self.event(ctx, asset=asset, event_type=MT.BOOK_SNAPSHOT, symbol=sym, event_ts_ms=ts,
                                                  payload=dict(book=sym, bids=bids, asks=asks, update_id=None, depth=self.depth,
-                                                              checksum=cs, **self.units())))
+                                                              checksum=cs, exact_bids=[[_s(p), _s(q)] for p, q in xb],
+                                                              exact_asks=[[_s(p), _s(q)] for p, q in xa], **self.units())))
                 elif typ == "update":
                     ch_ = [["bid", p, q, "abs"] for p, q in bids] + [["ask", p, q, "abs"] for p, q in asks]
+                    ex_ = [["bid", _s(p), _s(q)] for p, q in xb] + [["ask", _s(p), _s(q)] for p, q in xa]
                     res.events.append(self.event(ctx, asset=asset, event_type=MT.BOOK_DELTA, symbol=sym, event_ts_ms=ts,
                                                  payload=dict(book=sym, changes=ch_, update_id=None, prev_update_id=None,
-                                                              first_update_id=None, checksum=cs, **self.units())))
+                                                              first_update_id=None, checksum=cs, exact_changes=ex_,
+                                                              **self.units())))
                 else:
                     raise ValueError(f"unknown book message type {typ!r}")
             self.guarded(res, ctx, d, build)
         return res
+
+
+def _exact(v, name, positive=False):
+    """A wire number -> Decimal with its literal digits (no binary float anywhere)."""
+    try:
+        d = exact_decimal(v, name)
+    except (TypeError, ValueError, ArithmeticError) as e:
+        raise NormalizationError(str(e))
+    if positive and d <= 0:
+        raise NormalizationError(f"{name} must be positive: {v!r}")
+    return d
+
+
+def _s(d):
+    """Decimal -> plain decimal string (trailing zeros kept, no exponent)."""
+    return format(d, "f")
+
+
+def _txt(v):
+    """Instrument metadata kept JSON-safe and exact (a Decimal becomes its literal string)."""
+    return format(v, "f") if isinstance(v, Decimal) else v

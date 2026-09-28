@@ -89,9 +89,9 @@ Nothing in `market_data/`, `settlement/` or `perp_data/` was modified (their fin
 | Book | Channel | Classification | Sequence policy | Resnapshot |
 |---|---|---|---|---|
 | `coinbase_l2` | Coinbase Advanced Trade `level2` (+ `heartbeats`), public | TRUE INCREMENTAL BOOK | `chain_contiguous`: `sequence_num` +1 per message on the **connection** | reconnect |
-| `kraken_book` | Kraken v2 `book` (+ `instrument`), depth 10/25/100/500/1000 | TRUE INCREMENTAL BOOK | `checksum`: CRC32 of the top 10 after every update (needs the pair's precisions); the book is truncated to the subscribed depth | reconnect |
+| `kraken_book` | Kraken v2 `book` (+ `instrument`), depth 10/25/100/500/1000 | TRUE INCREMENTAL BOOK | `checksum`: CRC32 of the top 10 after every update (needs the pair's precisions), computed from a separate EXACT-DECIMAL book (see §3a); the book is truncated to the subscribed depth | reconnect |
 | `binance_usdm_book` | `<s>@depth@100ms` + `GET /fapi/v1/depth` | TRUE INCREMENTAL BOOK | `binance_diff`: buffer → drop `u < lastUpdateId` → first `U ≤ L ≤ u` → `pu` = previous `u` | new GET snapshot |
-| `bybit_linear_book` | `orderbook.{1,50,200,500}` | TRUE INCREMENTAL BOOK | `monotonic_only`: `u` must increase; `u = 1` restart snapshot resets. **A lost delta is not detectable** (contiguity undocumented) | reconnect |
+| `bybit_linear_book` | `orderbook.{1,50,200,1000}` (pushed every 10 / 20 / 100 / 200 ms; 500 is not a linear depth and is rejected) | TRUE INCREMENTAL BOOK | `monotonic_only`: `u` must increase; `u = 1` restart snapshot resets. **A lost delta is not detectable** (contiguity undocumented) | reconnect |
 | `okx_swap_book` | OKX `books` (400 levels) | TRUE INCREMENTAL BOOK | `prev_chain`: `prevSeqId` = previous `seqId` (the checksum is deprecated, always 0) | reconnect |
 | `kalshi_ws` | Kalshi `orderbook_delta` + `trade` (read-only authenticated) | TRUE INCREMENTAL BOOK | `chain_contiguous`: `seq` +1 per message on the **subscription** (`sid`) | resubscribe (new sid) |
 
@@ -103,6 +103,30 @@ discontinuity. So a message lost anywhere on the chain is detected at the next b
 * it belonged to another product or market.
 
 A chain break invalidates **every** book on that chain.
+
+## 3a. Exact decimals for the Kraken checksum (Step 5.1)
+
+Kraken's CRC32 is defined on the decimal digits of each price and quantity, so it must never be computed from
+binary floats:
+
+* **Parsing.** `KrakenBookAdapter` parses messages with `json.loads(..., parse_float=Decimal)`, which keeps the
+  literal wire digits.
+* **Payload.** Every book event carries the exact decimals as strings (`exact_bids`, `exact_asks`,
+  `exact_changes`; trailing zeros kept).
+* **Exact book.** The reconstructor feeds them into a separate `ExactBook`, a Decimal-only book that refuses
+  floats. The checksum (`kraken_checksum` / `kraken_checksum_string`) is computed only from that book.
+* **Formatting.** Each value is formatted with the instrument precision by zero padding only. A wire value with
+  more decimals than the precision makes the book INVALID (`CHECKSUM_PRECISION`); it is never rounded.
+* **Float book.** The float `LocalBook` beside it serves the generic feature engine only.
+* **Missing exact data.** An event without exact decimals is never checksum-verified; the book is flagged
+  `CHECKSUM_UNVERIFIED`.
+
+Regression tests:
+
+* Kraken's published BTC/USD v2 example (checksum `3310070434`) goes raw JSON → adapter → normalized event →
+  reconstruction → checksum validation. It is also run through the collector, the store and a replay.
+* Adversarial decimal cases are checked against a pure string-operation reference: trailing zeroes, tiny sizes,
+  a maximum precision of 10 digits, many meaningful digits, and values that are unsafe as binary floats.
 
 ## 4. Book states, gaps and resnapshots
 
@@ -433,13 +457,16 @@ Projection with ASSUMED real rates (10–15 msg/s per symbol for the exchange bo
 
 ## 13. Tests and mutations
 
-Stage 21 (32 checks) covers:
+Stage 21 (35 checks) covers:
 
 * the audit vocabulary;
 * the local book;
 * states;
 * every sequence policy;
 * Kalshi units;
+* the Kraken official checksum example (raw JSON → adapter → event → reconstruction → `3310070434`) and
+  adversarial exact-decimal cases (Step 5.1);
+* the Bybit linear depth set 1 / 50 / 200 / 1000 (Step 5.1);
 * all six adapters;
 * the collector (raw first, resnapshot, BOOK_RESET, GET-only snapshots);
 * injected faults per venue, with recovery;
@@ -460,7 +487,7 @@ Stage 21 (32 checks) covers:
 * performance bounds;
 * all previous stages.
 
-`scripts/mutation_test_microstructure.py` breaks eleven rules, one at a time, in a temporary copy. Each runs
+`scripts/mutation_test_microstructure.py` breaks thirteen rules, one at a time, in a temporary copy. Each runs
 as-is and with the engine guards disabled:
 
 1. event time used instead of receive time
@@ -474,8 +501,10 @@ as-is and with the engine guards disabled:
 9. a crossed book accepted as healthy
 10. a Step-5 feature imported by production
 11. a Step-5 feature imported by the existing perp veto
+12. the old Bybit depth bug: 500 accepted and 1000 rejected (Step 5.1)
+13. the Kraken checksum path loses decimal exactness through a binary-float round trip (Step 5.1)
 
-Result (`analysis_output/microstructure_mutation_results.json`): **11 / 11 caught**, both as-is and with the
+Result (`analysis_output/microstructure_mutation_results.json`): **13 / 13 caught**, both as-is and with the
 guards disabled. Controls (unmutated; guards disabled only) pass.
 
 The separate fingerprint lives in `config/microstructure_baseline.json` (`py -m microstructure.fingerprint --verify`).
@@ -484,11 +513,31 @@ It pins:
 * the modules, feature registry, config and venue table;
 * the hashes of the existing perp-veto chain and of the production files.
 
+Step 5.1 changed microstructure code, so the Step-5 fingerprint changed (a deliberate, logged re-baseline of THIS
+layer only):
+
+| | Step-5 microstructure fingerprint |
+|---|---|
+| OLD (Step 5, commit `32de3f4`) | `ce91fcd52941b588a706ed90a034b9d14b3945ed1fc071aeee66ab5fd5706f4b` |
+| NEW (Step 5.1) | `695d8e7741287c0bbac40ae9835148e4a0fbcd0e517669784aae647a8dcb0799` |
+
+WHY: these parts changed.
+
+* `venues.py`: Bybit linear depths (1, 50, 200, 500) → (1, 50, 200, 1000); this also changes the venue-table
+  hash.
+* `book.py`: new `ExactBook` and a Decimal-only Kraken checksum.
+* `reconstruction.py`: the Kraken checksum is computed from the exact book.
+* `sources/kraken_book.py`: `parse_float=Decimal`, and the exact wire decimals are carried in the payload.
+* `synthetic.py`: the synthetic feed follows the configured depth; its Kraken checksums are exact.
+
+The strategy, settlement, market-data and perp-data fingerprints and the existing perp-veto fingerprint are
+unchanged.
+
 ## 14. Limitations (documented, not hidden)
 
 * **Bybit:** delta contiguity is not documented, so a lost delta cannot be detected from the stream. It
   surfaces only indirectly (e.g. a later crossed book). Flag: SEQUENCE_UNVERIFIABLE.
-* **Kraken:** without the instrument precisions the checksum is not verified (flag CHECKSUM_UNVERIFIED).
+* **Kraken:** without the instrument precisions, or without exact wire decimals, the checksum is not verified (flag CHECKSUM_UNVERIFIED); it is never computed from floats.
 * **Coinbase:** the level2 book comes from Advanced Trade, while Step 3's Coinbase trades come from the
   Exchange feed. They share a matching engine but not a sequence space.
 * **Clocks:** latency and cross-venue timing include clock offsets (see §6).

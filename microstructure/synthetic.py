@@ -19,7 +19,9 @@ import math
 
 from market_data.clock import FakeClock
 from market_data.synthetic import SERIES, World
-from microstructure.book import LocalBook, kraken_checksum
+from decimal import Decimal
+
+from microstructure.book import ExactBook, kraken_checksum
 from microstructure.collector import MicroCollector, ResnapshotRequired
 from microstructure.poller import SnapshotPoller
 from microstructure.sources.binance_depth import BinanceDepthAdapter
@@ -101,9 +103,10 @@ class SynthBook:
 class VenueFeed:
     """Native-format messages of one venue for several assets (one connection at a time)."""
 
-    def __init__(self, venue, assets, world, pworld, seed):
+    def __init__(self, venue, assets, world, pworld, seed, depth=None):
         self.venue, self.assets = venue, list(assets)
         self.spec = VENUES[venue]
+        self.depth = depth if depth is not None else self.spec.default_depth
         self.books = {}
         self.conn_seq = 0
         self.u = {}                  # asset -> update id (Binance / Bybit / OKX)
@@ -178,7 +181,7 @@ class VenueFeed:
                 if not b.bids:
                     b.evolve(t)
                 self.u[a] += 1
-                out.append(json.dumps({"topic": f"orderbook.200.{VENUES[v].symbols[a]}", "type": "snapshot", "ts": t, "cts": t - 3,
+                out.append(json.dumps({"topic": f"orderbook.{self.depth}.{VENUES[v].symbols[a]}", "type": "snapshot", "ts": t, "cts": t - 3,
                                        "data": {"s": VENUES[v].symbols[a], "b": [[self._p(a, p), f"{q:.6f}"] for p, q in b.top("bid", LEVELS)],
                                                 "a": [[self._p(a, p), f"{q:.6f}"] for p, q in b.top("ask", LEVELS)], "u": self.u[a], "seq": self.u[a] * 3}}))
         elif v == "okx_swap_book":
@@ -231,10 +234,12 @@ class VenueFeed:
 
     def _kraken_view(self, a, snapshot=False, changes=None):
         b = self.books[a]
-        view_b, view_a = b.top("bid", self.spec.default_depth), b.top("ask", self.spec.default_depth)
-        lb = LocalBook()
-        lb.load(view_b, view_a)
-        cs = kraken_checksum(lb, b.dec, 8)
+        view_b, view_a = b.top("bid", self.depth), b.top("ask", self.depth)
+        # the checksum is computed from the exact decimals of the JSON text actually sent (json writes repr(float)),
+        # exactly as Kraken computes it from the digits it publishes
+        eb = ExactBook()
+        eb.load([(Decimal(repr(p)), Decimal(repr(q))) for p, q in view_b], [(Decimal(repr(p)), Decimal(repr(q))) for p, q in view_a])
+        cs = kraken_checksum(eb, b.dec, 8)
         if snapshot:
             return {"symbol": VENUES[self.venue].symbols[a], "bids": [{"price": p, "qty": q} for p, q in view_b],
                     "asks": [{"price": p, "qty": q} for p, q in view_a], "checksum": cs}
@@ -274,8 +279,8 @@ class VenueFeed:
                         "no_price_dollars": f"{(100 - yp) / 100:.4f}", "count_fp": f"{1 + int(next(self.g) * 40)}.00",
                         "taker_side": taker, "ts": t // 1000, "ts_ms": t - 5}}))
             return out
-        views = {a: (dict(self.books[a].top("bid", self.spec.default_depth or LEVELS)),
-                     dict(self.books[a].top("ask", self.spec.default_depth or LEVELS))) for a in self.assets} \
+        views = {a: (dict(self.books[a].top("bid", self.depth or LEVELS)),
+                     dict(self.books[a].top("ask", self.depth or LEVELS))) for a in self.assets} \
             if v == "kraken_book" else {}
         for a in self.assets:
             b = self.books[a]
@@ -286,7 +291,7 @@ class VenueFeed:
                         "new_quantity": f"{q:.6f}"} for s, p, q in ch]
                 out.append(self._cb({"channel": "l2_data", "events": [{"type": "update", "product_id": sym, "updates": ups}]}, t))
             elif v == "kraken_book":
-                depth = self.spec.default_depth
+                depth = self.depth
                 ob, oa = views[a]
                 nb, na = dict(b.top("bid", depth)), dict(b.top("ask", depth))
                 # levels new to / changed in the subscribed view, and deletions of levels that left the book entirely;
@@ -307,7 +312,7 @@ class VenueFeed:
                 self.u[a] = u
             elif v == "bybit_linear_book":
                 self.u[a] += 1
-                out.append(json.dumps({"topic": f"orderbook.200.{sym}", "type": "delta", "ts": t, "cts": t - 3, "data": {
+                out.append(json.dumps({"topic": f"orderbook.{self.depth}.{sym}", "type": "delta", "ts": t, "cts": t - 3, "data": {
                     "s": sym, "b": [[self._p(a, p), f"{q:.6f}"] for s, p, q in ch if s == "bid"],
                     "a": [[self._p(a, p), f"{q:.6f}"] for s, p, q in ch if s == "ask"], "u": self.u[a], "seq": self.u[a] * 3}}))
             elif v == "okx_swap_book":
@@ -400,7 +405,7 @@ def run_research_session(root, assets=("BTC",), start_ms=1_790_000_000_000, dura
                               step3_session_dir=col3.dir if col3 else None)
         mcol.manifest.notes.append("SYNTHETIC data generated by microstructure.synthetic - not market data")
         for k, v in enumerate(micro_venues):
-            feeds[v] = VenueFeed(v, ad5[v].assets, world, pw, seed * 7 + k)
+            feeds[v] = VenueFeed(v, ad5[v].assets, world, pw, seed * 7 + k, depth=ad5[v].depth)
         mrest = FakeBookRest(feeds, clock)
         snap = SnapshotPoller(ad5["binance_usdm_book"], mrest, mcol, clock, min_interval_s=0.5) if "binance_usdm_book" in ad5 else None
         for v in micro_venues:

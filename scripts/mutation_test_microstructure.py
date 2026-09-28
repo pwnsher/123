@@ -73,6 +73,14 @@ MUTATIONS = [
     ("M11", "a Step-5 feature is imported by the existing perp veto",
      [("perp_live.py", None, "\nimport microstructure.features.engine  # noqa: E402,F401\n", 1)],
      ["veto", "isolation"]),
+    ("M12", "old Bybit depth bug: linear depth 500 accepted and 1000 rejected",
+     [("microstructure/venues.py", "BYBIT_LINEAR_DEPTHS = (1, 50, 200, 1000)", "BYBIT_LINEAR_DEPTHS = (1, 50, 200, 500)", 1)],
+     ["bybit_depth"]),
+    ("M13", "the Kraken checksum path loses decimal exactness through a binary-float round trip",
+     [("microstructure/sources/kraken_book.py", "json.loads(text, parse_float=Decimal)", "json.loads(text, parse_float=float)", 1),
+      ("microstructure/book.py", 'raise TypeError(f"{name}: float on the checksum path (decimal exactness lost): {v!r}")',
+       "return Decimal(repr(v))", 1)],
+     ["kraken_decimal", "kraken_official"]),
 ]
 IGNORE = shutil.ignore_patterns(".git", "__pycache__", "analysis_output", "market_data_sessions", "settlement_data",
                                 ".venv", "venv*", "*.zip", ".mypy_cache", ".ruff_cache")

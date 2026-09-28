@@ -2,7 +2,8 @@
 Bybit v5 public linear — orderbook.<depth>.<symbol> (snapshot + deltas). No authentication.
 
 Transport  wss://stream.bybit.com/v5/public/linear (env BYBIT_LINEAR_WS_URL overrides)
-Subscribe  {"op":"subscribe","args":["orderbook.200.BTCUSDT", ...]} (<= 10 args per request);
+Subscribe  {"op":"subscribe","args":["orderbook.200.BTCUSDT", ...]} (<= 10 args per request); linear depths are
+           1 / 50 / 200 / 1000 (pushed every 10 / 20 / 100 / 200 ms) - any other depth (e.g. 500) is refused here;
            client keep-alive {"op":"ping"} every 20 s.
 Messages   {"topic", "type": snapshot|delta, "ts", "cts", "data": {s, b: [[p, size]], a, u, seq}}
            sizes are ABSOLUTE (0 deletes). snapshot -> BOOK_SNAPSHOT (a "u": 1 snapshot is the venue's restart

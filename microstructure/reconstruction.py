@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
-from microstructure.book import LocalBook, NegativeLevel, kraken_checksum
+from microstructure.book import ChecksumPrecisionError, ExactBook, LocalBook, NegativeLevel, exact_decimal, kraken_checksum
 from microstructure.types import MicroEventType as MT
 from microstructure.venues import VENUES
 
@@ -58,6 +58,11 @@ class BookTrack:
     def __init__(self, key, policy, depth_cap=None):
         self.key, self.policy, self.depth_cap = key, policy, depth_cap
         self.book = LocalBook()
+        # checksum venues (Kraken): a parallel Decimal-only book fed with the exact wire decimals; the float book above
+        # serves the features, the exact book is the ONLY input of the checksum
+        self.exact = ExactBook() if policy == "checksum" else None
+        self.exact_ok = False           # the exact book is complete (snapshot + every delta carried exact decimals)
+        self.last_checksum = None       # the locally computed checksum of the last verified message
         self.base = BookStatus.NO_BOOK
         self.update_id = None
         self.chain = None
@@ -126,15 +131,47 @@ class BookReconstructor:
             return self._invalidate(tr, ev, BookStatus.INVALID, "CROSSED_OR_LOCKED_BOOK")
         if tr.policy == "checksum" and ev.payload.get("checksum") is not None:
             prec = self.precision.get(tr.key)
-            if prec is None:
-                tr.flags.add("CHECKSUM_UNVERIFIED")
+            if prec is None or not tr.exact_ok:
+                tr.flags.add("CHECKSUM_UNVERIFIED")          # no precisions yet, or no exact decimals: never guessed
             else:
-                if kraken_checksum(tr.book, *prec) != int(ev.payload["checksum"]):
+                try:
+                    tr.last_checksum = kraken_checksum(tr.exact, *prec)
+                except ChecksumPrecisionError as e:
+                    tr.counts["checksum_fail"] += 1
+                    return self._invalidate(tr, ev, BookStatus.INVALID, f"CHECKSUM_PRECISION {e}")
+                if tr.last_checksum != int(ev.payload["checksum"]):
                     tr.counts["checksum_fail"] += 1
                     return self._invalidate(tr, ev, BookStatus.INVALID, "CHECKSUM_MISMATCH")
                 tr.counts["checksum_ok"] += 1
                 tr.flags.discard("CHECKSUM_UNVERIFIED")
         return upd
+
+    @staticmethod
+    def _load_exact(tr, p):
+        """Snapshot -> exact book from the payload's wire decimals (strings); missing -> exact state incomplete."""
+        if tr.exact is None:
+            return
+        eb, ea = p.get("exact_bids"), p.get("exact_asks")
+        if eb is None or ea is None:
+            tr.exact.clear()
+            tr.exact_ok = False
+            return
+        tr.exact.load([(exact_decimal(px, "price"), exact_decimal(q, "qty")) for px, q in eb],
+                      [(exact_decimal(px, "price"), exact_decimal(q, "qty")) for px, q in ea])
+        tr.exact_ok = True
+
+    @staticmethod
+    def _apply_exact(tr, p):
+        if tr.exact is None or not tr.exact_ok:
+            return
+        ex = p.get("exact_changes")
+        if ex is None:
+            tr.exact_ok = False
+            return
+        for side, px, q in ex:
+            tr.exact.set_level(side, exact_decimal(px, "price"), exact_decimal(q, "qty"))
+        if tr.depth_cap:
+            tr.exact.truncate(tr.depth_cap)
 
     def _apply_changes(self, tr, changes):
         out = []
@@ -196,6 +233,11 @@ class BookReconstructor:
         tr.chain = chain
         tr.depth_cap = p.get("depth") if tr.policy == "checksum" else None
         tr.book.load(p["bids"], p["asks"])
+        try:
+            self._load_exact(tr, p)
+        except (TypeError, ValueError, ArithmeticError):
+            tr.exact.clear()
+            tr.exact_ok = False
         tr.update_id = p.get("update_id")
         if tr.policy == "binance_diff":
             tr.snapshot_id = p.get("update_id")
@@ -253,8 +295,11 @@ class BookReconstructor:
         before = tr.l1()
         try:
             ch = self._apply_changes(tr, ev.payload["changes"])
+            self._apply_exact(tr, ev.payload)
         except NegativeLevel as e:
             return self._invalidate(tr, ev, BookStatus.INVALID, f"NEGATIVE_LEVEL {e}")
+        except (TypeError, ValueError, ArithmeticError) as e:                # a malformed exact decimal: never guessed
+            return self._invalidate(tr, ev, BookStatus.INVALID, f"EXACT_STATE_ERROR {e}")
         if uid is not None:
             tr.update_id = uid
         tr.counts["deltas"] += 1

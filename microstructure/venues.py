@@ -29,6 +29,12 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional, Tuple
 
 
+# Bybit v5 linear orderbook depths and push intervals (docs: Level 1 = 10 ms, 50 = 20 ms, 200 = 100 ms, 1000 = 200 ms).
+# 500 is NOT a linear depth (an older / other-category value): it is rejected, 1000 is accepted.
+BYBIT_LINEAR_DEPTHS = (1, 50, 200, 1000)
+BYBIT_PUSH_MS = {1: 10, 50: 20, 200: 100, 1000: 200}
+
+
 @dataclass(frozen=True)
 class BookVenue:
     name: str
@@ -78,11 +84,11 @@ VENUES = {
         "REST snapshot weight grows with depth (limit=1000); a snapshot older than the buffered stream forces a new one."),
     "bybit_linear_book": BookVenue(
         "bybit_linear_book", "perp", "PERP_BOOK", "monotonic_only", "TRUE_INCREMENTAL_BOOK", "PRICE_LEVEL", "USDT", "coin", "USDT",
-        "wss://stream.bybit.com/v5/public/linear", "orderbook.<depth>.<symbol>", (1, 50, 200, 500), 200, 100,
+        "wss://stream.bybit.com/v5/public/linear", "orderbook.<depth>.<symbol>", BYBIT_LINEAR_DEPTHS, 200, 100,
         "resubscribe (reconnect); u=1 snapshot from the venue also resets",
         {"BTC": "BTCUSDT", "ETH": "ETHUSDT", "SOL": "SOLUSDT", "XRP": "XRPUSDT"}, 5000,
-        "Bybit v5 orderbook channel: snapshot then deltas (absolute sizes, 0 deletes); u = update id, u=1 = venue restart "
-        "snapshot.",
+        "Bybit v5 orderbook channel (linear depths 1 / 50 / 200 / 1000, pushed every 10 / 20 / 100 / 200 ms): snapshot then "
+        "deltas (absolute sizes, 0 deletes); u = update id, u=1 = venue restart snapshot.",
         "delta contiguity is not documented: a lost delta cannot be detected from the stream (SEQUENCE_UNVERIFIABLE)."),
     "okx_swap_book": BookVenue(
         "okx_swap_book", "perp", "PERP_BOOK", "prev_chain", "TRUE_INCREMENTAL_BOOK", "PRICE_LEVEL", "USDT", "contracts", "USDT",

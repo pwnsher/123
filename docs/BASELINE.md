@@ -203,6 +203,7 @@ no issues. `compileall`: clean on 3.10–3.13.
 | 2026-09-25 | Step 3 | **none** for the strategy. The separate settlement baseline was rewritten only to record the documented CF index-id provenance (OLD/NEW/WHY in SETTLEMENT_ENGINE.md); a new, separate `config/market_data_baseline.json` | Step-1 artifacts and perp/production files byte-identical (stage 19 test 1); 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…` unchanged; stages 1–19 green on 3.10–3.13 (329 checks) |
 | 2026-09-25 | Step 4 | **none** for the strategy, the settlement engine, the Step-3 engine and the EXISTING perp veto chain (14 files byte-identical; fingerprint `499c1e16…`). New, separate `config/perp_data_baseline.json` | Step-1 artifacts identical (stage 20 test 1); 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…` unchanged; settlement and market-data fingerprints verify unchanged; stages 1–20 green on 3.10–3.13 (355 checks) |
 | 2026-09-25 | Step 5 | **none** for the strategy, settlement, market-data, perp-data engines and the EXISTING perp veto chain (fingerprints unchanged). New, separate `config/microstructure_baseline.json` (`ce91fcd5…`, also pinning the veto chain and production files) | Step-1 artifacts identical (stage 21 test 1); 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…` unchanged; settlement `3eba791c…`, market-data `969cec83…`, perp-data `90543ddf…`, perp veto `499c1e16…` verify unchanged; stages 1–21 green on 3.10–3.13 |
+| 2026-09-28 | Step 5.1 | **Step-5 layer only**: Bybit linear depths corrected to 1/50/200/1000; Kraken checksum on an exact-decimal book. Step-5 fingerprint `ce91fcd5…` → `695d8e77…` (OLD/NEW/WHY in MICROSTRUCTURE.md §13). Nothing else changed | Step-1 artifacts identical; 47 fixtures MATCH; legacy / extended, settlement, market-data, perp-data and perp-veto fingerprints unchanged; STEP51_ROW_PLACEHOLDER |
 
 ### Step 2 notes
 
@@ -253,6 +254,29 @@ no issues. `compileall`: clean on 3.10–3.13.
   * docs.
 * No existing module changed: `market_data/` and `settlement/` are untouched (their fingerprints verify), and
   so are all perp-veto chain files and `kalshi_dashboard.py`. No OLD/NEW/WHY re-baseline was needed.
+
+### Step 5.1 notes (microstructure correctness hardening)
+
+* **Bybit.** Linear order-book depths are 1 / 50 / 200 / 1000 (pushed every 10 / 20 / 100 / 200 ms).
+  * The Step-5 table allowed 500 (not a linear depth) and refused 1000.
+  * Fixed in `microstructure/venues.py` (`BYBIT_LINEAR_DEPTHS`).
+  * The CLI choices are now read from the venue table.
+  * `orderbook.1000.<symbol>` is produced.
+  * Tests, docs and the synthetic feed follow the configured depth.
+* **Kraken.** The checksum no longer depends on a float round trip:
+  * the adapter parses with `parse_float=Decimal` and carries the exact wire decimals;
+  * the reconstructor keeps a Decimal-only `ExactBook` from which alone the CRC32 is computed;
+  * formatting only zero-pads, and extra decimals make the book INVALID.
+* **Tests.** The official Kraken BTC/USD v2 example (`3310070434`) runs raw JSON → adapter → event →
+  reconstruction → checksum. Adversarial exact-decimal cases were added, plus Bybit depth tests. Stage 21:
+  32 → 35 checks.
+* **Mutations.** M12 (old Bybit depth bug) and M13 (Kraken checksum through a float round trip) were added:
+  13 mutations in total.
+* **Fingerprint.** Step-5 microstructure fingerprint OLD `ce91fcd5…` → NEW `695d8e77…`.
+  * WHY: the microstructure modules and the venue table above changed.
+  * No other baseline changed.
+  * No production, perp-veto, settlement, market_data or perp_data file was modified.
+* **Results.** STEP51_RESULTS_PLACEHOLDER
 
 ### Step 5 notes
 
