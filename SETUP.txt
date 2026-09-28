@@ -3,7 +3,9 @@ SETUP
 LOCAL-FIRST (Step 1 baseline) — start here. No Discord, no credentials, no orders.
   py run_local.py            # watcher + local dashboard http://127.0.0.1:8000, structured logs
   py run_local.py --check    # offline self-check (config + strategy fingerprints)
-  py run_all_tests.py        # stages 1-21
+  py run_all_tests.py        # stages 1-22
+  py run_step6_research.py --dry-run    # Step 6 feature evaluation on REAL sessions (evidence only); docs/STEP6_FEATURE_EVALUATION.md
+  py research_status.py                 # Step 6: how much real data exists, which gates are unmet (no ETA)
   py collect_research_data.py --dry-run --all-research # Step 5 microstructure research (read-only); docs/MICROSTRUCTURE.md
   py collect_research_data.py --dry-run # Step 4 perp research telemetry (read-only); docs/PERP_HIGH_RESOLUTION_DATA.md
   py collect_market_data.py --dry-run   # Step 3 research data capture (read-only); docs/HIGH_RESOLUTION_DATA.md
@@ -29,6 +31,12 @@ Run:
   py kalshi_bot.py        # legacy optional: Discord bot + watcher + website
 
 Webhooks are fully removed — all Discord posting now goes through the bot to real channels.
+
+NOTE (Step 6 of the staged project): feature_eval/ (run_step6_research.py, validate_research_session.py,
+research_status.py, docs/STEP6_FEATURE_EVALUATION.md) evaluates the frozen Step 2-5 inputs against the frozen legacy
+probability on REAL captured sessions and writes evidence files only (analysis_output/step6_*.json). It never changes a
+production call, threshold, window, stop, size, the perp veto or execution, and never promotes a model. Without enough
+real data every result is INSUFFICIENT_DATA; synthetic data only tests the code.
 
 NOTE (Step 5 of the staged project): the separate research package microstructure/ (collect_research_data.py --micro /
 --all-research, docs/MICROSTRUCTURE.md) rebuilds spot / perp / Kalshi order books for research features only. It does NOT
@@ -74,9 +82,10 @@ PERP TELEMETRY (Step 1 — passive, read-only research recorder)
   This is unproven research data — nothing here claims perps improve profitability.
 
 TESTS
-  py run_all_tests.py      # stages 1-21 (16: baseline regression, 17: local-first architecture, 18: settlement engine,
+  py run_all_tests.py      # stages 1-22 (16: baseline regression, 17: local-first architecture, 18: settlement engine,
                            #              19: high-resolution market data + causal research features,
-                           #              20: expanded perpetual-futures telemetry, 21: market microstructure)
+                           #              20: expanded perpetual-futures telemetry, 21: market microstructure,
+                           #              22: real-data feature evaluation / ablation / model comparison)
   py test_stage7.py        # perp telemetry only (no network needed)
 
 PERP TELEMETRY — STEP 2 (causal alignment + data quality; still observation only)

@@ -1,0 +1,307 @@
+{
+ "defaults": {
+  "ablation": {
+   "boosted_rounds": 40,
+   "bootstrap_reps": 1000,
+   "complexity": {
+    "min_events_per_parameter": 10.0,
+    "min_train_markets_per_parameter": 20.0
+   },
+   "max_selected_features": 12,
+   "min_ready_rows_for_selection": 20,
+   "min_slice_markets": 20,
+   "missing_strategy": "indicator",
+   "models": [
+    "B_logistic",
+    "C_ridge_logistic",
+    "D_boosted_stumps"
+   ],
+   "permutation_reps": 2000,
+   "practical_brier_improvement": 0.0005,
+   "practical_logloss_improvement": 0.002,
+   "primary_model": "C_ridge_logistic",
+   "prune": {
+    "corr_threshold": 0.995,
+    "max_features_for_corr": 400,
+    "min_ready_rows": 20,
+    "near_constant_share": 0.995
+   },
+   "q_threshold": 0.1,
+   "seed": 20260928,
+   "stable_share": 0.6666666666666666
+  },
+  "calibration_gates": {
+   "min_isotonic_markets": 400,
+   "min_platt_markets": 40
+  },
+  "checkpoint_grid_s": [
+   600,
+   480,
+   360,
+   300,
+   240,
+   180,
+   120,
+   90,
+   60,
+   30
+  ],
+  "coinbase_sequence": {
+   "consistent_share": 0.995,
+   "contradiction_share": 0.98,
+   "min_connections": 2,
+   "min_envelopes": 5000,
+   "min_heartbeats": 30,
+   "min_products": 2
+  },
+  "confidence_buckets": [
+   [
+    0.5,
+    0.6
+   ],
+   [
+    0.6,
+    0.7
+   ],
+   [
+    0.7,
+    0.8
+   ],
+   [
+    0.8,
+    0.85
+   ],
+   [
+    0.85,
+    0.9
+   ],
+   [
+    0.9,
+    0.92
+   ],
+   [
+    0.92,
+    0.95
+   ],
+   [
+    0.95,
+    0.97
+   ],
+   [
+    0.97,
+    0.98
+   ],
+   [
+    0.98,
+    0.99
+   ],
+   [
+    0.99,
+    1.0000001
+   ]
+  ],
+  "feature_classes": [
+   "KEEP_CANDIDATE",
+   "NO_INCREMENTAL_VALUE",
+   "REDUNDANT",
+   "INSUFFICIENT_DATA",
+   "UNSTABLE",
+   "UNAVAILABLE"
+  ],
+  "feature_universe_version": "feature_universe_v1",
+  "fee_model": {
+   "effective_date": "UNVERIFIED",
+   "maker_rate": 0.0175,
+   "market_exceptions": {},
+   "rounding": "ceil_to_cent_per_order",
+   "source": "Kalshi fee schedule: general trading fee = round up(rate x C x P x (1 - P)) per order (to be confirmed)",
+   "taker_rate": 0.07,
+   "verified": false,
+   "version": "kalshi_general_fee_formula_v1"
+  },
+  "fee_model_fingerprint": "857fe8e3e65a9edb4a5712fa8d86d5a63a5d20b0bdff391b9eaf7a0ee5c03781",
+  "hypotheses": [
+   [
+    "H01",
+    [
+     "STEP2_SETTLEMENT"
+    ]
+   ],
+   [
+    "H02",
+    [
+     "STEP3_SPOT"
+    ]
+   ],
+   [
+    "H03",
+    [
+     "STEP4_PERP"
+    ]
+   ],
+   [
+    "H04",
+    [
+     "STEP5_MICRO"
+    ]
+   ],
+   [
+    "H05",
+    [
+     "STEP2_SETTLEMENT",
+     "STEP3_SPOT"
+    ]
+   ],
+   [
+    "H06",
+    [
+     "STEP3_SPOT",
+     "STEP4_PERP"
+    ]
+   ],
+   [
+    "H07",
+    [
+     "STEP3_SPOT",
+     "STEP5_MICRO"
+    ]
+   ],
+   [
+    "H08",
+    [
+     "STEP4_PERP",
+     "STEP5_MICRO"
+    ]
+   ],
+   [
+    "H09",
+    [
+     "STEP2_SETTLEMENT",
+     "STEP3_SPOT",
+     "STEP4_PERP",
+     "STEP5_MICRO"
+    ]
+   ]
+  ],
+  "label_gate": {
+   "label_window_policy": "cf_rti_60s_start_incl_asof_v1",
+   "min_markets_compared": 50,
+   "min_outcome_agreement_share": 0.99,
+   "min_within_tolerance_share": 0.98
+  },
+  "label_version": "labels_v1",
+  "quality": {
+   "book_ready_degraded": 0.9,
+   "book_ready_reject": 0.5,
+   "coverage_degraded": 0.9,
+   "coverage_reject": 0.5,
+   "duplicate_share_degraded": 0.05,
+   "future_share_degraded": 0.001,
+   "future_share_reject": 0.01,
+   "future_tolerance_ms": 2000,
+   "gap_share_degraded": 0.1,
+   "gap_share_reject": 0.5,
+   "max_epoch_ms": 4102444800000,
+   "min_epoch_ms": 1600000000000,
+   "min_session_minutes": 15.0,
+   "reconnects_per_hour_degraded": 6.0,
+   "regress_share_reject": 0.01
+  },
+  "regime_variables": [
+   "vol.cf.rv.5m",
+   "vol.coinbase.rv.5m"
+  ],
+  "research_sizes": [
+   1,
+   10,
+   50
+  ],
+  "result_classes": [
+   "INSUFFICIENT_DATA",
+   "INSUFFICIENT_DATA_FOR_COMPLEXITY",
+   "SYNTHETIC_ONLY",
+   "NO_INCREMENTAL_VALUE",
+   "PROMISING_RESEARCH_ONLY",
+   "UNSTABLE",
+   "DEGRADED"
+  ],
+  "sample_gates": {
+   "min_markets_per_asset": 75,
+   "min_markets_per_checkpoint": 200,
+   "min_markets_per_direction": 100,
+   "min_markets_per_regime": 50,
+   "min_negative_outcomes": 100,
+   "min_positive_outcomes": 100,
+   "min_total_markets": 400
+  },
+  "split": {
+   "calibration_fraction": 0.25,
+   "development_fraction": 0.2,
+   "label_horizon_ms": 0,
+   "max_causal_lookback_ms": 1500000,
+   "min_train_markets": 40,
+   "purge_ms": 1500000,
+   "train_fraction": 0.6,
+   "walk_forward_folds": 4
+  },
+  "step6_schema_version": 1
+ },
+ "defaults_sha256": "dafb67d1c7ac5d25158451126089217051e94c19c89bcf1f0bca7da3dea35a54",
+ "existing_perp_veto_files": {
+  "analyze_perp_integration.py": "d34215be9b8a8fc8c9a51534dae47428b5b6000e0adb4b57f09362a8b2694c35",
+  "analyze_perp_predictive.py": "6a783a753a9f1f9b118f1936aec5c2835dadc9f741f36b0ecf4758561403773d",
+  "analyze_perp_quality.py": "b1a3a35e2a15a0c58a460739a90eff9c574cae3ab6bb548298021c6b0bda50bf",
+  "analyze_perp_shadow.py": "5aa0ae764d417ed5e3118faff78dda747b492695936efeff3d81a1476534d87b",
+  "build_perp_integration_experiment.py": "c9ef7c33712d13fea4edaeccbe68c17045d64114143c6efd1f6fbe429a081309",
+  "build_perp_shadow_policy.py": "8003371e9a0dbf657c5b1db5888cbd6e285172a3fab45389385d062c03ea0e38",
+  "check_perp_deployment.py": "879d8ab854aa9b17e7d4c67ed0aed8d9b32e40175e0cf9486a68ea41c840b819",
+  "label_binary_outcomes.py": "497108eb30f9a29a6b88ba994f581e8aa057b4a283a54405dafb841dbf91f238",
+  "perp_live.py": "95b0ce6f1f6ce70b62cae1176757dbb27574501817a0d6c868fec4bbd7ba48a2",
+  "perp_probability.py": "344114534aef2a90ba41b07a52a454bd1e5ebc3b06b4b2facebde5c90eb76546",
+  "perp_shadow.py": "ba3b3444e83fe384f5556050abc7d543d9c06fbc147a51319a314dddf12794c3",
+  "perp_telemetry.py": "5e1de6d6553032bd2902d0b9766086b826876c632bb41cfcfe52234c90b4d99e",
+  "promote_perp_integration.py": "7f4aab689fceaac6d5441d8b239617e80c21d7c1da23184e688b213e2d9da73c",
+  "step5_baseline_manifest.json": "6a2994ff8bdc2d36b41608515c77a13d71fd371030487b5e62b2b064cd096db8"
+ },
+ "existing_perp_veto_fingerprint": "499c1e16da5d9cc763babe7dea31db7104ebc3f1460a17241af83240c8de523b",
+ "feature_universe_fingerprint": "e4c856ba2b63df06ba4637a874ced4a5a3f10f9e17f316338325b5e437846f84",
+ "feature_universe_records": 2047,
+ "format": "step6_fingerprint_v1/canonical_ast_v2_sha256",
+ "modules": {
+  "feature_eval/__init__.py": "697d3d2c127eaefc2fde0c1405bbdbfc12f8656beda17a32ad4f2fd598df40fd",
+  "feature_eval/ablation.py": "72330a2f5a29db954eac420e7781c7a84e82dc2d78b63b7b23e3f4a2536d3f7e",
+  "feature_eval/bootstrap.py": "87197870e8e90cc3533cd568d870b0f6014d4b78e41410e900c94b2b1f5daece",
+  "feature_eval/calibration.py": "d9c4915cccc1202fe21649a2d6904d7f5a6668359934643dda3de174a4c9d575",
+  "feature_eval/coinbase_seq.py": "9033fa9aaa23b6149e6d795bf54d49fdf83e6a611743f9b86fc229ea0e30034e",
+  "feature_eval/dataset.py": "045873e5b82c6f013a610a4f64375152d706fdd76a35a2d1e50ddbb9eac32a12",
+  "feature_eval/economics.py": "5284df1119651ebf46ea919c936301b8e56ec218dad960b65ff0f909db7c99ac",
+  "feature_eval/experiment.py": "3f26809d40b80789bed6afe9f1c0effbee7a3432f9ede4a08b0a62fcd52eaf12",
+  "feature_eval/fingerprint.py": "20eb15499ff0971f00260bae5e19924fa3425dc8b4048c98e23ed61ec56fed39",
+  "feature_eval/gates.py": "d422a82be40d39480d2f51cc789d47dbd40924595d03b15bcaa0dfdd06ca35bc",
+  "feature_eval/labels.py": "6cf7b0bf249be840d747401860f59a8141a5252c790e0f476c638d302c4ddfd3",
+  "feature_eval/leakage.py": "f27ff0d7c2438c889d5820140eaf2d1588ac7ea412f912392b5be7f1593252ad",
+  "feature_eval/ledger.py": "4e4f59e5cc90addd711224c144abc2255a0ef5665259ecc3bf480f4b986f2460",
+  "feature_eval/legacy.py": "4d9f0b8396ce9d05d6d2c31e397b79716d9525db60ee9a7d67d09032d7af32e8",
+  "feature_eval/metrics.py": "9d127f87c25668e50281757dc04e88139ff8a60b946021c5547705ee87c800ab",
+  "feature_eval/models.py": "ed17a09b2f8ad78e85935254cf3d938d5042eb1d45e17852ea1a0af3413e0473",
+  "feature_eval/pipeline.py": "d262ad6442bcd78f88a6df2935caefadc02dfce3e35ecd9136784b277d6ae35d",
+  "feature_eval/pruning.py": "21476479574ec9fc310623d1a722161896b61e30dbae13482ac0c68f2430d1c1",
+  "feature_eval/quality.py": "2c244731085925dfcb4d6e8d3b313f7f0455d93b8ac944ea0b5567f04a334855",
+  "feature_eval/report.py": "8622eae01f1f1990a6d9dd7b68b519f1338f7cd93c235398f86e855e7596ed83",
+  "feature_eval/splits.py": "929a34baf8760094587505bf767938583a859483aa876b57a8afbf21a746195f",
+  "feature_eval/synthetic.py": "5d0e80c342f1aec286a7beca25632ac8e907644c6d78e9a8d7c4270a7721fcf6",
+  "feature_eval/universe.py": "c698830b18992bbab81294d28338ac6e3bcad64abe7d945401d96b08f768629a",
+  "research_status.py": "161870b4d36305a6f669a56be228541c578da4f6b57c1346450cb433ad2978b4",
+  "run_step6_research.py": "812d6c0f81d21ef462d3b29687920d1e4a29ea8f7e13617de5b1c842d108f2ad",
+  "validate_research_session.py": "4087cb9ee6a709c31a536d7a7543006ee1e8e6645f6159693652cf5c4cba77c2"
+ },
+ "note": "Research-only evaluation code; independent of every earlier baseline. existing_perp_veto_* and production_files record files Step 6 must leave byte-identical.",
+ "production_files": {
+  "kalshi_backtest.py": "19f4bc281701db5234c29cc922b3806b21ac333883df174dcd936385fe9f117f",
+  "kalshi_bot.py": "8278bdc4d2adaa117e2fdcce101924181d4bc64d3987b584a69741eeb474cd5d",
+  "kalshi_dashboard.py": "aa66c7ae1d6cf8b913b746b05bfd6cf64197454d3b7fd00a2ba174749150c595",
+  "run_local.py": "0749c2a83b3c219ed63dc5d994253883983f9b6b4ebc81a2b72f46b067e53044",
+  "strategy_fingerprint.py": "4b8a3383d08d75f896fc36c0f0032f780ac37736f923b2186c5c6d11f6256eec"
+ },
+ "step6_fingerprint": "7469fc0fc46eef18314699fe1d4cb918d38069f2ddc74ba01620d99ab16b75e8"
+}

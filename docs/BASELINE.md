@@ -255,6 +255,26 @@ no issues. `compileall`: clean on 3.10–3.13.
 * No existing module changed: `market_data/` and `settlement/` are untouched (their fingerprints verify), and
   so are all perp-veto chain files and `kalshi_dashboard.py`. No OLD/NEW/WHY re-baseline was needed.
 
+### Step 6 notes (feature evaluation, research only)
+
+* Added:
+  * `feature_eval/` (frozen feature universe, quality / Coinbase-sequence / settlement-label validators, legacy
+    probability wrapper, research matrix + immutable cache, purged splits, pruning, models, metrics, calibration,
+    economics, bootstrap, gates, leakage guards, ablation, pipeline, ledger, report, synthetic self-test,
+    fingerprint);
+  * three CLIs (`run_step6_research.py`, `validate_research_session.py`, `research_status.py`);
+  * two scripts (`bench_step6.py`, `mutation_test_step6.py`);
+  * `config/step6_feature_universe.json`, `config/step6_baseline.json`, `test_stage22.py` and
+    `docs/STEP6_FEATURE_EVALUATION.md` (the full design is there).
+* Edits to existing files:
+  * the runner range (1–22), stage 13's `last = 22` and stage 17's runner assertion;
+  * `.gitignore` (the Step-6 output files are kept);
+  * docs.
+* No production file, strategy constant, perp-veto file or Step 2–5 engine changed. Every earlier fingerprint
+  verifies unchanged. No OLD/NEW/WHY re-baseline was needed.
+* Real-data result: **INSUFFICIENT_DATA**. There are no real captured sessions yet; see
+  `docs/STEP6_FEATURE_EVALUATION.md` §15 and `py research_status.py`.
+
 ### Step 5.1 notes (microstructure correctness hardening)
 
 * **Bybit.** Linear order-book depths are 1 / 50 / 200 / 1000 (pushed every 10 / 20 / 100 / 200 ms).

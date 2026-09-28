@@ -35,6 +35,17 @@ analysis_output/*
 !analysis_output/perp_data_mutation_results.json
 !analysis_output/microstructure_performance.json
 !analysis_output/microstructure_mutation_results.json
+!analysis_output/step6_performance.json
+!analysis_output/step6_mutation_results.json
+!analysis_output/step6_synthetic_selftest.json
+!analysis_output/step6_data_quality.json
+!analysis_output/step6_family_ablation.json
+!analysis_output/step6_calibration.json
+!analysis_output/step6_confidence_buckets.json
+!analysis_output/step6_economic_metrics.json
+!analysis_output/step6_research_ledger.json
+!analysis_output/step6_research_ledger.jsonl
+!analysis_output/step6_research_status.json
 settlement_data/*
 !settlement_data/README.md
 market_data_sessions/

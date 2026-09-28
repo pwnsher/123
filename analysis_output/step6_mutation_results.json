@@ -1,0 +1,224 @@
+{
+ "note": "Each mutation breaks one Step-6 rule in a temporary copy; CAUGHT = the Stage-22 tests fail.",
+ "controls": {
+  "unmutated": {
+   "caught": false,
+   "returncode": 0,
+   "seconds": 29.9,
+   "failed_test": null,
+   "passed_tests": [
+    "4 frozen feature universe (2047): fields, roles, aliases, finer ",
+    "6 Coinbase sequence validator: consistent / contradicts / unveri",
+    "7 settlement-label gate: official / conflict / verified / unveri",
+    "9 research matrix from a session, real mode skips synthetic, imm",
+    "10 dataset fingerprint covers every session, raw checksum, unive",
+    "11 purged chronological TRAIN / DEV / HOLDOUT, close-time groups",
+    "14 missing data never zero: train mean + indicator, complete cas",
+    "16 train-only scaler / selection / ridge; future-only feature no",
+    "18 market-clustered bootstrap + sign-flip p-values",
+    "23 leakage guards: label / post-event names, disguised leaked va",
+    "24 research ledger: hash chain, tamper detection, holdout single",
+    "27 outputs: synthetic refused in real files; INSUFFICIENT_DATA f"
+   ]
+  }
+ },
+ "mutations": [
+  {
+   "id": "S1",
+   "mutation": "random train / test shuffle (close-time groups shuffled before the chronological cut)",
+   "tests": [
+    "splits"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  11 purged chronological TRAIN / DEV / HOLDOUT, close-time groups, walk-forward, no holdout in folds: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S2",
+   "mutation": "scaler fit on all data (training + test rows standardize the features)",
+   "tests": [
+    "fold"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  16 train-only scaler / selection / ridge; future-only feature not selected; holdout leak refused: AssertionError: ('mom.syn.noise', 0.010283732104335874, 0.018432066446273543)",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S3",
+   "mutation": "feature selector reads future folds (screening on training + test rows)",
+   "tests": [
+    "fold"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.4,
+    "failed_test": "FAIL  16 train-only scaler / selection / ridge; future-only feature not selected; holdout leak refused: AssertionError: ({'vol.syn.noise': 0.23703947881016363, 'vol.cf.rv.5m': -0.0366665847955236}, {'vol.cf.rv.5m': -0.03971493823448502, 'vol.syn.noise': -0.011174979917105997})",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S4",
+   "mutation": "holdout influences hyperparameters / model choice (FINAL_HOLDOUT markets enter the walk-forward test blocks)",
+   "tests": [
+    "splits"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  11 purged chronological TRAIN / DEV / HOLDOUT, close-time groups, walk-forward, no holdout in folds: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S5",
+   "mutation": "row-level bootstrap instead of market clusters",
+   "tests": [
+    "bootstrap"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  18 market-clustered bootstrap + sign-flip p-values: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S6",
+   "mutation": "the settlement result enters the features (the label is copied into a feature column)",
+   "tests": [
+    "dataset"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 4.3,
+    "failed_test": "FAIL  9 research matrix from a session, real mode skips synthetic, immutable cache, raw change invalidates: AssertionError: a settlement outcome changed a feature value",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S7",
+   "mutation": "a post-event price-impact label enters the features undetected (name and value leakage scans disabled)",
+   "tests": [
+    "leakage"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  23 leakage guards: label / post-event names, disguised leaked values, availability: AssertionError: micro_label.cb.fwd_mid_bps.1000ms",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S8",
+   "mutation": "synthetic results treated as real (the synthetic flag is ignored when writing the real outputs)",
+   "tests": [
+    "outputs"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 24.1,
+    "failed_test": "FAIL  27 outputs: synthetic refused in real files; INSUFFICIENT_DATA files name requirements: AssertionError: synthetic written to real outputs",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S9",
+   "mutation": "missing values silently replaced with zero (raw 0 instead of the training mean + indicator)",
+   "tests": [
+    "missing"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.1,
+    "failed_test": "FAIL  14 missing data never zero: train mean + indicator, complete case, native: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S10",
+   "mutation": "dataset fingerprint ignores a session (only the first session is hashed)",
+   "tests": [
+    "dsfp"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  10 dataset fingerprint covers every session, raw checksum, universe, labels, grid, assets: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S11",
+   "mutation": "holdout reused after tuning (the single-use holdout check is bypassed)",
+   "tests": [
+    "ledger"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.1,
+    "failed_test": "FAIL  24 research ledger: hash chain, tamper detection, holdout single use: AssertionError: holdout reused",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S12",
+   "mutation": "feature manifest changed without a version / fingerprint change (records comparison skipped)",
+   "tests": [
+    "universe"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.4,
+    "failed_test": "FAIL  4 frozen feature universe (2047): fields, roles, aliases, finer families, tags; changed-without-version refused: AssertionError: []",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S13",
+   "mutation": "Coinbase sequence failure ignored (a contradicting real feed is not reported)",
+   "tests": [
+    "coinbase"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  6 Coinbase sequence validator: consistent / contradicts / unverified / synthetic; features fail closed: AssertionError: ambiguous: global 0.008002667555851951, per-channel 0.027685123415610406, per-product 1.0",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S14",
+   "mutation": "unverified settlement labels treated as gold",
+   "tests": [
+    "labels"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.1,
+    "failed_test": "FAIL  7 settlement-label gate: official / conflict / verified / unverified; unverified never gold: AssertionError: SETTLEMENT_UNVERIFIED",
+    "passed_tests": []
+   }
+  }
+ ],
+ "all_caught_and_controls_pass": true
+}

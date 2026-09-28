@@ -1,0 +1,223 @@
+{
+ "capture_hours": 0.0,
+ "days_covered": [],
+ "eta": "not estimated - depends only on how many real sessions are captured",
+ "markets_per_asset": {},
+ "quality": {},
+ "real_sessions": 0,
+ "sample_gate_from_last_run": {
+  "counts": {
+   "by_asset": {},
+   "by_checkpoint": {},
+   "by_direction": {},
+   "by_regime": {},
+   "gold_markets": 0,
+   "markets_excluded_non_gold_label": 0,
+   "negative": 0,
+   "positive": 0
+  },
+  "failed_requirements": [
+   {
+    "have": 0,
+    "need": 400,
+    "requirement": "settled_independent_markets"
+   },
+   {
+    "have": 0,
+    "need": 75,
+    "requirement": "markets_asset_BTC"
+   },
+   {
+    "have": 0,
+    "need": 75,
+    "requirement": "markets_asset_ETH"
+   },
+   {
+    "have": 0,
+    "need": 75,
+    "requirement": "markets_asset_SOL"
+   },
+   {
+    "have": 0,
+    "need": 75,
+    "requirement": "markets_asset_XRP"
+   },
+   {
+    "have": 0,
+    "need": 100,
+    "requirement": "markets_direction_UP"
+   },
+   {
+    "have": 0,
+    "need": 100,
+    "requirement": "markets_direction_DOWN"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_600s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_480s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_360s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_300s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_240s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_180s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_120s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_90s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_60s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_30s"
+   },
+   {
+    "have": 0,
+    "need": 100,
+    "requirement": "positive_outcomes"
+   },
+   {
+    "have": 0,
+    "need": 100,
+    "requirement": "negative_outcomes"
+   }
+  ],
+  "status": "INSUFFICIENT_DATA"
+ },
+ "sessions_root": "/home/user/123/market_data_sessions",
+ "settled_markets_per_asset": {},
+ "settlement_convention": {
+  "reason": "no research matrix built yet",
+  "status": "SETTLEMENT_UNVERIFIED"
+ },
+ "status": "INSUFFICIENT_DATA",
+ "synthetic_sessions_ignored": [],
+ "unmet_gates": [
+  {
+   "have": 0,
+   "need": 400,
+   "requirement": "settled_independent_markets"
+  },
+  {
+   "have": 0,
+   "need": 75,
+   "requirement": "markets_asset_BTC"
+  },
+  {
+   "have": 0,
+   "need": 75,
+   "requirement": "markets_asset_ETH"
+  },
+  {
+   "have": 0,
+   "need": 75,
+   "requirement": "markets_asset_SOL"
+  },
+  {
+   "have": 0,
+   "need": 75,
+   "requirement": "markets_asset_XRP"
+  },
+  {
+   "have": 0,
+   "need": 100,
+   "requirement": "markets_direction_UP"
+  },
+  {
+   "have": 0,
+   "need": 100,
+   "requirement": "markets_direction_DOWN"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_600s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_480s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_360s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_300s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_240s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_180s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_120s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_90s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_60s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_30s"
+  },
+  {
+   "have": 0,
+   "need": 100,
+   "requirement": "positive_outcomes"
+  },
+  {
+   "have": 0,
+   "need": 100,
+   "requirement": "negative_outcomes"
+  }
+ ]
+}

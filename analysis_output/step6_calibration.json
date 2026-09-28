@@ -1,0 +1,108 @@
+{
+ "app_version": "kalshi-local-step6",
+ "failed_requirements": [
+  {
+   "have": 0,
+   "need": 400,
+   "requirement": "settled_independent_markets"
+  },
+  {
+   "have": 0,
+   "need": 75,
+   "requirement": "markets_asset_BTC"
+  },
+  {
+   "have": 0,
+   "need": 75,
+   "requirement": "markets_asset_ETH"
+  },
+  {
+   "have": 0,
+   "need": 75,
+   "requirement": "markets_asset_SOL"
+  },
+  {
+   "have": 0,
+   "need": 75,
+   "requirement": "markets_asset_XRP"
+  },
+  {
+   "have": 0,
+   "need": 100,
+   "requirement": "markets_direction_UP"
+  },
+  {
+   "have": 0,
+   "need": 100,
+   "requirement": "markets_direction_DOWN"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_600s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_480s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_360s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_300s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_240s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_180s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_120s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_90s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_60s"
+  },
+  {
+   "have": 0,
+   "need": 200,
+   "requirement": "markets_checkpoint_30s"
+  },
+  {
+   "have": 0,
+   "need": 100,
+   "requirement": "positive_outcomes"
+  },
+  {
+   "have": 0,
+   "need": 100,
+   "requirement": "negative_outcomes"
+  }
+ ],
+ "kind": "calibration",
+ "never": "APPROVED_FOR_PRODUCTION",
+ "production_effect": "NONE - evidence only; nothing here changes a production call, threshold, window, stop, size, the perp veto or any order path",
+ "reason": "no real research sessions",
+ "research_only": true,
+ "result_class": "INSUFFICIENT_DATA",
+ "schema_version": 1,
+ "synthetic_only": false
+}

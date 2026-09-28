@@ -9,6 +9,7 @@ It **places no orders**. Discord is optional and legacy. Everything runs locally
 * High-resolution market data + research features (Step 3): [`docs/HIGH_RESOLUTION_DATA.md`](docs/HIGH_RESOLUTION_DATA.md)
 * Expanded perpetual-futures telemetry (Step 4): [`docs/PERP_HIGH_RESOLUTION_DATA.md`](docs/PERP_HIGH_RESOLUTION_DATA.md)
 * Market microstructure — local order books, order flow, toxicity (Step 5): [`docs/MICROSTRUCTURE.md`](docs/MICROSTRUCTURE.md)
+* Feature evaluation, ablation and model comparison on real data (Step 6, evidence only): [`docs/STEP6_FEATURE_EVALUATION.md`](docs/STEP6_FEATURE_EVALUATION.md)
 * Future phases (not implemented): [`docs/ROADMAP.md`](docs/ROADMAP.md)
 * Perp research steps, runbook: `SETUP.txt`, `PRODUCTION_RUNBOOK.txt`
 
@@ -25,7 +26,7 @@ No Docker. No credentials are needed for anything below.
 # one-time
 py -m pip install requests
 
-# tests: every stage suite once, each in its own process (1-21)
+# tests: every stage suite once, each in its own process (1-22)
 py run_all_tests.py
 py test_stage16.py            # one stage alone (re-runs the earlier stages once each)
 
@@ -89,6 +90,16 @@ py scripts/prune_sessions.py market_data_sessions --keep-days 14
 py scripts/bench_microstructure.py
 py scripts/mutation_test_microstructure.py
 py -m microstructure.fingerprint --verify
+
+# feature-family evaluation on REAL captured sessions (Step 6; evidence only, never promotes anything)
+py research_status.py                                              # real sessions, settled markets, unmet gates
+py validate_research_session.py market_data_sessions\<session>     # PASS / DEGRADED / REJECT
+py run_step6_research.py --dry-run
+py run_step6_research.py --sessions market_data_sessions --assets BTC,ETH,SOL,XRP --workers 2
+py run_step6_research.py --synthetic-selftest                      # code self-test (SYNTHETIC only)
+py scripts/mutation_test_step6.py
+py scripts/bench_step6.py
+py -m feature_eval.fingerprint --verify
 
 # legacy optional Discord adapter
 py -m pip install -U discord.py

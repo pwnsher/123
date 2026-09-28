@@ -1,0 +1,160 @@
+{
+ "app_version": "kalshi-local-step6",
+ "assets": [
+  "BTC",
+  "ETH",
+  "SOL",
+  "XRP"
+ ],
+ "checkpoint_grid_s": [
+  600,
+  480,
+  360,
+  300,
+  240,
+  180,
+  120,
+  90,
+  60,
+  30
+ ],
+ "coinbase_features_allowed": false,
+ "coinbase_sequence": {
+  "reason": "no real sessions",
+  "status": "UNVERIFIED_REAL_FEED"
+ },
+ "feature_universe_fingerprint": "e4c856ba2b63df06ba4637a874ced4a5a3f10f9e17f316338325b5e437846f84",
+ "kind": "data_quality",
+ "never": "APPROVED_FOR_PRODUCTION",
+ "production_effect": "NONE - evidence only; nothing here changes a production call, threshold, window, stop, size, the perp veto or any order path",
+ "real_sessions": 0,
+ "reason": "no real research sessions",
+ "research_only": true,
+ "result_class": "INSUFFICIENT_DATA",
+ "sample_gate": {
+  "config": {
+   "min_markets_per_asset": 75,
+   "min_markets_per_checkpoint": 200,
+   "min_markets_per_direction": 100,
+   "min_markets_per_regime": 50,
+   "min_negative_outcomes": 100,
+   "min_positive_outcomes": 100,
+   "min_total_markets": 400
+  },
+  "counts": {
+   "by_asset": {},
+   "by_checkpoint": {},
+   "by_direction": {},
+   "by_regime": {},
+   "gold_markets": 0,
+   "markets_excluded_non_gold_label": 0,
+   "negative": 0,
+   "positive": 0
+  },
+  "failed_requirements": [
+   {
+    "have": 0,
+    "need": 400,
+    "requirement": "settled_independent_markets"
+   },
+   {
+    "have": 0,
+    "need": 75,
+    "requirement": "markets_asset_BTC"
+   },
+   {
+    "have": 0,
+    "need": 75,
+    "requirement": "markets_asset_ETH"
+   },
+   {
+    "have": 0,
+    "need": 75,
+    "requirement": "markets_asset_SOL"
+   },
+   {
+    "have": 0,
+    "need": 75,
+    "requirement": "markets_asset_XRP"
+   },
+   {
+    "have": 0,
+    "need": 100,
+    "requirement": "markets_direction_UP"
+   },
+   {
+    "have": 0,
+    "need": 100,
+    "requirement": "markets_direction_DOWN"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_600s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_480s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_360s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_300s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_240s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_180s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_120s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_90s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_60s"
+   },
+   {
+    "have": 0,
+    "need": 200,
+    "requirement": "markets_checkpoint_30s"
+   },
+   {
+    "have": 0,
+    "need": 100,
+    "requirement": "positive_outcomes"
+   },
+   {
+    "have": 0,
+    "need": 100,
+    "requirement": "negative_outcomes"
+   }
+  ],
+  "note": "counts are independent settled markets with a gold label (official or verified reconstruction)",
+  "status": "INSUFFICIENT_DATA"
+ },
+ "schema_version": 1,
+ "session_reports": [],
+ "sessions_root": "/home/user/123/market_data_sessions",
+ "synthetic_only": false,
+ "synthetic_sessions_ignored": [],
+ "usable_sessions": []
+}

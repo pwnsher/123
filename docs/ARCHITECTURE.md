@@ -45,7 +45,8 @@ manually promoted, inactive-by-default live veto.
 | Research data capture (Step 3) | `py collect_market_data.py [--dry-run]` (read-only collector + status page on 127.0.0.1:8766), `scripts/replay_market_data.py`, `scripts/build_market_features.py`, `scripts/bench_market_data.py`, `scripts/mutation_test_market_data.py`, `py -m market_data.fingerprint --verify` |
 | Perp research data (Step 4) | `py collect_research_data.py [--dry-run]` (Step 3 + Step 4 read-only, one session), `scripts/replay_perp_data.py`, `scripts/build_research_dataset.py`, `scripts/bench_perp_data.py`, `scripts/mutation_test_perp_data.py`, `py -m perp_data.fingerprint --verify` |
 | Microstructure research (Step 5) | `py collect_research_data.py --all-research [--dry-run]` (Steps 3 + 4 + 5, one session), `scripts/replay_microstructure.py`, `scripts/build_micro_dataset.py`, `scripts/lead_lag_analysis.py`, `scripts/prune_sessions.py`, `scripts/bench_microstructure.py`, `scripts/mutation_test_microstructure.py`, `py -m microstructure.fingerprint --verify` |
-| Tests | `py run_all_tests.py` (stages 1–21, each in its own process) |
+| Feature evaluation (Step 6, research only) | `py run_step6_research.py [--dry-run / --validate-only / --dataset-only / --family-ablation / --calibration / --report / --synthetic-selftest]`, `py validate_research_session.py <session>`, `py research_status.py`, `scripts/bench_step6.py`, `scripts/mutation_test_step6.py`, `py -m feature_eval.fingerprint --verify` (docs/STEP6_FEATURE_EVALUATION.md) |
+| Tests | `py run_all_tests.py` (stages 1–22, each in its own process) |
 
 ## 4. Prediction and signal path (per coin, every `POLL_SECONDS` = 4 s)
 
@@ -248,6 +249,27 @@ Isolation:
   production files).
 
 Stage 21 checks this. See `docs/MICROSTRUCTURE.md`.
+
+## 13a. Feature evaluation (Step 6, evidence only)
+
+`feature_eval/` evaluates the FROZEN Step 2–5 inputs against the frozen legacy probability on REAL captured
+sessions:
+
+* a frozen, fingerprinted feature universe (2047 records);
+* real-session quality validation (PASS / DEGRADED / REJECT);
+* an empirical Coinbase sequence validator (fail closed);
+* a settlement-label gate (official / verified reconstruction only);
+* purged chronological TRAIN / DEVELOPMENT / FINAL_HOLDOUT splits with walk-forward folds;
+* train-only structural pruning, screening, preprocessing and fitting (logistic, ridge, boosted stumps; the legacy
+  probability is computed by the unmodified `evaluate()`);
+* paired comparisons with market-clustered bootstrap CIs and Benjamini–Hochberg;
+* calibration gates;
+* taker-only executable economics with versioned fees;
+* a hash-chained research ledger (single-use holdout).
+
+It produces evidence files only (`analysis_output/step6_*.json`). There is no promotion class, and nothing
+production, veto or Step 2–5 imports it. Stage 22 and `scripts/mutation_test_step6.py` (S1–S14) check this. See
+`docs/STEP6_FEATURE_EVALUATION.md`.
 
 ## 14. Future boundaries (not implemented)
 
