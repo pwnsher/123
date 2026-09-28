@@ -154,6 +154,11 @@ Step 5 (microstructure layer added): before, 20/20 suites and 355 checks (re-ver
 plus every fingerprint and the 47 fixtures). After, 21/21 suites, 387 checks passed, 0 failed on CPython 3.10.20, 3.11.15, 3.12.3 and 3.13.12 (the same 1 skip on 3.10/3.11).
 `scripts/mutation_test_microstructure.py`: 11/11 mutations caught (as-is and with the micro engine guards disabled).
 
+Step 6 (feature-evaluation framework added): before, 21/21 suites and 390 checks (re-verified from the delivered Step-5.1
+ZIP, plus every fingerprint, the perp veto and LIVE refusal). After, 22/22 suites, 421 checks passed, 0 failed on CPython
+3.10.20, 3.11.15, 3.12.3 and 3.13.12 (the same 1 skip on 3.10/3.11). `scripts/mutation_test_step6.py`: 14/14 mutations
+(S1–S14) caught; the unmutated control passes.
+
 Why 3.10/3.11 were red before: `kalshi_backtest.py` used a backslash inside an f-string expression
 (legal only from Python 3.12, PEP 701). It could not even be imported, and stages 7/8 failed because
 they re-run stage 3. Stage 12 test 6.1 assumed `FunctionDef.type_params`, an AST field that only
@@ -204,6 +209,7 @@ no issues. `compileall`: clean on 3.10–3.13.
 | 2026-09-25 | Step 4 | **none** for the strategy, the settlement engine, the Step-3 engine and the EXISTING perp veto chain (14 files byte-identical; fingerprint `499c1e16…`). New, separate `config/perp_data_baseline.json` | Step-1 artifacts identical (stage 20 test 1); 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…` unchanged; settlement and market-data fingerprints verify unchanged; stages 1–20 green on 3.10–3.13 (355 checks) |
 | 2026-09-25 | Step 5 | **none** for the strategy, settlement, market-data, perp-data engines and the EXISTING perp veto chain (fingerprints unchanged). New, separate `config/microstructure_baseline.json` (`ce91fcd5…`, also pinning the veto chain and production files) | Step-1 artifacts identical (stage 21 test 1); 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…` unchanged; settlement `3eba791c…`, market-data `969cec83…`, perp-data `90543ddf…`, perp veto `499c1e16…` verify unchanged; stages 1–21 green on 3.10–3.13 |
 | 2026-09-28 | Step 5.1 | **Step-5 layer only**: Bybit linear depths corrected to 1/50/200/1000; Kraken checksum on an exact-decimal book. Step-5 fingerprint `ce91fcd5…` → `695d8e77…` (OLD/NEW/WHY in MICROSTRUCTURE.md §13). Nothing else changed | Step-1 artifacts identical; 47 fixtures MATCH; legacy / extended, settlement, market-data, perp-data and perp-veto fingerprints unchanged; stages 1–21 green on 3.10–3.13 (390 checks); 13/13 mutations caught |
+| 2026-09-28 | Step 6 | **none** for the strategy, settlement, market-data, perp-data, microstructure engines and the EXISTING perp veto chain (fingerprints unchanged). New, separate `config/step6_baseline.json` (`7469fc0f…`) and frozen `config/step6_feature_universe.json` (`e4c856ba…`) | Step-1 artifacts identical (stage 22 test 1); 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…`, settlement `3eba791c…`, market-data `969cec83…`, perp-data `90543ddf…`, microstructure `695d8e77…`, perp veto `499c1e16…` verify unchanged; stages 1–22 green on 3.10–3.13 (421 checks); 14/14 mutations caught; real-data result INSUFFICIENT_DATA |
 
 ### Step 2 notes
 
