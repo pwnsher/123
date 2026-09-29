@@ -59,6 +59,7 @@ class Flag(str, Enum):
     ROUNDING_TIE_UNRESOLVED = "ROUNDING_TIE_UNRESOLVED"
     ROUNDING_TIE_OUTCOME_INVARIANT = "ROUNDING_TIE_OUTCOME_INVARIANT"
     RULE_OBSERVED_AFTER_CLOSE = "RULE_OBSERVED_AFTER_CLOSE"
+    RULE_CONFLICT = "RULE_CONFLICT"                  # market rule text conflicts / is unrecognised / untrusted (6.2)
     PROXY_SOURCE = "PROXY_SOURCE"
     MIXED_SOURCES = "MIXED_SOURCES"
     WINDOW_NOT_STARTED = "WINDOW_NOT_STARTED"
@@ -109,6 +110,7 @@ class SettlementObservation:
     schema_id: str = ""
     schema_fingerprint: str = ""
     record_schema_version: int = RECORD_SCHEMA_VERSION
+    value_text: str = ""                       # the provider's ORIGINAL decimal text (Step 6.2); "" when unknown
 
     def to_dict(self):
         return asdict(self)
@@ -148,6 +150,7 @@ class SettlementMarket:
     series: str = ""
     metadata_source: str = ""
     metadata_schema_fingerprint: str = ""
+    rule_snapshot: Optional[Dict[str, Any]] = None   # the market's own captured contract rule text (Step 6.2)
 
     def to_dict(self):
         return asdict(self)

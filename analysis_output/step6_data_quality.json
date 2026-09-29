@@ -23,7 +23,7 @@
   "reason": "no real sessions",
   "status": "UNVERIFIED_REAL_FEED"
  },
- "feature_universe_fingerprint": "920c0a8aae81535f7b27aadd33c1210a84fa0ab970325e35b71f6d838dfbc994",
+ "feature_universe_fingerprint": "edef198fb82913f244982a75382d61a5d7db9b0d21d9bd3218c587c8d1013fd8",
  "kind": "data_quality",
  "never": "APPROVED_FOR_PRODUCTION",
  "production_effect": "NONE - evidence only; nothing here changes a production call, threshold, window, stop, size, the perp veto or any order path",

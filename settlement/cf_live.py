@@ -38,8 +38,23 @@ class PublishedAverage:
         return cls(**d)
 
 
-def parse_cfb_frame(frame, receive_ts_ms=None, seq=None, source="cfb_ws"):
-    """One CF websocket value frame (dict). Returns (observation | None, [ParseIssue])."""
+def value_text(raw):
+    """The provider's ORIGINAL decimal text of a value (Step 6.2): a decimal string is kept verbatim; a JSON number
+    that was already decoded to a binary float has no recoverable text ("")."""
+    if isinstance(raw, str):
+        t = raw.strip()
+        try:
+            from decimal import Decimal, InvalidOperation
+            d = Decimal(t)
+        except (InvalidOperation, ValueError):
+            return ""
+        return t if d.is_finite() else ""
+    return ""
+
+
+def parse_cfb_frame(frame, receive_ts_ms=None, seq=None, source="cfb_ws", exact_value=None):
+    """One CF websocket value frame (dict). Returns (observation | None, [ParseIssue]).
+    exact_value: the value token decoded WITHOUT float conversion (when the caller decoded the JSON itself)."""
     chk = validate(frame, CFB_WS_VALUE)
     if not chk.ok:
         return None, [ParseIssue(source, "SCHEMA_MISMATCH", "; ".join(chk.problems)[:300],
@@ -67,7 +82,8 @@ def parse_cfb_frame(frame, receive_ts_ms=None, seq=None, source="cfb_ws"):
         asset=INDEX_ASSET.get(frame["id"], "?"), index_id=frame["id"], source=source, value=val, event_ts_ms=ts,
         receive_ts_ms=receive_ts_ms, amend_ts_ms=amend, seq=seq,
         repeat_of_previous=frame.get("repeatOfPreviousValue") if isinstance(frame.get("repeatOfPreviousValue"), bool) else None,
-        schema_id=f"{CFB_WS_VALUE.schema_id}@{CFB_WS_VALUE.version}", schema_fingerprint=chk.fingerprint)
+        schema_id=f"{CFB_WS_VALUE.schema_id}@{CFB_WS_VALUE.version}", schema_fingerprint=chk.fingerprint,
+        value_text=value_text(exact_value if exact_value is not None else frame["value"]))
     return obs, issues
 
 
@@ -94,10 +110,12 @@ def parse_kalshi_cfb_message(message, receive_ts_ms=None, seq=None):
                                      receive_ts_ms=receive_ts_ms)]
     try:
         frame = json.loads(message["msg"]["data"])
+        exact = json.loads(message["msg"]["data"], parse_float=str)    # the numeric text, never through a float
     except ValueError as e:
         return None, [], [ParseIssue(src, "SCHEMA_MISMATCH", f"msg.data is not JSON: {e}"[:200], location=f"seq={seq}",
                                      receive_ts_ms=receive_ts_ms)]
-    obs, issues = parse_cfb_frame(frame, receive_ts_ms, seq if seq is not None else message.get("seq"), source=src)
+    obs, issues = parse_cfb_frame(frame, receive_ts_ms, seq if seq is not None else message.get("seq"), source=src,
+                                  exact_value=exact.get("value") if isinstance(exact, dict) else None)
     avgs = []
     if obs is not None:
         msg = message["msg"]

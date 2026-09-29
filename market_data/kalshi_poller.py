@@ -5,6 +5,8 @@ Each cycle, per asset: the open-markets list (current market state), the current
 and (every `trades_every` cycles) its recent trades. After a market closes, its settled result and
 expiration_value are fetched once (from close + settle_grace_s, retried up to settle_giveup_s).
 Trades returned by the first poll after (re)start are BACKFILLED (they happened before we watched).
+Step 6.2: each market's event object is fetched ONCE (GET /events/{event_ticker}) for fee metadata; its raw text is
+stored and later market snapshots carry it.
 """
 import json
 
@@ -19,6 +21,7 @@ class KalshiPoller:
         self.current = {}                    # asset -> SettlementMarket
         self.pending_settle = {}             # ticker -> (asset, close_ms, last_try_ms)
         self.first_trades = set()
+        self.events_fetched = set()          # event tickers whose event object (fee metadata) was captured (6.2)
 
     def _get(self, url, params):
         body = self.getter.get_json(url, params)
@@ -47,6 +50,18 @@ class KalshiPoller:
             if m is None:
                 continue
             self.current[asset] = m
+            et = getattr(self.adapter, "event_of", {}).get(m.ticker)
+            if et and et not in self.events_fetched:
+                self.events_fetched.add(et)                  # once per event: GET, read-only (fee metadata, 6.2)
+                url, params = self.adapter.event_url(et)
+                try:
+                    body, wall, mono = self._get(url, params)
+                except Exception as exc:                     # noqa: BLE001 - metadata only; the market data goes on
+                    self.collector.on_poll_error("kalshi_event", self.clock.wall_ms(), exc)
+                else:
+                    e_, f, g = self.collector.on_rest("kalshi", "event", json.dumps(body),
+                                                      lambda ctx, b=body: self.adapter.parse_event(b, ctx), wall, mono)
+                    n_ev, n_f, n_g = n_ev + e_, n_f + f, n_g + g
             url, params = self.adapter.orderbook_url(m.ticker)
             body, wall, mono = self._get(url, params)
             e, f, g = self.collector.on_rest("kalshi", "orderbook", json.dumps(body),

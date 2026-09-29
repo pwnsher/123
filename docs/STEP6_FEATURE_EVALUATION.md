@@ -364,24 +364,24 @@ predeclared size (1, 10, 50 contracts):
 `net_edge = calibrated_prob − VWAP/100 − fee_per_contract` (probability units per $1 contract; unit conversions
 tested). Any uncertainty buffer is reported separately.
 
-**Fees are versioned configuration** (`FeeModel` of `FeeSchedule`s; Step 6.1). Each schedule records:
+**Fees** (`FeeModel` of time-versioned `FeeSchedule`s; exact `decimal.Decimal` arithmetic on exact price and
+quantity; Step 6.2):
 
-* source / version and URL;
-* effective start and end;
-* the series it covers, or the general `*` scope with explicit exclusions;
-* taker and maker rates, rounding, and whether it is verified.
+| Schedule | Effective | Formula | Rounding | Verified |
+|---|---|---|---|---|
+| `kalshi_general_2026_07_07` | from 2026-07-07 00:00 ET | taker M·0.07·C·P·(1−P), maker M·0.0175·C·P·(1−P) | **fee + position cost rounded UP to a centicent** ($0.0001) | terms as supplied by the project owner (PDF unreachable here) |
+| `kalshi_general_pre_2026_07_07` | before 2026-07-07 (start unknown) | 0.07·C·P·(1−P) | fee rounded up to a cent (the earlier behaviour, preserved for old periods) | no |
 
-A trade uses the covering schedule for its series at its timestamp. A series-specific schedule beats the general one.
-
-The fee status is `VERIFIED` only when that schedule is verified **and** its effective range covers the trade time.
-It is `FEE_UNVERIFIED` otherwise: an unverified schedule, an unknown start date, or an unknown trade time. It is
-`FEE_UNKNOWN` when no schedule covers the trade. The general formula is never verified globally, and the fingerprint
-of every schedule is part of every experiment.
-
-Default: Kalshi's general formula ceil_to_cent(rate × C × P × (1 − P)), taker 0.07, maker 0.0175, **unverified**.
-The official schedule (`kalshi.com/docs/kalshi-fee-schedule.pdf`) was not reachable from the build environment, and
-public summaries disagree on whether crypto uses a different multiplier. The economic status therefore stays
-**`FEE_UNVERIFIED`**.
+* A trade always uses the schedule covering its **timestamp**. The July-2026 rounding is never applied to earlier
+  trades.
+* The multiplier M comes from captured Kalshi metadata. A market / event `fee_multiplier_override` beats the series /
+  market `fee_multiplier`. `fee_type_override` must be one the schedule prices.
+* The 15-minute crypto series are **not** hardcoded as general-fee markets: the schedule lists excepted products, and
+  the captured fee type or override decides for each event.
+* **`FEE_VERIFIED`** requires all of: a verified schedule version, the trade time inside an interval with a known
+  start, a captured override state, a captured multiplier, and a known rounding rule.
+* Otherwise the result is `FEE_UNVERIFIED`, or `FEE_UNKNOWN` when no schedule covers the trade.
+* Every schedule, including its source hash and effective dates, is in the fee-model fingerprint.
 
 **Maker EV is `NOT_EVALUATED`.** The fill probability of a resting order is unknown from the displayed book; a maker
 EV needs a fill model.
@@ -506,9 +506,14 @@ Step-2 settlement engine deliberately, for correctness; see §18.
   kalshi.com could not be opened from the build environment. v1's effective start is unknown.
 * (6.1) Exact .5 rounding ties are unresolved by design (tie rule undocumented). Empirical verification against
   official expiration values reports them separately.
-* (6.1) The frozen Step-3 synthetic world (`market_data/synthetic.py`, fingerprint-pinned, not edited) still issues
-  its SYNTHETIC "official" results with a strict `>` on unrounded values. It is code-test data only; synthetic labels
-  are never gold and never verify a convention.
+* (6.1 → 6.2) The Step-3 synthetic world now issues its SYNTHETIC official results by the contract rule. It carries
+  SYNTHETIC rule text; SOL deliberately has no precision sentence.
+* (6.2) Real per-market rule text and fee metadata have never been observed from this environment (kalshi.com is
+  blocked). The parser accepts only the documented wording; any real deviation fails closed until it is reviewed.
+* (6.2) The July-2026 fee terms were supplied by the project owner; the PDF could not be read here. A fee is
+  `FEE_VERIFIED` only with captured override and multiplier metadata.
+* (6.2) A CF frame received DIRECTLY with a numeric (not string) value has no recoverable decimal text. The float's
+  shortest repr is exact up to 15 significant digits.
 
 ## 18. Step 6.1 — correctness hardening
 
@@ -592,3 +597,57 @@ perp-data, microstructure and perp-veto fingerprints are unchanged.
 | `test_stage18.py` | equality → `AT_STRIKE`, no outcome; `expiration_value_abs_diff`, `within_tolerance` | equality → YES (`AT_STRIKE` informational); exact / half-unit / raw checks | the corrected contract semantics |
 | `test_stage21.py` | pins settlement `3eba791c…` | pins `ba4e50c3…` | the deliberate settlement re-baseline |
 | `scripts/settlement_validation_report.py` | "EV within tol" | "EV exact @ official precision" | the removed tolerance |
+
+## 19. Step 6.2 — rule provenance, fee schedules, exact CF values
+
+**Issue 1: no retroactive rules.** Details in `settlement/market_rules.py` and SETTLEMENT_ENGINE.md §9b.
+
+* Every Kalshi market object's `rules_primary` / `rules_secondary` is retained verbatim as a snapshot, with:
+  * its hash, series and event tickers;
+  * capture and update times;
+  * source, schema fingerprint and fee metadata.
+* The Step-3 collector stores it in MARKET_STATE / RESOLUTION payloads, and the dataset attaches it to each market.
+  A rejected `kalshi:<asset>` source contributes none.
+* A narrow deterministic parser interprets the snapshot. Rule resolution:
+  * the market's own text first; a contradiction with the static rule, the strike or another snapshot →
+    `RULE_CONFLICT`;
+  * unrecognised text → `RULE_TEXT_UNRECOGNIZED`, never overridden by the static table;
+  * the static series rule only within its evidenced period: `RULE_CURRENT_OBSERVED` for closes at or after its
+    observation date, `RULE_HISTORICALLY_UNVERIFIED` (diagnostic only) for earlier closes;
+  * otherwise fail closed.
+* `market_label()` gives `RECONSTRUCTED_VERIFIED` only with a gold rule status. Otherwise the result is
+  `RULE_UNVERIFIED_FOR_MARKET` (non-gold). Official results are unaffected.
+* Each dataset's fingerprint includes every market's rule-text hash, status and rule fingerprint. A changed snapshot
+  changes the dataset, and the cache is invalidated through the raw-store checksums.
+* SOL stays UNVERIFIED unless a SOL market's own text says "at least" and "nearest 4 decimal places".
+
+**Issue 2: fee schedule** (§10). Exact Decimal fees. The July 7, 2026 general schedule rounds fee + position cost up
+to a centicent; earlier trades keep cent rounding. Overrides take precedence. `FEE_VERIFIED` only with every condition
+met.
+
+**CF exact decimals.** The CF value's original text is carried to the official rounding. The regression case is
+`99999.994999999999999`: exact → 99999.99 (NO against 100000); float → a .5 tie.
+
+**Mutations S21–S27** (all caught):
+
+* S21: a current rule is applied retroactively and gives a gold label.
+* S22: the static rule silently beats a conflicting `rules_primary`.
+* S23: the dataset fingerprint ignores the rule hash.
+* S24: the July-2026 schedule rounds the fee to cents.
+* S25: the fee-multiplier override is ignored.
+* S26: the fee schedule is chosen without regard to the trade time.
+* S27: settlement values take a lossy float round-trip.
+
+**Fingerprints (OLD → NEW, WHY)**
+
+| Fingerprint | OLD | NEW | WHY |
+|---|---|---|---|
+| settlement | `ba4e50c39ab59359…` | `4884524a795f0e2c…` | `market_rules.py`; rule-status-gated outcomes; `value_text`; snapshot retention in `parse_market`; checkpoint label fields |
+| market-data | `969cec83e8b9912e…` | `609905956c9e6120…` | versioned metadata extension (`KALSHI_METADATA_VERSION` 2): contract snapshot in payloads, one event GET, synthetic rule text. No feature changed |
+| feature universe | v2 `920c0a8aae81535f…` | v3 `edef198fb82913f2…` | the settlement source fingerprint changed |
+| Step-6 baseline | `bc7f1b47cae79b88…` | `2344b12c3ab80360…` | label gating, rule hashes in the dataset fingerprint, fee model v3, labels v3, universe v3 |
+| fee model | `fee_model_v2` | `fee_model_v3` `b1b0843cf51ae0cc…` | time-versioned schedules, centicent rounding, override handling |
+| dataset fingerprints | — | now include `market_rules` and `labels_v3` | per-market rule provenance |
+
+The previous files are archived in `config/history/`. The legacy / extended strategy, perp-data, microstructure and
+perp-veto fingerprints are unchanged.

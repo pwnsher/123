@@ -268,7 +268,7 @@ sessions:
 * a hash-chained research ledger (single-use holdout).
 
 It produces evidence files only (`analysis_output/step6_*.json`). There is no promotion class, and nothing
-production, veto or Step 2–5 imports it. Stage 22 and `scripts/mutation_test_step6.py` (S1–S20) check this.
+production, veto or Step 2–5 imports it. Stage 22 and `scripts/mutation_test_step6.py` (S1–S27) check this.
 
 Step 6.1 corrected the research settlement semantics: versioned per-series contract rules in `settlement/rules.py`
 ("at least": equality is YES; official precision; unknown rules fail closed). It also added precision-aware

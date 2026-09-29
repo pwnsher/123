@@ -1,12 +1,12 @@
 {
  "app_version": "kalshi-local-step6",
  "by_kind": {
-  "RUN_INSUFFICIENT_DATA": 3,
-  "SYNTHETIC_SELFTEST": 2
+  "RUN_INSUFFICIENT_DATA": 4,
+  "SYNTHETIC_SELFTEST": 4
  },
  "chain_verified": true,
- "entries": 5,
- "head_hash": "b8ab65cc9c746817ae694bd1f407178b071968aa149219e917eaaa011ca45426",
+ "entries": 8,
+ "head_hash": "3f173bd36e35990b6a89e2adc590ad1d6eeb42d324fbf047f69795295e521b8a",
  "holdout_accesses": [],
  "kind": "research_ledger",
  "never": "APPROVED_FOR_PRODUCTION",

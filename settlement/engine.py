@@ -14,9 +14,10 @@ import math
 
 from settlement import ENGINE_VERSION
 from settlement.policy import PROXY_SOURCES, available_ts
-from settlement.assets import series_of
 from settlement.quality import classify
-from settlement.rules import official_outcome, rule_for
+from settlement.market_rules import (DIAGNOSTIC_OUTCOME_STATUSES, RULE_CONFLICT, RULE_HISTORICALLY_UNVERIFIED,
+                                     RULE_SNAPSHOT_UNTRUSTED, RULE_TEXT_UNRECOGNIZED, RULE_UNKNOWN, resolve_market_rule)
+from settlement.rules import exact, official_outcome
 from settlement.types import (Flag, Membership, Phase, Quality, Sample, SampleKind, SettlementState,
                               OBSERVED_KINDS)
 
@@ -37,6 +38,7 @@ class ObservationBook:
         self.times = []                  # sorted distinct event times inside [lookback_start, close]
         self.cands = {}                  # event_ts -> list of distinct (value, amend_ts, source)
         self.resolved = {}               # event_ts -> float | CONFLICT
+        self.resolved_exact = {}         # event_ts -> the winning value's exact decimal (Fraction) (Step 6.2)
         self.received = 0
         self.index_mismatch = 0
         self.untrusted_ignored = 0
@@ -94,38 +96,49 @@ class ObservationBook:
                 self.late_excluded += 1
                 return None
         lst = self.cands.setdefault(t, [])
-        if any((v, a) == (obs.value, obs.amend_ts_ms) for v, a, _s in lst):
+        # values compare EXACTLY: the provider's original decimal text when known, else the float's shortest repr
+        key = exact(obs.value_text or obs.value)
+        if any((k, a) == (key, obs.amend_ts_ms) for _v, a, _s, k in lst):
             self.duplicates += 1                                 # exact repeat (any source): dropped
             return None
-        if any(v == obs.value for v, _a, _s in lst):
+        if any(k == key for _v, _a, _s, k in lst):
             self.duplicates += 1                                 # same value, new amendment info: kept
         else:
             self.in_lookback += 1                                # a new distinct (event_ts, value)
         if not lst:
             bisect.insort(self.times, t)
-        lst.append((obs.value, obs.amend_ts_ms, obs.source))
+        lst.append((obs.value, obs.amend_ts_ms, obs.source, key))
         self.used_event_min = t if self.used_event_min is None else min(self.used_event_min, t)
         self.used_event_max = t if self.used_event_max is None else max(self.used_event_max, t)
-        self._digest_items.append((t, repr(obs.value), obs.amend_ts_ms, obs.source))
+        self._digest_items.append((t, obs.value_text or repr(obs.value), obs.amend_ts_ms, obs.source))
         self.resolved[t] = self._resolve(t, lst)
         return t
 
     def _resolve(self, t, lst):
-        values = {v for v, _a, _s in lst}
-        if len(values) == 1:
+        keys = {k for _v, _a, _s, k in lst}
+        if len(keys) == 1:
             self.conflict_times.discard(t)
+            self.resolved_exact[t] = lst[0][3]
             return lst[0][0]
         if self.rpol.conflict_rule == "PREFER_AMENDED":
-            amended = [(a, v) for v, a, _s in lst if a is not None]
+            amended = [(a, k, v) for v, a, _s, k in lst if a is not None]
             if amended:
-                top = max(a for a, _v in amended)
-                winners = {v for a, v in amended if a == top}
-                if len(winners) == 1:
+                top = max(a for a, _k, _v in amended)
+                winners = {(k, v) for a, k, v in amended if a == top}
+                if len({k for k, _v in winners}) == 1:
                     self.amended_times.add(t)
                     self.conflict_times.discard(t)
-                    return winners.pop()
+                    k, v = sorted(winners, key=lambda x: repr(x[1]))[0]
+                    self.resolved_exact[t] = k
+                    return v
         self.conflict_times.add(t)
+        self.resolved_exact.pop(t, None)
         return CONFLICT
+
+    def exact_value(self, sample):
+        """The exact decimal of a sample's source observation (Step 6.2), or the float's repr when unknown."""
+        k = self.resolved_exact.get(sample.source_event_ts_ms) if sample.source_event_ts_ms is not None else None
+        return k if k is not None else exact(sample.value)
 
     # ---------- sampling ----------
     def sample(self, g):
@@ -207,6 +220,7 @@ def summarize(book, samples, as_of_ms, schema_mismatch=False, invalid=False, lab
     conflict_samples = sum(1 for s in samples if s.kind == SampleKind.CONFLICT)
     missing = elapsed - filled - interpolated
     usable = [s.value for s in samples if s.kind in OBSERVED_KINDS or s.kind == SampleKind.INTERPOLATED]
+    usable_exact = [book.exact_value(s) for s in samples if s.kind in OBSERVED_KINDS or s.kind == SampleKind.INTERPOLATED]
     acc_sum = math.fsum(usable) if usable else None
     acc_mean = acc_sum / len(usable) if usable else None
     run = best = 0
@@ -250,12 +264,16 @@ def summarize(book, samples, as_of_ms, schema_mismatch=False, invalid=False, lab
     # final_value stays the UNROUNDED accepted mean (diagnostic, never destroyed). The official settlement value and
     # the outcome come from the market's versioned CONTRACT RULE (settlement.rules): official precision, then the
     # rule's comparator; unknown rules / precision / outcome-changing rounding ties fail closed (outcome None).
-    rule = rule_for(m.series or series_of(m.ticker), close)
+    # Step 6.2: the rule must be evidenced FOR THIS MARKET (settlement.market_rules): its own captured rule text, or
+    # the static series rule only for the period it is evidenced for. Unknown / conflicting / unparsed -> fail closed.
+    rule, rinfo = resolve_market_rule(m)
     settle = {"rule_id": rule.rule_id if rule else None, "rule_fingerprint": rule.fingerprint() if rule else None,
               "settlement_value": None, "outcome": None, "status": "NO_FINAL_VALUE", "tie_candidates": None}
     outcome = None
     if final_value is not None:
-        settle = official_outcome(usable, m.strike, rule)
+        settle = official_outcome(usable_exact, m.strike, rule if rinfo["status"] in DIAGNOSTIC_OUTCOME_STATUSES else None)
+        if rule is None and rinfo["status"] not in (RULE_UNKNOWN,):
+            settle["status"] = rinfo["status"]
         outcome = settle["outcome"]
         if settle["at_strike"]:
             flags.add(Flag.AT_STRIKE)
@@ -264,8 +282,15 @@ def summarize(book, samples, as_of_ms, schema_mismatch=False, invalid=False, lab
                        ("ROUNDING_TIE_OUTCOME_INVARIANT", Flag.ROUNDING_TIE_OUTCOME_INVARIANT)):
             if settle["status"] == st_:
                 flags.add(f)
-        if rule is not None and close is not None and close < rule.observed_ts_ms:
+        if rinfo["status"] == RULE_HISTORICALLY_UNVERIFIED:
             flags.add(Flag.RULE_OBSERVED_AFTER_CLOSE)
+        if rinfo["status"] in (RULE_CONFLICT, RULE_TEXT_UNRECOGNIZED, RULE_SNAPSHOT_UNTRUSTED):
+            flags.add(Flag.RULE_CONFLICT)
+    settle["rule_status"] = rinfo["status"]
+    settle["rule_basis"] = rinfo["basis"]
+    settle["rule_gold_eligible"] = rinfo["gold_eligible"]
+    settle["rule_text_sha256"] = rinfo["rule_text_sha256"]
+    settle["rule_reasons"] = list(rinfo["reasons"])
     if m.strike is None:
         flags.add(Flag.NO_STRIKE)
     if not w.verified:

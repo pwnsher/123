@@ -34,7 +34,8 @@ FEATURE_FIELDS = ("phase", "seconds_remaining", "current_index", "current_index_
                   "max_gap_s", "quality", "flags", "sources")
 LABEL_FIELDS = ("final_settlement_value", "reconstructed_outcome", "final_quality", "final_coverage",
                 "official_result", "official_expiration_value", "reconstruction_matches_official",
-                "final_unrounded_mean", "settlement_rule_id", "settlement_rule_fingerprint", "settlement_status")
+                "final_unrounded_mean", "settlement_rule_id", "settlement_rule_fingerprint", "settlement_status",
+                "settlement_rule_status", "settlement_rule_gold_eligible", "settlement_rule_text_sha256")
 
 
 @dataclass(frozen=True)
@@ -84,7 +85,9 @@ def labels_for(market, observations, resolution=None, wpol=None, rpol=None, issu
             "official_expiration_value": resolution.expiration_value if resolution is not None else None,
             "reconstruction_matches_official": match, "final_unrounded_mean": res.final_value,
             "settlement_rule_id": s.get("rule_id"), "settlement_rule_fingerprint": s.get("rule_fingerprint"),
-            "settlement_status": s.get("status")}
+            "settlement_status": s.get("status"), "settlement_rule_status": s.get("rule_status"),
+            "settlement_rule_gold_eligible": bool(s.get("rule_gold_eligible")),
+            "settlement_rule_text_sha256": s.get("rule_text_sha256")}
 
 
 def build_checkpoints(market, observations, resolution=None, wpol=None, rpol=None,

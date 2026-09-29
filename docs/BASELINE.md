@@ -216,6 +216,7 @@ no issues. `compileall`: clean on 3.10–3.13.
 | 2026-09-28 | Step 5.1 | **Step-5 layer only**: Bybit linear depths corrected to 1/50/200/1000; Kraken checksum on an exact-decimal book. Step-5 fingerprint `ce91fcd5…` → `695d8e77…` (OLD/NEW/WHY in MICROSTRUCTURE.md §13). Nothing else changed | Step-1 artifacts identical; 47 fixtures MATCH; legacy / extended, settlement, market-data, perp-data and perp-veto fingerprints unchanged; stages 1–21 green on 3.10–3.13 (390 checks); 13/13 mutations caught |
 | 2026-09-28 | Step 6 | **none** for the strategy, settlement, market-data, perp-data, microstructure engines and the EXISTING perp veto chain (fingerprints unchanged). New, separate `config/step6_baseline.json` (`7469fc0f…`) and frozen `config/step6_feature_universe.json` (`e4c856ba…`) | Step-1 artifacts identical (stage 22 test 1); 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…`, settlement `3eba791c…`, market-data `969cec83…`, perp-data `90543ddf…`, microstructure `695d8e77…`, perp veto `499c1e16…` verify unchanged; stages 1–22 green on 3.10–3.13 (421 checks); 14/14 mutations caught; real-data result INSUFFICIENT_DATA |
 | 2026-09-29 | Step 6.1 | **Deliberate, versioned research-settlement correction.** The settlement fingerprint `3eba791c…` → `ba4e50c3…` (versioned contract rules: AT_LEAST equality → YES, official precision, precision-aware verification, engine v2). Step-6 universe v1 `e4c856ba…` → v2 `920c0a8a…`; Step-6 baseline `7469fc0f…` → `bc7f1b47…` (OLD / NEW / WHY in STEP6_FEATURE_EVALUATION.md §18 and SETTLEMENT_ENGINE.md; old files archived in `config/history/`) | Step-1 artifacts identical; 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…`, market-data `969cec83…`, perp-data `90543ddf…`, microstructure `695d8e77…`, perp veto `499c1e16…` unchanged; production P(UP), calls, thresholds, windows, stops, sizing, execution and LIVE refusal unchanged; mutations S1–S20 caught; real-data result INSUFFICIENT_DATA |
+| 2026-09-29 | Step 6.2 | **Deliberate, versioned provenance pass.** Settlement `ba4e50c3…` → `4884524a…` (per-market rule provenance, exact CF text); market-data `969cec83…` → `60990595…` (versioned Kalshi rule / fee metadata capture; no feature changed); universe v2 → v3 `edef198f…`; Step-6 baseline `bc7f1b47…` → `2344b12c…`; fee model v3 (OLD / NEW / WHY in STEP6_FEATURE_EVALUATION.md §19; old files archived in `config/history/`) | Step-1 artifacts identical; 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…`, perp-data `90543ddf…`, microstructure `695d8e77…`, perp veto `499c1e16…` unchanged; production P(UP), calls, thresholds, windows, stops, sizing, execution and LIVE refusal unchanged; mutations S1–S27 caught; real-data result INSUFFICIENT_DATA |
 
 ### Step 2 notes
 
@@ -266,6 +267,14 @@ no issues. `compileall`: clean on 3.10–3.13.
   * docs.
 * No existing module changed: `market_data/` and `settlement/` are untouched (their fingerprints verify), and
   so are all perp-veto chain files and `kalshi_dashboard.py`. No OLD/NEW/WHY re-baseline was needed.
+
+### Step 6.2 notes (provenance)
+
+* A static rule observed on 2026-09-29 no longer makes an earlier market's reconstruction gold. Per-market Kalshi rule
+  text is captured, parsed deterministically and fingerprinted.
+* Fees use exact Decimal, time-versioned schedules (July-2026 centicent rule) with override handling.
+* CF values keep their original decimal text through to settlement rounding.
+* Earlier-stage test edits: `test_stage21.py` (new settlement and market-data pins).
 
 ### Step 6.1 notes (correctness hardening)
 

@@ -342,6 +342,7 @@ It has no control endpoints and cannot affect calls.
 | Date | What changed | Why |
 |---|---|---|
 | 2026-09-25 | initial baseline (`hires_features_v1`, 452 features) | Step 3 created the package |
+| 2026-09-29 | **Step 6.2, versioned metadata extension (`KALSHI_METADATA_VERSION` 2).** `sources/kalshi.py`: MARKET_STATE / RESOLUTION payloads carry `contract` (the market's ORIGINAL `rules_primary` / `rules_secondary`, hash, series / event tickers, capture and update times, schema fingerprint, fee metadata). `kalshi_poller.py`: one read-only `GET /events/{event_ticker}` per event (fee overrides; raw text stored). `collector.py`: the settlement store keeps the snapshot. `synthetic.py`: SYNTHETIC rule text, an events endpoint, official results by the contract rule. OLD `969cec83e8b9912e…` → NEW `609905956c9e6120…` (archived in `config/history/`) | Settlement labels must be tied to each market's OWN contract rule text, and fee overrides must be captured. No feature, feature definition or feature value changed (452 features, `hires_features_v1`). |
 
 ## 14. Limitations and next steps
 

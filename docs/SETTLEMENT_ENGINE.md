@@ -273,6 +273,40 @@ per series (never one global comparator):
 * The rule-set fingerprint enters the settlement fingerprint (format v2) and every Step-6 dataset fingerprint.
 * `SettlementWindowPolicy.round_decimals` must stay `None`: rounding is a contract rule, not a window convention.
 
+## 9b. Per-market rule provenance and exact CF values (`settlement/market_rules.py`, Step 6.2)
+
+* **Capture.** The Kalshi market object's `rules_primary` / `rules_secondary` text is kept verbatim in
+  `SettlementMarket.rule_snapshot`, together with:
+  * its sha256, ticker, series and event tickers;
+  * the capture time and the market's update time;
+  * source, schema fingerprint and fee metadata.
+* **Interpretation.** A narrow, deterministic parser (`crypto15m_rule_parser_v1`, regular expressions only, no LLM)
+  recognises only these:
+  * "at least" / "at or above" → `GREATER_THAN_OR_EQUAL`; "above" → `GREATER_THAN`;
+  * "nearest N decimal places";
+  * the asset's CF index id or name;
+  * the 60-second average;
+  * the target number.
+
+  Any other wording is `UNRECOGNIZED`, and the rule fails closed.
+* **Priority:**
+  1. the market's own trusted snapshot: → `RULE_VERIFIED_FOR_MARKET`, or `RULE_CONFLICT` when it contradicts the static
+     rule, the strike or another snapshot;
+  2. the static series rule, only for the period it is evidenced for: `RULE_CURRENT_OBSERVED` when the close is at or
+     after the observation date, otherwise `RULE_HISTORICALLY_UNVERIFIED` (diagnostic outcome only);
+  3. otherwise fail closed (`RULE_UNVERIFIED` / `RULE_UNKNOWN`).
+
+  Only the first two statuses can make a reconstructed label gold.
+* **SOL** is never inferred. A SOL market's own rule text ("at least" + "nearest 4 decimal places" + the Solana index
+  + the 60-second average) verifies that market.
+* **Exact CF values.** A CF value arriving as a decimal string, or as a JSON number inside Kalshi's `msg.data` (decoded
+  with `parse_float=str`), keeps its ORIGINAL text in `value_text`. The engine compares and averages those exact
+  decimals, while features keep using floats.
+  * Evidence: float decoding is exact for values up to 15 significant digits.
+  * The text `99999.994999999999999` decodes to the float `99999.995`, turning a clear round-down into a .5 tie.
+  * A directly decoded CF frame whose value was a JSON number (not a string) has no recoverable text; the float's
+    shortest repr is used.
+
 ## 10. Resolution verification and overlap
 
 * `scripts/verify_settlement_resolution.py` produces one row per market × convention:
@@ -370,4 +404,5 @@ back-history. The collector never marks a convention verified.
 |---|---|---|
 | 2026-09-24 | initial settlement baseline | Step 2 |
 | 2026-09-25 | `assets.py`: `INDEX_ID_PROVENANCE` added; the docstring now marks the asset→index mapping as DOCUMENTED. Mapping values are unchanged, and window policies stay `verified=False`. OLD `b665778b47cc1d49…` → NEW `3eba791cfe8163cc…` | Step 3: the index ids are confirmed by Kalshi documentation (owner-supplied, corroborated by search). The only source change is the added provenance constant; no settlement behaviour changed. |
+| 2026-09-29 | **Step 6.2 (provenance, versioned).** New `market_rules.py`: per-market rule snapshots (original `rules_primary` / `rules_secondary` + hash), a narrow deterministic parser, and rule resolution with historical provenance. A rule observed only AFTER a market closed is `RULE_HISTORICALLY_UNVERIFIED` (diagnostic only); conflicting or unrecognised market text fails closed; the static table never overrides market text. CF values keep their original decimal text (`SettlementObservation.value_text`) through to the official rounding; `parse_market` retains the snapshot. OLD `ba4e50c39ab59359…` → NEW `4884524a795f0e2c…` (archived) | The 6.1 table applied a rule observed on 2026-09-29 retroactively, and CF float decoding could move a value across a rounding boundary (`99999.994999999999999` → `99999.995`). |
 | 2026-09-29 | **Step 6.1 (semantic correction, versioned).** New `rules.py` (versioned contract rules); the engine takes outcomes from the rule (AT_LEAST equality → YES, official precision, unresolved ties fail closed, unknown rules fail closed); `resolution.py` is precision-aware (`VALUE_TOLERANCE = 0.01` removed); labels carry rule provenance; `ENGINE_VERSION` v1 → v2; fingerprint format v2 pins the rules. OLD `3eba791cfe8163cc…` → NEW `ba4e50c39ab59359…` (old baseline archived in `config/history/`) | The earlier engine treated equality as an unresolved `AT_STRIKE` and compared unrounded values against a universal 0.01 tolerance. Both conflict with the current Kalshi 15-minute crypto rules ("at least" the target; official values rounded to 2 dp for BTC / ETH and 4 dp for XRP). Research labels only; production is untouched. |

@@ -4,7 +4,7 @@ Mutation tests for the Step-6 evaluation framework's methodological rules (offli
 
     py scripts/mutation_test_step6.py [--out analysis_output/step6_mutation_results.json] [--only S1,S7]
 
-Each mutation breaks ONE rule (S1-S14 of the Step-6 brief, S15-S20 of Step 6.1) in a TEMPORARY copy of the repository and runs the relevant
+Each mutation breaks ONE rule (S1-S14 of the Step-6 brief, S15-S20 of Step 6.1, S21-S27 of Step 6.2) in a TEMPORARY copy of the repository and runs the relevant
 Stage-22 tests there; CAUGHT = those tests fail. Control: the unmutated copy must PASS the same tests. The working tree
 is never modified.
 """
@@ -106,6 +106,32 @@ MUTATIONS = [
       ("settlement/resolution.py", '        out["expiration_value_within_half_unit"] = abs(exact(unrounded) - ev) <= half\n',
        '        out["expiration_value_within_half_unit"] = abs(exact(unrounded) - ev) <= Fraction(1, 100)\n', 1)],
      ["precision"]),
+    ("S21", "a current rule is applied to a pre-observation historical market and becomes a gold reconstructed label",
+     [("settlement/market_rules.py", "    if market.close_ts_ms is not None and market.close_ts_ms >= static.observed_ts_ms:",
+       "    if market.close_ts_ms is not None:", 1)],
+     ["histrule"]),
+    ("S22", "captured rules_primary contradicts the static rule but the static rule silently wins",
+     [("settlement/market_rules.py", "            info.update(status=RULE_CONFLICT, reasons=conflicts)\n            return None, info",
+       "            info.update(status=RULE_VERIFIED_FOR_MARKET, gold_eligible=True)\n            return static, info", 1)],
+     ["rulecapture"]),
+    ("S23", "the dataset fingerprint ignores the per-market rule-text hash",
+     [("feature_eval/dataset.py", '    body["market_rules"] = sorted([tk, p.get("rule_text_sha256"), p.get("rule_status"), '
+                                  'p.get("rule_fingerprint")]',
+       '    body["market_rules"] = sorted([tk, None, p.get("rule_status"), p.get("rule_fingerprint")]', 1)],
+     ["rulefp"]),
+    ("S24", "the current (July-2026) schedule rounds the fee itself to full cents instead of fee + cost to a centicent",
+     [("feature_eval/economics.py", "        fee = _ceil_to(raw + cost, CENTICENT) - cost", "        fee = _ceil_to(raw, CENT)", 1)],
+     ["fees62"]),
+    ("S25", "the Kalshi fee_multiplier_override from the captured metadata is ignored",
+     [("feature_eval/economics.py", '    om = _num(meta.get("fee_multiplier_override"))', "    om = None", 1)],
+     ["fees62"]),
+    ("S26", "a historical trade uses a fee schedule whose effective interval does not cover it",
+     [("feature_eval/economics.py", "x.covers_series(ticker) and x.covers_time(ts_ms)]",
+       "x.covers_series(ticker) and ts_ms is not None]", 1)],
+     ["fees62"]),
+    ("S27", "settlement sample values are forced through a lossy float round-trip before the official rounding",
+     [("settlement/engine.py", "        key = exact(obs.value_text or obs.value)", "        key = exact(obs.value)", 1)],
+     ["cfexact"]),
 ]
 
 

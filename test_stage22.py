@@ -53,8 +53,8 @@ from feature_eval import universe as UV                                         
 EARLIER_FINGERPRINTS = {
     "legacy_strategy": "8d94f241e8fc8edadc76058e1f12f430b6e4f499f4c0a30fba1cb5cf07dad82a",
     "extended_strategy": "784141876a1b7f4c9f605036ef1358a6a3ea51ef32fced1f80f74045a6adef8c",
-    "settlement": "ba4e50c39ab593599ab601bcd5ff0e3b6095d7f8523e252a881cdf6529e44f0a",    # Step 6.1 re-baseline; OLD 3eba791cfe8163cc17406ecdbd0c0e04abfe178afb7b6695565a3484318ff2be
-    "market_data": "969cec83e8b9912e1fb91d02e8663acc943424dce7d33456b8850b0fb58297fd",
+    "settlement": "4884524a795f0e2cc63bc561074d00e2a2351bba4f0f1ef3cf7092803db17aad",    # Step 6.2; OLD ba4e50c3... (6.1), 3eba791c... (Steps 2-6)
+    "market_data": "609905956c9e6120c1021f3f72017db87ee5eeaeedac236bf822d630473e3f5f",   # Step 6.2 metadata extension; OLD 969cec83e8b9912e1fb91d02e8663acc943424dce7d33456b8850b0fb58297fd
     "perp_data": "90543ddff68e9dece7443fd9a7d876070f14a06d008a013e8980cb6aa292758c",
     "microstructure": "695d8e7741287c0bbac40ae9835148e4a0fbcd0e517669784aae647a8dcb0799",
 }
@@ -333,7 +333,9 @@ def test_coinbase_sequence_validator():
 def test_settlement_label_gate():
     assert LB.market_label({"official_result": "yes", "reconstructed_outcome": "yes"}, "SETTLEMENT_UNVERIFIED") == (1, "OFFICIAL_RESULT")
     assert LB.market_label({"official_result": "yes", "reconstructed_outcome": "no"}, "VERIFIED") == (None, "LABEL_CONFLICT")
-    assert LB.market_label({"reconstructed_outcome": "no"}, "VERIFIED") == (0, "RECONSTRUCTED_VERIFIED")
+    assert LB.market_label({"reconstructed_outcome": "no", "settlement_rule_status": "RULE_VERIFIED_FOR_MARKET"},
+                           "VERIFIED") == (0, "RECONSTRUCTED_VERIFIED")
+    assert LB.market_label({"reconstructed_outcome": "no"}, "VERIFIED") == (0, "RULE_UNVERIFIED_FOR_MARKET")   # 6.2
     assert LB.market_label({"reconstructed_outcome": "no"}, "SETTLEMENT_UNVERIFIED") == (0, "SETTLEMENT_UNVERIFIED")
     assert LB.market_label({}, "VERIFIED") == (None, "UNLABELED")
     assert LB.is_gold("OFFICIAL_RESULT") and LB.is_gold("RECONSTRUCTED_VERIFIED")
@@ -722,40 +724,45 @@ def test_calibration_gates():
 # ═══════════════════ 20 economics ═══════════════════
 def test_executable_economics():
     fm = EC.FeeModel()
-    assert fm.status("KXBTC15M-X", 1_800_000_000_000) == "FEE_UNVERIFIED" and fm.schedules[0].taker_rate == 0.07
-    assert fm.fee_dollars(1, 0.5) == 0.02                                # ceil(0.07*0.25*100)/100 = ceil(1.75)/100
-    assert fm.fee_dollars(100, 0.5) == 1.75 and fm.fee_dollars(10, 0.9) == 0.07
-    assert fm.fee_dollars(10, 0.5, maker=True) == 0.05
+    OLD, NEW = EC.JULY_2026_START_MS - 1, EC.JULY_2026_START_MS + 1
+    assert fm.status("KXBTC15M-X", NEW) == "FEE_UNVERIFIED"            # no captured multiplier / override state
+    assert fm.fee_dollars(1, 0.5, ts_ms=OLD) == 0.02                     # pre-7.7.26: ceil(0.0175) to a cent
+    assert fm.fee_dollars(100, 0.5, ts_ms=OLD) == 1.75 and fm.fee_dollars(10, 0.9, ts_ms=OLD) == 0.07
+    assert fm.fee_dollars(10, 0.5, maker=True, ts_ms=OLD) == 0.05
+    assert fm.fee_dollars(1, 0.5, ts_ms=None) is None                    # no trade time -> no schedule
     assert EC.vwap([[40, 5], [42, 10]], 10) == ((5 * 40 + 5 * 42) / 10, 10)
     assert EC.vwap([[40, 5], [42, 3]], 10) == (None, 8)                  # never extrapolated
-    e = EC.side_economics(0.60, [[40, 5], [42, 10]], 10, fm, "KXBTC")
-    assert e["status"] == "EXECUTABLE" and abs(e["price"] - 0.41) < 1e-12
-    assert abs(e["raw_edge"] - 0.19) < 1e-12
-    assert abs(e["fee_per_contract"] - fm.fee_dollars(10, 0.41) / 10) < 1e-12
+    e = EC.side_economics(0.60, [[40, 5], [42, 10]], 10, fm, "KXBTC", ts_ms=NEW)
+    assert e["status"] == "EXECUTABLE" and abs(e["price"] - 0.41) < 1e-12 and abs(e["raw_edge"] - 0.19) < 1e-12
+    exp = EC.fee_for_fills([(EC.dec("0.40"), EC.dec(5)), (EC.dec("0.42"), EC.dec(5))], EC.KALSHI_GENERAL_2026_07_07, 1)
+    assert abs(e["fee_per_contract"] - float(exp["fee"]) / 10) < 1e-15 and e["fee_schedule"] == "kalshi_general_2026_07_07"
     assert abs(e["net_executable_edge"] - (0.60 - 0.41 - e["fee_per_contract"])) < 1e-12
-    assert EC.side_economics(0.6, [[40, 5]], 10, fm, "K")["status"] == "NOT_EXECUTABLE"
-    ev = EC.evaluate([{"market": "M", "p_yes": 0.7, "y": 1, "checkpoint_s": 60, "ticker": "M",
+    assert EC.side_economics(0.6, [[40, 5]], 10, fm, "K", ts_ms=NEW)["status"] == "NOT_EXECUTABLE"
+    ev = EC.evaluate([{"market": "M", "p_yes": 0.7, "y": 1, "checkpoint_s": 60, "ticker": "M", "ts_ms": NEW,
                        "execution": {"yes_ask_ladder": [[50, 100]], "no_ask_ladder": [[52, 100]]}}])
     assert ev["status"] == "FEE_UNVERIFIED" and ev["maker"]["status"] == "NOT_EVALUATED"
     assert ev["by_size"]["1"]["labels"] == "SIMULATED" and ev["by_size"]["50"]["executable"] == 1
     from dataclasses import replace as _rp
-    fm2 = EC.FeeModel(schedules=(_rp(EC.GENERAL_UNVERIFIED, taker_rate=0.05),))
+    fm2 = EC.FeeModel(schedules=(_rp(EC.KALSHI_GENERAL_2026_07_07, taker_coefficient="0.05"),))
     assert fm2.fingerprint() != fm.fingerprint()
-    # a verified schedule is VERIFIED only for its series and inside its effective range; the general formula never
-    # becomes verified globally
-    t0, t1 = 1_790_000_000_000, 1_800_000_000_000
-    spec = EC.FeeSchedule("crypto15m_special", "v1", "test", "u", t0, t1, series_scope=("KXBTC15M",), taker_rate=0.05,
-                          maker_rate=0.0, verified=True)
-    gen = _rp(EC.GENERAL_UNVERIFIED, excluded_series=("KXBTC15M",))
+    # a special schedule applies only to its series and interval; the general one never becomes verified globally
+    t0, t1 = EC.JULY_2026_START_MS, EC.JULY_2026_START_MS + 10 ** 9
+    spec = EC.FeeSchedule("crypto15m_special", "v1", "test", "u", t0, t1, series_scope=("KXBTC15M",),
+                          taker_coefficient="0.05", maker_coefficient="0", rounding="ROUND_UP_FEE_PLUS_COST_TO_CENTICENT",
+                          verified=True)
+    gen = _rp(EC.KALSHI_GENERAL_2026_07_07, excluded_series=("KXBTC15M",))
     fmv = EC.FeeModel(schedules=(gen, spec))
-    assert fmv.status("KXBTC15M-26SEP291015", t0 + 1) == "VERIFIED" and fmv.fee_dollars(10, 0.5, "KXBTC15M-A", ts_ms=t0 + 1) == 0.13
-    assert fmv.status("KXBTC15M-26SEP291015", t1) == "FEE_UNKNOWN"             # outside the effective range
-    assert fmv.status("KXBTC15M-26SEP291015", None) == "FEE_UNKNOWN"           # unknown trade time
-    assert fmv.status("KXETH15M-26SEP291015", t0 + 1) == "FEE_UNVERIFIED"      # general, unverified
-    assert EC.FeeModel(schedules=(_rp(EC.GENERAL_UNVERIFIED, verified=True),)).status("KXBTC15M-A", t0) == "FEE_UNVERIFIED"
+    ctx = {"fee_metadata": {"fee_type": "general", "fee_multiplier": 1, "fee_type_override": None,
+                            "fee_multiplier_override": None}}
+    assert fmv.status("KXBTC15M-26SEP291015", t0 + 1, ctx) == "FEE_VERIFIED"
+    assert fmv.fee_dollars(10, 0.5, "KXBTC15M-A", ts_ms=t0 + 1, fee_context=ctx) == 0.125
+    assert fmv.status("KXBTC15M-26SEP291015", t1, ctx) == "FEE_UNKNOWN"        # outside the effective range
+    assert fmv.status("KXBTC15M-26SEP291015", None, ctx) == "FEE_UNKNOWN"      # unknown trade time
+    assert fmv.status("KXETH15M-26SEP291015", t0 + 1, ctx) == "FEE_VERIFIED"   # the general July-2026 schedule
     evv = EC.evaluate([{"market": "M", "p_yes": 0.7, "y": 1, "checkpoint_s": 60, "ticker": "KXBTC15M-A", "ts_ms": t0 + 5,
-                        "execution": {"yes_ask_ladder": [[50, 100]], "no_ask_ladder": [[52, 100]]}}], fmv)
-    assert evv["status"] == "SIMULATED_RESEARCH_ONLY" and evv["by_size"]["1"]["fee_status_counts"] == {"VERIFIED": 1}
+                        "fee_context": ctx, "execution": {"yes_ask_ladder": [[50, 100]], "no_ask_ladder": [[52, 100]]}}],
+                      fmv)
+    assert evv["status"] == "FEE_VERIFIED" and evv["by_size"]["1"]["fee_status_counts"] == {"FEE_VERIFIED": 1}
     res = pipeline_result()["economic_metrics"]
     assert res["primary"].startswith("TAKER") and res["best"]["status"] == "FEE_UNVERIFIED"
     assert res["best"]["by_size"]["50"]["not_executable"] > 0            # thin synthetic books are NOT_EXECUTABLE
@@ -843,7 +850,7 @@ def test_experiment_fingerprint():
     f0, _ = EXP.experiment_fingerprint("d", spec)
     from dataclasses import replace as _rp
     for k, v in (("model", "D"), ("families", ["B"]), ("missing_strategy", "complete_case"), ("seed", 1),
-                 ("fee_model_fingerprint", EC.FeeModel(schedules=(_rp(EC.GENERAL_UNVERIFIED, taker_rate=0.05),)).fingerprint()),
+                 ("fee_model_fingerprint", EC.FeeModel(schedules=(_rp(EC.KALSHI_GENERAL_2026_07_07, taker_coefficient="0.05"),)).fingerprint()),
                  ("split_config", SP.SplitConfig(label_horizon_ms=1000).to_dict())):
         assert EXP.experiment_fingerprint("d", dict(spec, **{k: v}))[0] != f0, k
     assert EXP.experiment_fingerprint("d2", spec)[0] != f0
@@ -1248,6 +1255,219 @@ def test_ridge_inner_split():
     assert not set(ri["used_validation_markets"]) & (set(folds[-1]["test"]) | st.holdout)
 
 
+# ═══════════════════ Step 6.2 corrections ═══════════════════
+def _btc_rule_obj(ticker, close_ms, strike, dp_words="2", comparator="is at least", index="Bitcoin Real-Time Index (BRTI)",
+                  extra=None, asset_series="KXBTC15M"):
+    import datetime as _dt
+    obj = {"ticker": ticker, "close_time": _dt.datetime.fromtimestamp(close_ms / 1000, _dt.timezone.utc).isoformat()
+           .replace("+00:00", "Z"), "floor_strike": float(strike), "status": "settled", "event_ticker": ticker,
+           "rules_primary": f"If the simple average of the sixty seconds of the CF Benchmarks {index} before the close "
+                            f"{comparator} {strike}, then the market resolves to Yes.",
+           "rules_secondary": f"The 60-second average of the RTI prices is the official value, rounded to the nearest "
+                              f"{dp_words} decimal places."}
+    obj.update(extra or {})
+    return obj
+
+
+def _market_from(obj, capture_ts):
+    from settlement.kalshi_markets import parse_market
+    m, _r, issues = parse_market(obj, capture_ts_ms=capture_ts)
+    assert m is not None, issues
+    return m
+
+
+def test_historical_rule_provenance():
+    from dataclasses import replace as _rp
+    from settlement import market_rules as MR
+    from settlement.checkpoints import labels_for
+    from settlement.reconstruction import reconstruct
+    from settlement.rules import OBSERVED_2026_09_29_MS as T0
+    from settlement.types import Flag, SettlementMarket
+    before = T0 - 86_400_000                                    # closed one day BEFORE the rule was observed
+    m = SettlementMarket("KXBTC15M-T62OLD", "BTC", before, "BRTI", strike=100000.0, series="KXBTC15M")
+    obs = _flat_obs("BRTI", 100000.5, before)
+    r = reconstruct(m, obs)
+    assert r.final_value is not None and r.reconstructed_outcome == "yes"             # diagnostic value / outcome
+    assert r.settlement["rule_status"] == MR.RULE_HISTORICALLY_UNVERIFIED and not r.settlement["rule_gold_eligible"]
+    assert Flag.RULE_OBSERVED_AFTER_CLOSE.value in r.state.flags
+    lab = labels_for(m, obs)
+    assert LB.market_label(lab, "VERIFIED") == (1, "RULE_UNVERIFIED_FOR_MARKET")        # never gold
+    assert not LB.is_gold("RULE_UNVERIFIED_FOR_MARKET")
+    # the historical market's OWN trusted rules_primary makes it verifiable
+    snapped = _market_from(_btc_rule_obj(m.ticker, before, "100000.00"), before - 900_000)
+    assert snapped.rule_snapshot["rules_primary"].startswith("If the simple average")
+    lab2 = labels_for(snapped, obs)
+    assert lab2["settlement_rule_status"] == MR.RULE_VERIFIED_FOR_MARKET and lab2["reconstructed_outcome"] == "yes"
+    assert LB.market_label(lab2, "VERIFIED") == (1, "RECONSTRUCTED_VERIFIED")
+    assert lab2["settlement_rule_text_sha256"] == snapped.rule_snapshot["rule_text_sha256"]
+    # a market closing after the observation: the current rule is valid when every other gate passes
+    after = _rp(m, ticker="KXBTC15M-T62NEW", close_ts_ms=T0 + 900_000)
+    lab3 = labels_for(after, _flat_obs("BRTI", 100000.5, T0 + 900_000))
+    assert lab3["settlement_rule_status"] == MR.RULE_CURRENT_OBSERVED
+    assert LB.market_label(lab3, "VERIFIED") == (1, "RECONSTRUCTED_VERIFIED")
+    assert LB.market_label(lab3, "SETTLEMENT_UNVERIFIED") == (1, "SETTLEMENT_UNVERIFIED")
+    # official Kalshi results stay authoritative regardless
+    assert LB.market_label(dict(lab, official_result="yes"), "SETTLEMENT_UNVERIFIED") == (1, "OFFICIAL_RESULT")
+
+
+def test_market_rule_capture_and_parser():
+    from settlement import market_rules as MR
+    from settlement.rules import GT, GTE
+    from settlement.reconstruction import reconstruct
+    close = LATER
+    obj = _btc_rule_obj("KXBTC15M-T62CAP", close, "100000.00",
+                        extra={"series_ticker": "KXBTC15M", "updated_time": "2026-10-01T00:00:00Z",
+                               "fee_multiplier_override": None})
+    m = _market_from(obj, close - 800_000)
+    sn = m.rule_snapshot
+    assert sn["rules_primary"] == obj["rules_primary"] and sn["rules_secondary"] == obj["rules_secondary"]   # verbatim
+    assert sn["rule_text_sha256"] == MR.rule_text_sha256(obj["rules_primary"], obj["rules_secondary"])
+    assert sn["ticker"] == m.ticker and sn["series_ticker"] == "KXBTC15M" and sn["event_ticker"] == m.ticker
+    assert sn["capture_ts_ms"] == close - 800_000 and sn["market_updated_ts"] == "2026-10-01T00:00:00Z"
+    assert sn["source"] == "kalshi_market_api" and sn["schema_fingerprint"] and sn["fee_metadata_state"] == "CAPTURED"
+    rule, info = MR.resolve_market_rule(m)
+    assert info["status"] == MR.RULE_VERIFIED_FOR_MARKET and info["parsed"]["status"] == "PARSED"
+    assert rule.comparison_operator == GTE and rule.settlement_decimal_places == 2 and info["parsed"]["target_value"] == "100000.00"
+    # the deterministic parser: only the documented wording
+    P = MR.parse_rule_text
+    ok_txt = "the 60-second average of the Bitcoin Real-Time Index is {c} 5, rounded to the nearest {d} decimal places"
+    assert P(ok_txt.format(c="above", d="2"), "", "BTC")["comparison_operator"] == GT
+    assert P(ok_txt.format(c="at least", d="two"), "", "BTC")["settlement_decimal_places"] == 2
+    for bad in (ok_txt.format(c="at least 5 and above", d="2"), ok_txt.format(c="greater than", d="2"),
+                ok_txt.format(c="at least", d="some"), ok_txt.replace("Bitcoin Real-Time Index", "Ether Real-Time Index"),
+                ok_txt.replace("60-second average", "closing print").format(c="at least", d="2"), ""):
+        assert P(bad.format(c="at least", d="2") if "{" in bad else bad, "", "BTC")["status"] == "UNRECOGNIZED", bad
+    src = open(os.path.join(HERE, "settlement", "market_rules.py"), encoding="utf-8").read()
+    assert not {m_ for m_ in _imports(os.path.join(HERE, "settlement", "market_rules.py"))} - {
+        "hashlib", "json", "re", "dataclasses", "settlement.rules", "settlement.assets"}, "parser must stay deterministic"
+    assert "anthropic" not in src.lower() and "openai" not in src.lower()
+    # per-market text contradicting the static rule -> RULE_CONFLICT, never silently overridden
+    c4 = _market_from(_btc_rule_obj("KXBTC15M-T62C4", close, "100000.00", dp_words="4"), close - 800_000)
+    r4 = reconstruct(c4, _flat_obs("BRTI", 100000.5, close))
+    assert r4.settlement["rule_status"] == MR.RULE_CONFLICT and r4.reconstructed_outcome is None
+    tgt = _market_from(_btc_rule_obj("KXBTC15M-T62TG", close, "99999.00"), close - 800_000)
+    assert MR.resolve_market_rule(__import__("dataclasses").replace(tgt, strike=100000.0))[1]["status"] == MR.RULE_CONFLICT
+    unrec = _market_from(_btc_rule_obj("KXBTC15M-T62UN", close, "100000.00", comparator="closes higher than"),
+                         close - 800_000)
+    ru = reconstruct(unrec, _flat_obs("BRTI", 100000.5, close))
+    assert ru.settlement["rule_status"] == MR.RULE_TEXT_UNRECOGNIZED and ru.reconstructed_outcome is None   # no fallback
+    two = MR.with_snapshots(m, [sn, dict(sn, rules_primary=sn["rules_primary"] + " ",
+                                         rule_text_sha256=MR.rule_text_sha256(sn["rules_primary"] + " ",
+                                                                              sn["rules_secondary"]))])
+    assert MR.resolve_market_rule(two)[1]["status"] == MR.RULE_CONFLICT
+    untrusted = __import__("dataclasses").replace(m, rule_snapshot=dict(sn, source="scraped_web_page"))
+    assert MR.resolve_market_rule(untrusted)[1]["status"] == MR.RULE_SNAPSHOT_UNTRUSTED
+    # SOL: never inferred; a SOL market's OWN rule text may verify that market
+    from settlement.types import SettlementMarket
+    sol = SettlementMarket("KXSOL15M-T62", "SOL", close, "SOLUSD_RTI", strike=150.0, series="KXSOL15M")
+    assert MR.resolve_market_rule(sol)[1]["status"] == MR.RULE_UNVERIFIED
+    sol_obj = _btc_rule_obj("KXSOL15M-T62", close, "150.0000", dp_words="4", index="Solana Real-Time Index (SOLUSD_RTI)")
+    solm = _market_from(sol_obj, close - 800_000)
+    sr, si = MR.resolve_market_rule(solm)
+    assert si["status"] == MR.RULE_VERIFIED_FOR_MARKET and sr.settlement_decimal_places == 4 and sr.comparison_operator == GTE
+    # the Step-3 collector retains the snapshot and the event's fee metadata (synthetic session)
+    from market_data.replay import load_sessions
+    from market_data.types import EventType
+    s3 = load_sessions([session()], include_raw=True)
+    states = [e for e in s3.events if e.event_type == EventType.MARKET_STATE]
+    assert states and all(e.payload["contract"]["rules_primary"] for e in states)
+    later_states = [e for e in states if e.payload["contract"]["fee_metadata_state"] == "CAPTURED"]
+    assert later_states and "fee_multiplier_override" in later_states[-1].payload["contract"]["fee_metadata"]
+    assert any(r_.stream == "event" for r_ in s3.raw)                            # the event's raw text is stored
+
+
+def test_rule_fingerprinting():
+    a = {"session_id": "S1", "raw_store_sha256": "a" * 64,
+         "rule_provenance": {"KXBTC15M-X": {"rule_text_sha256": "1" * 64, "rule_status": "RULE_VERIFIED_FOR_MARKET",
+                                            "rule_fingerprint": "f" * 64}}}
+    f1, body = DS.dataset_fingerprint([a], "u", {"s": 1}, DS.CHECKPOINT_GRID_S, ("BTC",), [])
+    b = dict(a, rule_provenance={"KXBTC15M-X": dict(a["rule_provenance"]["KXBTC15M-X"], rule_text_sha256="2" * 64)})
+    f2, _ = DS.dataset_fingerprint([b], "u", {"s": 1}, DS.CHECKPOINT_GRID_S, ("BTC",), [])
+    c = dict(a, rule_provenance={"KXBTC15M-X": dict(a["rule_provenance"]["KXBTC15M-X"], rule_status="RULE_CONFLICT")})
+    f3, _ = DS.dataset_fingerprint([c], "u", {"s": 1}, DS.CHECKPOINT_GRID_S, ("BTC",), [])
+    assert len({f1, f2, f3}) == 3 and body["market_rules"][0][1] == "1" * 64
+    d = session()
+    q = QU.validate_session(d)
+    m = DS.build_matrix([d], ("BTC",), quality_reports={d: q}, synthetic_mode=True, include_perp=False, include_micro=False)
+    rp = m.meta["session_meta"][0]["rule_provenance"]
+    assert rp and all(v["rule_text_sha256"] for v in rp.values())
+    assert m.meta["fingerprint_body"]["market_rules"] and all(r_["fee_context"] is None or "fee_metadata" in r_["fee_context"]
+                                                              for r_ in m.rows)
+    from settlement.market_rules import RULE_VERIFIED_FOR_MARKET
+    assert all(v["rule_status"] == RULE_VERIFIED_FOR_MARKET for v in rp.values())    # BTC synthetic text parses
+
+
+def test_fee_schedules_centicent():
+    from decimal import Decimal as D
+    new = EC.KALSHI_GENERAL_2026_07_07
+    assert new.rounding == "ROUND_UP_FEE_PLUS_COST_TO_CENTICENT" and new.effective_from_ms == EC.JULY_2026_START_MS
+    cases = ((1, "0.50", "0.0175", "0.5000"), (10, "0.50", "0.1750", "5.0000"), (100, "0.50", "1.7500", "50.0000"),
+             (1, "0.01", "0.0007", "0.0100"), (3, "0.37", "0.0490", "1.1100"), (7, "0.63", "0.1143", "4.4100"))
+    for c, p, fee, cost in cases:
+        r = EC.fee_for_fills([(D(p), D(c))], new, 1)
+        raw = D("0.07") * c * D(p) * (1 - D(p))
+        assert r["raw_fee"] == raw and r["fee"] == D(fee) and r["position_cost"] == D(cost), (c, p, r)
+        assert r["total"] == r["fee"] + r["position_cost"] and r["total"] % D("0.0001") == 0
+        assert r["total"] >= raw + r["position_cost"] and r["total"] - (raw + r["position_cost"]) < D("0.0001")
+        assert all(isinstance(r[k], D) for k in ("raw_fee", "fee", "position_cost", "total"))    # exact decimals
+    old = EC.KALSHI_GENERAL_PRE_2026_07_07
+    assert EC.fee_for_fills([(D("0.50"), D(1))], old, 1)["fee"] == D("0.02")                     # cent rounding kept
+    assert EC.fee_for_fills([(D("0.37"), D(3))], old, 1)["fee"] == D("0.05")
+    assert EC.fee_for_fills([(D("0.50"), D("2.5"))], new, 1)["fee"] == D("0.0438")               # fractional qty
+    assert EC.fee_for_fills([(D("0.50"), D(1))], new, 1, maker=True)["fee"] == D("0.0044")        # maker 0.0175
+    fm = EC.FeeModel()
+    NEW, OLD = EC.JULY_2026_START_MS + 60_000, EC.JULY_2026_START_MS - 60_000
+    known = {"fee_metadata": {"fee_type": "general", "fee_multiplier": 1, "fee_type_override": None,
+                              "fee_multiplier_override": None}}
+    r = fm.fee([(D("0.50"), D(1))], "KXBTC15M-A", NEW, known)
+    assert r["status"] == "FEE_VERIFIED" and r["fee"] == D("0.0175") and r["schedule_id"] == "kalshi_general_2026_07_07"
+    # a Kalshi override multiplier takes precedence over the default / series multiplier
+    ov = {"fee_metadata": dict(known["fee_metadata"], fee_multiplier_override=2)}
+    r2 = fm.fee([(D("0.50"), D(1))], "KXBTC15M-A", NEW, ov)
+    assert r2["fee"] == D("0.0350") and r2["override_state"] == "OVERRIDE" and r2["multiplier"] == 2
+    # historical trades keep the schedule that governed them (no retroactive centicent rounding)
+    r3 = fm.fee([(D("0.37"), D(3))], "KXBTC15M-A", OLD, known)
+    assert r3["schedule_id"] == "kalshi_general_pre_2026_07_07" and r3["fee"] == D("0.05") and r3["status"] == "FEE_UNVERIFIED"
+    # FEE_VERIFIED needs every condition
+    assert fm.fee([(D("0.5"), D(1))], "KXBTC15M-A", NEW, None)["status"] == "FEE_UNVERIFIED"           # nothing captured
+    nomult = {"fee_metadata": {"fee_type_override": None, "fee_multiplier_override": None}}
+    assert fm.fee([(D("0.5"), D(1))], "KXBTC15M-A", NEW, nomult)["status"] == "FEE_UNVERIFIED"         # multiplier unknown
+    special = {"fee_metadata": dict(known["fee_metadata"], fee_type_override="special_crypto")}
+    assert fm.fee([(D("0.5"), D(1))], "KXBTC15M-A", NEW, special)["status"] == "FEE_UNVERIFIED"
+    assert fm.fee([(D("0.5"), D(1))], "KXBTC15M-A", None, known)["status"] == "FEE_UNKNOWN"
+    assert "KXBTC15M" not in repr(new.series_scope) and new.series_scope == ("*",)                     # not hardcoded
+    # per-row captured fee context reaches the economics (synthetic session: override fields captured, no multiplier)
+    ctx_rows = [r_ for r_ in DS.build_matrix([session()], ("BTC",), synthetic_mode=True, include_perp=False,
+                                            include_micro=False).rows if r_["fee_context"]]
+    assert ctx_rows and ctx_rows[-1]["fee_context"]["fee_metadata"].get("fee_multiplier_override", "absent") is None
+
+
+def test_cf_exact_decimal():
+    from settlement.cf_live import parse_kalshi_cfb_message
+    from settlement.reconstruction import reconstruct
+    from settlement.synthetic import kalshi_message
+    from settlement.types import SettlementMarket, SettlementObservation
+    raw = "99999.994999999999999"                                  # 20 significant digits
+    o, _a, _i = parse_kalshi_cfb_message(kalshi_message({"type": "value", "id": "BRTI", "value": raw, "time": LATER}))
+    assert o.value_text == raw and o.value == 99999.995            # the float round-trip crosses the .5 boundary
+    num = {"type": "cfbenchmarks_value", "sid": 1,
+           "msg": {"data": '{"type":"value","id":"BRTI","value":99999.994999999999999,"time":%d}' % LATER}}
+    o2, _a, _i = parse_kalshi_cfb_message(num)
+    assert o2.value_text == raw                                    # a JSON NUMBER keeps its text too
+    m = SettlementMarket("KXBTC15M-T62EX", "BTC", LATER, "BRTI", strike=100000.0, series="KXBTC15M")
+    exact_obs = [SettlementObservation("BTC", "BRTI", "cfb_ws", float(raw), t, receive_ts_ms=t + 100, value_text=raw)
+                 for t in range(LATER - 61_000, LATER + 1, 1000)]
+    r = reconstruct(m, exact_obs)
+    assert r.settlement_value == 99999.99 and r.reconstructed_outcome == "no" and r.settlement["status"] == "OK"
+    lossy = [SettlementObservation("BTC", "BRTI", "cfb_ws", float(raw), t, receive_ts_ms=t + 100)
+             for t in range(LATER - 61_000, LATER + 1, 1000)]
+    rl = reconstruct(m, lossy)
+    assert rl.settlement["status"] == "ROUNDING_TIE_UNRESOLVED"     # what a float round-trip would have done
+    # typical CF values (<= 15 significant digits) round-trip exactly through a float (documented evidence)
+    for t in ("109234.56", "3500.25", "0.51234567", "151.2345", "2.3456789012345"):
+        assert repr(float(t)) == t or __import__("decimal").Decimal(repr(float(t))) == __import__("decimal").Decimal(t)
+
+
 # ═══════════════════ 27-29 fingerprint, docs, previous ═══════════════════
 def test_step6_fingerprint():
     ok, problems = S6FP.verify()
@@ -1288,6 +1508,11 @@ def test_docs_and_outputs():
         assert s in doc, s
     sdoc = open(os.path.join(HERE, "docs", "SETTLEMENT_ENGINE.md"), encoding="utf-8").read()
     assert "settlement/rules.py" in sdoc and "ba4e50c3" in sdoc and "3eba791c" in sdoc
+    assert "market_rules.py" in sdoc and "4884524a" in sdoc and "rule_historically_unverified" in sdoc.lower()
+    for s_ in ("step 6.2", "rule_historically_unverified", "centicent", "rules_primary", "fee_multiplier_override",
+               "fee_verified", "s27", "609905956c9e6120"):
+        assert s_ in doc, s_
+    assert {m["id"] for m in mut["mutations"]} >= {f"S{i}" for i in range(1, 28)}
 
 
 def test_previous_stages():
@@ -1334,6 +1559,11 @@ TESTS = [
     ("convention", "29c Step 6.1 ambiguous / tied window conventions never VERIFIED; migration required", test_convention_ambiguity),
     ("rejected", "29d Step 6.1 rejected settlement / resolution sources never reach labels", test_rejected_source_labels),
     ("ridge", "29e Step 6.1 ridge lambda: market-level, close-group, purged inner split", test_ridge_inner_split),
+    ("histrule", "29f Step 6.2 a rule observed later never makes a pre-observation reconstruction gold", test_historical_rule_provenance),
+    ("rulecapture", "29g Step 6.2 per-market rule text retained; deterministic parser; conflicts / SOL / untrusted fail closed", test_market_rule_capture_and_parser),
+    ("rulefp", "29h Step 6.2 dataset fingerprint covers the per-market rule-text hashes", test_rule_fingerprinting),
+    ("fees62", "29i Step 6.2 July-2026 schedule: exact centicent fee + cost, overrides, historical schedules", test_fee_schedules_centicent),
+    ("cfexact", "29j Step 6.2 CF exact decimal text survives to the settlement rounding", test_cf_exact_decimal),
     ("fingerprint", "29 separate Step-6 fingerprint; detects module changes; refuses silent rewrites", test_step6_fingerprint),
     ("docs", "30 docs + benchmark / mutation outputs", test_docs_and_outputs),
     ("previous", "31 all previous stage suites", test_previous_stages),

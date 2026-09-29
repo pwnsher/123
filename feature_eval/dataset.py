@@ -82,6 +82,10 @@ def dataset_fingerprint(session_meta, universe_fp, settlement_status, checkpoint
             "date_range": [min((s.get("first_close_ms") or 0) for s in session_meta) if session_meta else None,
                            max((s.get("last_close_ms") or 0) for s in session_meta) if session_meta else None],
             "extra": extra or {}}
+    # Step 6.2: the per-market contract rule text hashes / statuses used for the labels (a changed snapshot changes
+    # the dataset)
+    body["market_rules"] = sorted([tk, p.get("rule_text_sha256"), p.get("rule_status"), p.get("rule_fingerprint")]
+                                  for s in session_meta for tk, p in (s.get("rule_provenance") or {}).items())
     return _sha(body), body
 
 
@@ -145,6 +149,41 @@ def _quotes_asof(s3_events):
     return q
 
 
+def market_contract_snapshots(s3_events, rejected_sources):
+    """{ticker: [contract snapshots]}, {ticker: [(receive_ts_ms, snapshot)]} from MARKET_STATE / RESOLUTION payloads of
+    the Kalshi market API (Step 6.2). A REJECTED kalshi:<asset> pair contributes nothing."""
+    from market_data.types import EventType
+    snaps, fees = {}, {}
+    for ev in s3_events:
+        if ev.event_type not in (EventType.MARKET_STATE, EventType.RESOLUTION) or ev.source != "kalshi":
+            continue
+        if f"{ev.source}:{ev.asset}" in rejected_sources:
+            continue
+        c = (ev.payload or {}).get("contract")
+        if not isinstance(c, dict):
+            continue
+        tk = ev.payload.get("ticker")
+        snaps.setdefault(tk, []).append(c)
+        fees.setdefault(tk, []).append((ev.receive_ts_ms, c))
+    for v in fees.values():
+        v.sort(key=lambda x: x[0])
+    return snaps, fees
+
+
+def fee_context_asof(captures, t_ms):
+    """The newest captured fee metadata (market / event) RECEIVED at or before t_ms, or None."""
+    last = None
+    for rx, c in captures:
+        if rx > t_ms:
+            break
+        last = c
+    if last is None:
+        return None
+    return {"event_ticker": last.get("event_ticker"), "series_ticker": last.get("series_ticker"),
+            "fee_metadata": dict(last.get("fee_metadata") or {}), "fee_metadata_state": last.get("fee_metadata_state"),
+            "capture_ts_ms": last.get("capture_ts_ms")}
+
+
 SETTLEMENT_OBSERVATION_SOURCES = ("cf_via_kalshi", "cf_direct")     # the CF RTI capture paths
 RESOLUTION_SOURCES = ("kalshi",)                                     # the Kalshi market API (read-only GET)
 
@@ -191,6 +230,7 @@ def build_session_rows(session_dir, assets, columns, rec_by_name, quality, coinb
     from microstructure.replay import load_micro_sessions
     from perp_data.replay import load_perp_sessions
     from settlement.checkpoints import labels_for
+    from settlement.market_rules import with_snapshots
     from feature_eval.labels import market_label
     from feature_eval.legacy import LegacyEvaluator, tapes_from_events
     s3 = load_sessions([session_dir])
@@ -216,7 +256,13 @@ def build_session_rows(session_dir, assets, columns, rec_by_name, quality, coinb
     obs_by_index, resolutions, label_exclusions = settlement_inputs(s3.events, rejected)
     from market_data.features.dataset import discover_markets
     markets = discover_markets(s3.events, assets)
+    # Step 6.2: each market's own captured contract-rule snapshots (a rejected Kalshi source contributes none)
+    snaps, fee_ctx = market_contract_snapshots(s3.events, rejected)
+    markets = {tk: (with_snapshots(m, snaps.get(tk, [])), k) for tk, (m, k) in markets.items()}
     labels = {tk: labels_for(m, obs_by_index.get(m.index_id, []), resolutions.get(tk)) for tk, (m, _k) in markets.items()}
+    rule_prov = {tk: {"rule_text_sha256": lb.get("settlement_rule_text_sha256"),
+                      "rule_status": lb.get("settlement_rule_status"),
+                      "rule_fingerprint": lb.get("settlement_rule_fingerprint")} for tk, lb in sorted(labels.items())}
     # execution + legacy
     cps = {}
     for r in ds.rows:
@@ -248,14 +294,15 @@ def build_session_rows(session_dir, assets, columns, rec_by_name, quality, coinb
                          "checkpoint_ts_ms": t, "close_ts_ms": r["close_ts_ms"], "strike": r["strike"],
                          "session_id": quality.get("session_id"), "x": x, "st": s,
                          "legacy_p_up": p_up, "legacy_status": info.get("legacy_status"),
-                         "execution": exe.get((tk, t)), "y": y, "label_source": src,
+                         "execution": exe.get((tk, t)), "fee_context": fee_context_asof(fee_ctx.get(tk, []), t),
+                         "y": y, "label_source": src,
                          "official_result": labels.get(tk, {}).get("official_result"),
                          "synthetic": bool(quality.get("synthetic"))})
     closes = [m.close_ts_ms for m, _ in markets.values()]
     meta = {"session_id": quality.get("session_id"), "rows": len(rows), "markets": len(markets),
             "first_close_ms": min(closes) if closes else None, "last_close_ms": max(closes) if closes else None,
             "rejected_sources": sorted(rejected), "raw_store_sha256": quality.get("raw_store_sha256"),
-            "settlement_label_exclusions": label_exclusions,
+            "settlement_label_exclusions": label_exclusions, "rule_provenance": rule_prov,
             "synthetic": bool(quality.get("synthetic")), "quality_verdict": quality.get("verdict"),
             "settlement_inputs": {"markets": [m for m, _ in markets.values()], "resolutions": resolutions,
                                   "observations": [o for v in obs_by_index.values() for o in v]}}

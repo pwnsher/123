@@ -19,6 +19,11 @@ Events
                   aggressor: "yes" -> "buy" (bought YES), "no" -> "sell" (in YES terms). Trades returned
                   by the first poll after start/reconnect happened before we were watching -> BACKFILLED.
     RESOLUTION    result + expiration_value of a settled market (a LABEL; never a feature).
+Contract metadata (Step 6.2, KALSHI_METADATA_VERSION 2): MARKET_STATE and RESOLUTION payloads also carry "contract",
+the market's ORIGINAL rules_primary / rules_secondary text, its hash, series / event tickers, capture time, the market's
+update time when present, schema fingerprint and any fee metadata (fee_type / fee_multiplier / *_override) from the
+market object or its event (GET /events/{event_ticker}, fetched once per event). Research provenance only: no feature
+reads it.
 """
 import os
 
@@ -27,8 +32,10 @@ from market_data.sources.base import SourceAdapter, new_result
 from market_data.types import AggressorSemantics, EventFlag, EventType, IngestMode
 from settlement.assets import SERIES_ASSET
 from settlement.kalshi_markets import parse_market
+from settlement.market_rules import contract_snapshot
 
 KALSHI_BASE = os.environ.get("KALSHI_MD_BASE", "https://external-api.kalshi.com/trade-api/v2")
+KALSHI_METADATA_VERSION = 2                    # 2 (Step 6.2): contract rule text + fee metadata retained
 ASSET_SERIES = {v: k for k, v in SERIES_ASSET.items()}
 
 
@@ -54,6 +61,8 @@ class KalshiAdapter(SourceAdapter):
 
     def __init__(self, assets):
         self.assets = [a for a in assets if a in ASSET_SERIES]
+        self.events = {}                       # event_ticker -> event object (fee metadata), captured once
+        self.event_of = {}                     # market ticker -> event_ticker
 
     # ---------- URLs (GET only) ----------
     def markets_url(self, asset):
@@ -67,6 +76,26 @@ class KalshiAdapter(SourceAdapter):
 
     def market_url(self, ticker):
         return f"{KALSHI_BASE}/markets/{ticker}", None
+
+    def event_url(self, event_ticker):
+        return f"{KALSHI_BASE}/events/{event_ticker}", None
+
+    def parse_event(self, body, ctx):
+        """GET /events/{event_ticker} -> retained event object (fee metadata for the contract snapshot). No events."""
+        res = new_result()
+        ev = body.get("event") if isinstance(body, dict) and isinstance(body.get("event"), dict) else body
+        if not isinstance(ev, dict) or not isinstance(ev.get("event_ticker"), str):
+            self.fail(res, ctx, "event response without an event object", body)
+            return res
+        self.events[ev["event_ticker"]] = ev
+        return res
+
+    def _contract(self, obj, m, ctx):
+        et = obj.get("event_ticker") if isinstance(obj.get("event_ticker"), str) else None
+        if et:
+            self.event_of[m.ticker] = et
+        return contract_snapshot(obj, source="kalshi_market_api", capture_ts_ms=ctx.receive_ts_ms,
+                                 schema_fingerprint=m.metadata_schema_fingerprint, event_obj=self.events.get(et))
 
     # ---------- parsers ----------
     def parse_markets(self, asset, body, ctx, now_ms=None):
@@ -106,7 +135,8 @@ class KalshiAdapter(SourceAdapter):
                           flags=tuple(sorted(set(flags))),
                           payload={"ticker": m.ticker, "strike": m.strike, "strike_source": m.strike_source,
                                    "close_ts_ms": m.close_ts_ms, "open_ts_ms": m.open_ts_ms, "yes_bid": yb,
-                                   "yes_ask": ya, "no_bid": nb, "no_ask": na, "status": obj.get("status")})
+                                   "yes_ask": ya, "no_bid": nb, "no_ask": na, "status": obj.get("status"),
+                                   "contract": self._contract(obj, m, ctx)})
 
     def parse_orderbook(self, asset, ticker, body, ctx):
         res = new_result()
@@ -170,5 +200,7 @@ class KalshiAdapter(SourceAdapter):
             res.events.append(self.event(ctx, asset=m.asset, event_type=EventType.RESOLUTION, symbol=m.ticker,
                                          event_ts_ms=None, flags=(EventFlag.EVENT_TIME_MISSING.value,),
                                          payload={"ticker": m.ticker, "result": r.result,
-                                                  "expiration_value": r.expiration_value}))
+                                                  "expiration_value": r.expiration_value,
+                                                  "contract": self._contract(body.get("market", body)
+                                                                             if isinstance(body, dict) else {}, m, ctx)}))
         return res, m, r

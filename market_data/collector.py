@@ -205,7 +205,8 @@ class Collector:
             self._settle_buf.append(("market", SettlementMarket(
                 ticker=p["ticker"], asset=ev.asset, close_ts_ms=p["close_ts_ms"], index_id=ASSET_INDEX[ev.asset],
                 strike=p["strike"], strike_source=p["strike_source"], open_ts_ms=p["open_ts_ms"],
-                series=p["ticker"].split("-")[0], metadata_source="kalshi_market_api")))
+                series=p["ticker"].split("-")[0], metadata_source="kalshi_market_api",
+                rule_snapshot=p.get("contract") if (p.get("contract") or {}).get("rule_text_sha256") else None)))
         elif ev.event_type == EventType.RESOLUTION:
             self._settle_buf.append(("resolution", OfficialResolution(p["ticker"], p["result"], p["expiration_value"],
                                                                       "kalshi_market_api")))

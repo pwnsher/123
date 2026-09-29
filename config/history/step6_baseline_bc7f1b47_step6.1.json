@@ -111,53 +111,30 @@
    "UNSTABLE",
    "UNAVAILABLE"
   ],
-  "feature_universe_version": "feature_universe_v3",
+  "feature_universe_version": "feature_universe_v2",
   "fee_model": {
    "schedules": [
     {
-     "default_multiplier": "1",
-     "effective_from_ms": 1783396800000,
+     "effective_from_ms": null,
      "effective_to_ms": null,
      "excluded_series": [],
-     "fee_type": "general",
-     "maker_coefficient": "0.0175",
-     "note": "general schedule; specific listed products are excepted (the list is not encoded: the captured fee_type / override decides per event)",
-     "rounding": "ROUND_UP_FEE_PLUS_COST_TO_CENTICENT",
-     "schedule_id": "kalshi_general_2026_07_07",
+     "maker_rate": 0.0175,
+     "note": "15-minute crypto series may carry a special schedule / multiplier: not confirmed",
+     "rounding": "ceil_to_cent_per_order",
+     "schedule_id": "kalshi_general_fee_formula",
      "series_scope": [
       "*"
      ],
-     "source": "General taker fee M * 0.07 * C * P * (1-P); maker M * 0.0175 * C * P * (1-P); fee + positionCost rounded up to a centicent (Fee Schedule for July 2026 - 7.7.26 Update, as supplied by the project owner)",
-     "source_sha256": "661381de03ccddc767236376f1791686a04b0e7ddaf2357b66d868eaa13f8b06",
+     "source": "Kalshi fee schedule: general trading fee = round up(rate x C x P x (1 - P)) per order (not read: kalshi.com unreachable from the build environment)",
      "source_url": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
-     "taker_coefficient": "0.07",
-     "verified": true,
-     "version": "7.7.26"
-    },
-    {
-     "default_multiplier": "1",
-     "effective_from_ms": null,
-     "effective_to_ms": 1783396800000,
-     "excluded_series": [],
-     "fee_type": "general",
-     "maker_coefficient": "0.0175",
-     "note": "historical arithmetic preserved for old periods; start and exceptions unknown -> unverified",
-     "rounding": "ROUND_UP_FEE_TO_CENT",
-     "schedule_id": "kalshi_general_pre_2026_07_07",
-     "series_scope": [
-      "*"
-     ],
-     "source": "earlier general schedule as previously modelled: fee = round up (0.07 x C x P x (1 - P)) to a cent",
-     "source_sha256": "",
-     "source_url": "",
-     "taker_coefficient": "0.07",
+     "taker_rate": 0.07,
      "verified": false,
-     "version": "pre-7.7.26"
+     "version": "v1"
     }
    ],
-   "version": "fee_model_v3"
+   "version": "fee_model_v2"
   },
-  "fee_model_fingerprint": "b1b0843cf51ae0cc861237134a4162d1b1053db60fec97b0795dcb8eb27aff5c",
+  "fee_model_fingerprint": "0258e117c3993db77a56bfd2536149cea5034974545846c1379dea9e8b8f9029",
   "hypotheses": [
    [
     "H01",
@@ -227,7 +204,7 @@
    "min_markets_compared": 50,
    "min_outcome_agreement_share": 0.99
   },
-  "label_version": "labels_v3",
+  "label_version": "labels_v2",
   "quality": {
    "book_ready_degraded": 0.9,
    "book_ready_reject": 0.5,
@@ -288,7 +265,7 @@
   },
   "step6_schema_version": 1
  },
- "defaults_sha256": "23b89b5b1e4056e7a138f6fb956e8f63485197c2d3229e12718929ca6b7861c6",
+ "defaults_sha256": "1a004893514551f4ebda323eb063744ff8d1b1aed2700ff84eba78777a71b7cb",
  "existing_perp_veto_files": {
   "analyze_perp_integration.py": "d34215be9b8a8fc8c9a51534dae47428b5b6000e0adb4b57f09362a8b2694c35",
   "analyze_perp_predictive.py": "6a783a753a9f1f9b118f1936aec5c2835dadc9f741f36b0ecf4758561403773d",
@@ -306,27 +283,27 @@
   "step5_baseline_manifest.json": "6a2994ff8bdc2d36b41608515c77a13d71fd371030487b5e62b2b064cd096db8"
  },
  "existing_perp_veto_fingerprint": "499c1e16da5d9cc763babe7dea31db7104ebc3f1460a17241af83240c8de523b",
- "feature_universe_fingerprint": "edef198fb82913f244982a75382d61a5d7db9b0d21d9bd3218c587c8d1013fd8",
+ "feature_universe_fingerprint": "920c0a8aae81535f7b27aadd33c1210a84fa0ab970325e35b71f6d838dfbc994",
  "feature_universe_records": 2047,
  "format": "step6_fingerprint_v1/canonical_ast_v2_sha256",
  "modules": {
-  "feature_eval/__init__.py": "65c71bb4179ec6daa442e4423d2b364f5f74d29b630cb2d01652c02d1f3af80d",
+  "feature_eval/__init__.py": "7542ae2490a206269f82b53f9de8c61277165f348872b84d55f1e6b24d932e4c",
   "feature_eval/ablation.py": "0c277ae1ec80d6504ddedc6fc0c5bfa9e80eab0fab265b854d125c29c96f9ef6",
   "feature_eval/bootstrap.py": "87197870e8e90cc3533cd568d870b0f6014d4b78e41410e900c94b2b1f5daece",
   "feature_eval/calibration.py": "d9c4915cccc1202fe21649a2d6904d7f5a6668359934643dda3de174a4c9d575",
   "feature_eval/coinbase_seq.py": "9033fa9aaa23b6149e6d795bf54d49fdf83e6a611743f9b86fc229ea0e30034e",
-  "feature_eval/dataset.py": "d21a03dc3bbeead8ab665e2c85ca2df822224da198b51c3e1645523277070eac",
-  "feature_eval/economics.py": "76330e5d5c4658a81ca8297fcc6ae476d3d9bf0364edb67415457ada948018ba",
+  "feature_eval/dataset.py": "b0828807b277c6721427419f6be78d2001eef98b094e18be340ffebdf6e0a73b",
+  "feature_eval/economics.py": "3024721c8f1ae19f547de12afa63995ee13b18c6215c1065bf21e83ce3e98da5",
   "feature_eval/experiment.py": "3f26809d40b80789bed6afe9f1c0effbee7a3432f9ede4a08b0a62fcd52eaf12",
   "feature_eval/fingerprint.py": "ac6aa648f95fb4d0e8525f41d767b7df41505c2a8a3a1044ec90e50f51a3f9c3",
   "feature_eval/gates.py": "d422a82be40d39480d2f51cc789d47dbd40924595d03b15bcaa0dfdd06ca35bc",
-  "feature_eval/labels.py": "10f8cc7fba3bc06b23493d1c9c10ccac60541ea1329bba5917dbda0ca2a1d9fb",
+  "feature_eval/labels.py": "3f717b8df6da29cf8cc8142ad3b92a38b73702a5b3471d84c3c10159b440f43d",
   "feature_eval/leakage.py": "f27ff0d7c2438c889d5820140eaf2d1588ac7ea412f912392b5be7f1593252ad",
   "feature_eval/ledger.py": "4e4f59e5cc90addd711224c144abc2255a0ef5665259ecc3bf480f4b986f2460",
   "feature_eval/legacy.py": "4d9f0b8396ce9d05d6d2c31e397b79716d9525db60ee9a7d67d09032d7af32e8",
   "feature_eval/metrics.py": "9d127f87c25668e50281757dc04e88139ff8a60b946021c5547705ee87c800ab",
   "feature_eval/models.py": "b1ca605f047713409707b6406152915876462cf025e805e0f18910933bf99642",
-  "feature_eval/pipeline.py": "1177dd78bc46ea14196151410a093875349a4e49bbe5ff43156603ceb7be7238",
+  "feature_eval/pipeline.py": "5db78e2ed929c73a12b048e8f95d248caf68efaa5a1f51462e08e6d8bfae2f69",
   "feature_eval/pruning.py": "21476479574ec9fc310623d1a722161896b61e30dbae13482ac0c68f2430d1c1",
   "feature_eval/quality.py": "2c244731085925dfcb4d6e8d3b313f7f0455d93b8ac944ea0b5567f04a334855",
   "feature_eval/report.py": "8622eae01f1f1990a6d9dd7b68b519f1338f7cd93c235398f86e855e7596ed83",
@@ -345,5 +322,5 @@
   "run_local.py": "0749c2a83b3c219ed63dc5d994253883983f9b6b4ebc81a2b72f46b067e53044",
   "strategy_fingerprint.py": "4b8a3383d08d75f896fc36c0f0032f780ac37736f923b2186c5c6d11f6256eec"
  },
- "step6_fingerprint": "2344b12c3ab803609d79d57815023e97783f5e8e8a2be462213a4f6c9a9a2d1c"
+ "step6_fingerprint": "bc7f1b47cae79b88b8d9a1b3bcc425a37d7c502b8fba46ca203d78d4d1518018"
 }

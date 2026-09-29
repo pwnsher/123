@@ -1,7 +1,7 @@
 {
  "app_version": "kalshi-local-step6",
  "config_note": "lenient complexity gates for the SYNTHETIC self-test only (real runs use the predeclared defaults)",
- "generated_at_ms": 1790677642029,
+ "generated_at_ms": 1790704699537,
  "kind": "synthetic_selftest",
  "never": "APPROVED_FOR_PRODUCTION",
  "note": "SYNTHETIC - code-correctness evidence only; never feature selection, tuning or a predictive claim",
@@ -13,7 +13,7 @@
     "allowed": false,
     "gated_out": 1
    },
-   "dataset_fingerprint": "46c68b47f9eb4ca333e70f82da6746f5a03a5d9d711ae8005269b53fee2e4fdb",
+   "dataset_fingerprint": "5f7d516b9efff0d85a581b76f8df5b75b2b0a8c3f2d822b6af84150cb33af958",
    "economics_input_rule": "Platt-calibrated when its gate passed in every fold, else uncalibrated (predeclared)",
    "environment": {
     "hash_seed_independent": true,
@@ -860,7 +860,7 @@
     "allowed": false,
     "gated_out": 1
    },
-   "dataset_fingerprint": "46c68b47f9eb4ca333e70f82da6746f5a03a5d9d711ae8005269b53fee2e4fdb",
+   "dataset_fingerprint": "5f7d516b9efff0d85a581b76f8df5b75b2b0a8c3f2d822b6af84150cb33af958",
    "environment": {
     "hash_seed_independent": true,
     "implementation": "CPython",
@@ -1142,7 +1142,7 @@
     "allowed": false,
     "gated_out": 1
    },
-   "dataset_fingerprint": "46c68b47f9eb4ca333e70f82da6746f5a03a5d9d711ae8005269b53fee2e4fdb",
+   "dataset_fingerprint": "5f7d516b9efff0d85a581b76f8df5b75b2b0a8c3f2d822b6af84150cb33af958",
    "environment": {
     "hash_seed_independent": true,
     "implementation": "CPython",
@@ -1358,7 +1358,7 @@
       "simulated_win_rate": 0.7575757575757576
      },
      "50": {
-      "average_net_edge": 0.07363376215926884,
+      "average_net_edge": 0.07363824646420158,
       "average_raw_edge": 0.0872808473610626,
       "excursion_note": "on the frozen checkpoint grid only (captured bids at later checkpoints), not tick level",
       "executable": 446,
@@ -1379,35 +1379,58 @@
       },
       "not_executable": 186,
       "predictions_with_book": 632,
-      "simulated_pnl_total_per_contract_size": 1554.3200000000006,
-      "simulated_return_per_contract": 0.09448753799392101,
+      "simulated_pnl_total_per_contract_size": 1554.3700000000006,
+      "simulated_return_per_contract": 0.09449057750759882,
       "simulated_win_rate": 0.756838905775076
      }
     },
     "fee_model": {
      "schedules": [
       {
-       "effective_from_ms": null,
+       "default_multiplier": "1",
+       "effective_from_ms": 1783396800000,
        "effective_to_ms": null,
        "excluded_series": [],
-       "maker_rate": 0.0175,
-       "note": "15-minute crypto series may carry a special schedule / multiplier: not confirmed",
-       "rounding": "ceil_to_cent_per_order",
-       "schedule_id": "kalshi_general_fee_formula",
+       "fee_type": "general",
+       "maker_coefficient": "0.0175",
+       "note": "general schedule; specific listed products are excepted (the list is not encoded: the captured fee_type / override decides per event)",
+       "rounding": "ROUND_UP_FEE_PLUS_COST_TO_CENTICENT",
+       "schedule_id": "kalshi_general_2026_07_07",
        "series_scope": [
         "*"
        ],
-       "source": "Kalshi fee schedule: general trading fee = round up(rate x C x P x (1 - P)) per order (not read: kalshi.com unreachable from the build environment)",
+       "source": "General taker fee M * 0.07 * C * P * (1-P); maker M * 0.0175 * C * P * (1-P); fee + positionCost rounded up to a centicent (Fee Schedule for July 2026 - 7.7.26 Update, as supplied by the project owner)",
+       "source_sha256": "661381de03ccddc767236376f1791686a04b0e7ddaf2357b66d868eaa13f8b06",
        "source_url": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
-       "taker_rate": 0.07,
+       "taker_coefficient": "0.07",
+       "verified": true,
+       "version": "7.7.26"
+      },
+      {
+       "default_multiplier": "1",
+       "effective_from_ms": null,
+       "effective_to_ms": 1783396800000,
+       "excluded_series": [],
+       "fee_type": "general",
+       "maker_coefficient": "0.0175",
+       "note": "historical arithmetic preserved for old periods; start and exceptions unknown -> unverified",
+       "rounding": "ROUND_UP_FEE_TO_CENT",
+       "schedule_id": "kalshi_general_pre_2026_07_07",
+       "series_scope": [
+        "*"
+       ],
+       "source": "earlier general schedule as previously modelled: fee = round up (0.07 x C x P x (1 - P)) to a cent",
+       "source_sha256": "",
+       "source_url": "",
+       "taker_coefficient": "0.07",
        "verified": false,
-       "version": "v1"
+       "version": "pre-7.7.26"
       }
      ],
-     "version": "fee_model_v2"
+     "version": "fee_model_v3"
     },
-    "fee_model_fingerprint": "0258e117c3993db77a56bfd2536149cea5034974545846c1379dea9e8b8f9029",
-    "fee_status_rule": "VERIFIED only when every executable row's schedule is verified and its effective range covers the trade timestamp; otherwise FEE_UNVERIFIED",
+    "fee_model_fingerprint": "b1b0843cf51ae0cc861237134a4162d1b1053db60fec97b0795dcb8eb27aff5c",
+    "fee_status_rule": "FEE_VERIFIED only when every executable row has: a verified schedule version whose effective interval (with a known start) covers the trade timestamp, a known override state, a known multiplier and a known rounding rule; otherwise FEE_UNVERIFIED",
     "maker": {
      "reason": "resting-order fill probability is unknown from the displayed book; maker EV needs an explicit fill model (a later execution stage)",
      "status": "NOT_EVALUATED"
@@ -1420,7 +1443,7 @@
     "allowed": false,
     "gated_out": 1
    },
-   "dataset_fingerprint": "46c68b47f9eb4ca333e70f82da6746f5a03a5d9d711ae8005269b53fee2e4fdb",
+   "dataset_fingerprint": "5f7d516b9efff0d85a581b76f8df5b75b2b0a8c3f2d822b6af84150cb33af958",
    "environment": {
     "hash_seed_independent": true,
     "implementation": "CPython",
@@ -1496,7 +1519,7 @@
        "p25": -0.036803062168869964,
        "p50": -0.014257912713697016,
        "p75": -0.001973317006378029,
-       "p95": 0.008186119657420781
+       "p95": 0.008186119657420783
       },
       "not_executable": 186,
       "predictions_with_book": 632,
@@ -1505,7 +1528,7 @@
       "simulated_win_rate": 0.673469387755102
      },
      "50": {
-      "average_net_edge": -0.022217294516786563,
+      "average_net_edge": -0.022211913350867283,
       "average_raw_edge": -0.008623124113199128,
       "excursion_note": "on the frozen checkpoint grid only (captured bids at later checkpoints), not tick level",
       "executable": 446,
@@ -1522,39 +1545,62 @@
        "p25": -0.0384398668065223,
        "p50": -0.01605791271369702,
        "p75": -0.003719884434006379,
-       "p95": 0.006843336280845755
+       "p95": 0.006843336280845757
       },
       "not_executable": 186,
       "predictions_with_book": 632,
-      "simulated_pnl_total_per_contract_size": -350.32000000000005,
-      "simulated_return_per_contract": -0.08441445783132531,
+      "simulated_pnl_total_per_contract_size": -350.29000000000013,
+      "simulated_return_per_contract": -0.08440722891566269,
       "simulated_win_rate": 0.6506024096385542
      }
     },
     "fee_model": {
      "schedules": [
       {
-       "effective_from_ms": null,
+       "default_multiplier": "1",
+       "effective_from_ms": 1783396800000,
        "effective_to_ms": null,
        "excluded_series": [],
-       "maker_rate": 0.0175,
-       "note": "15-minute crypto series may carry a special schedule / multiplier: not confirmed",
-       "rounding": "ceil_to_cent_per_order",
-       "schedule_id": "kalshi_general_fee_formula",
+       "fee_type": "general",
+       "maker_coefficient": "0.0175",
+       "note": "general schedule; specific listed products are excepted (the list is not encoded: the captured fee_type / override decides per event)",
+       "rounding": "ROUND_UP_FEE_PLUS_COST_TO_CENTICENT",
+       "schedule_id": "kalshi_general_2026_07_07",
        "series_scope": [
         "*"
        ],
-       "source": "Kalshi fee schedule: general trading fee = round up(rate x C x P x (1 - P)) per order (not read: kalshi.com unreachable from the build environment)",
+       "source": "General taker fee M * 0.07 * C * P * (1-P); maker M * 0.0175 * C * P * (1-P); fee + positionCost rounded up to a centicent (Fee Schedule for July 2026 - 7.7.26 Update, as supplied by the project owner)",
+       "source_sha256": "661381de03ccddc767236376f1791686a04b0e7ddaf2357b66d868eaa13f8b06",
        "source_url": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
-       "taker_rate": 0.07,
+       "taker_coefficient": "0.07",
+       "verified": true,
+       "version": "7.7.26"
+      },
+      {
+       "default_multiplier": "1",
+       "effective_from_ms": null,
+       "effective_to_ms": 1783396800000,
+       "excluded_series": [],
+       "fee_type": "general",
+       "maker_coefficient": "0.0175",
+       "note": "historical arithmetic preserved for old periods; start and exceptions unknown -> unverified",
+       "rounding": "ROUND_UP_FEE_TO_CENT",
+       "schedule_id": "kalshi_general_pre_2026_07_07",
+       "series_scope": [
+        "*"
+       ],
+       "source": "earlier general schedule as previously modelled: fee = round up (0.07 x C x P x (1 - P)) to a cent",
+       "source_sha256": "",
+       "source_url": "",
+       "taker_coefficient": "0.07",
        "verified": false,
-       "version": "v1"
+       "version": "pre-7.7.26"
       }
      ],
-     "version": "fee_model_v2"
+     "version": "fee_model_v3"
     },
-    "fee_model_fingerprint": "0258e117c3993db77a56bfd2536149cea5034974545846c1379dea9e8b8f9029",
-    "fee_status_rule": "VERIFIED only when every executable row's schedule is verified and its effective range covers the trade timestamp; otherwise FEE_UNVERIFIED",
+    "fee_model_fingerprint": "b1b0843cf51ae0cc861237134a4162d1b1053db60fec97b0795dcb8eb27aff5c",
+    "fee_status_rule": "FEE_VERIFIED only when every executable row has: a verified schedule version whose effective interval (with a known start) covers the trade timestamp, a known override state, a known multiplier and a known rounding rule; otherwise FEE_UNVERIFIED",
     "maker": {
      "reason": "resting-order fill probability is unknown from the displayed book; maker EV needs an explicit fill model (a later execution stage)",
      "status": "NOT_EVALUATED"
@@ -1790,7 +1836,7 @@
     }
    },
    "best_development_configuration": {
-    "experiment_fingerprint": "40f97f00a69a1ba8ca388db2c056bd10f99a712c4c2560234bb4434a64036574",
+    "experiment_fingerprint": "e18675a92e077e87ee5f0a3814666469277749b13861a5b1c4b82f49f4d17bfa",
     "families": [
      "SETTLEMENT",
      "SPOT_PRICE_MOMENTUM",
@@ -3675,7 +3721,7 @@
     "seed": 20260928,
     "stable_share": 0.6666666666666666
    },
-   "dataset_fingerprint": "46c68b47f9eb4ca333e70f82da6746f5a03a5d9d711ae8005269b53fee2e4fdb",
+   "dataset_fingerprint": "5f7d516b9efff0d85a581b76f8df5b75b2b0a8c3f2d822b6af84150cb33af958",
    "environment": {
     "hash_seed_independent": true,
     "implementation": "CPython",
@@ -4372,7 +4418,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "4c29faf94d6d64af4aeb10d50573ec993c761a7c3f2a6be579055a0663c53049",
+     "experiment_fingerprint": "d13f5700d71ef50d79ab16a67c3f0a6d548f33379324037c534542f8a1fded3c",
      "families": [
       "SETTLEMENT"
      ],
@@ -4965,7 +5011,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "7c90f4ef7d5a8ea2451337dd1b7e47a1c4f69ab7812d36c7e1943a5fd43fcc47",
+     "experiment_fingerprint": "7eacf0b1d4e9d1cfdd83b00d04ab89b6bb34943048f01a2a9d6b67b73308a84e",
      "families": [
       "SETTLEMENT"
      ],
@@ -5640,7 +5686,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "adfcfcf2187cfc22b348e934f17a759beba34123a11f5ee73f26390de31f73c8",
+     "experiment_fingerprint": "2a37e6ef6357349d3adcbfdc402a858fd2dabb770844e0a844b42db63650913f",
      "families": [
       "SETTLEMENT"
      ],
@@ -6227,7 +6273,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "47799056a11e67e2bf10058fd1ef7aa0293527b1cdcdf718cbcdb67dfb996387",
+     "experiment_fingerprint": "81483b1c1b694fdeac1289f8ac94892b71f5a239a12e24165f0ec9a738d5cd2d",
      "families": [
       "SPOT_PRICE_MOMENTUM",
       "SPOT_VOLATILITY"
@@ -6839,7 +6885,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "2819686c4baa19a29c2d852e2ed32d752d7c5156184f484f7983122adf79ba28",
+     "experiment_fingerprint": "b237eed9789194c6c9b423c018a751bb87be79f6149af87de1c4ad2e9729606c",
      "families": [
       "SPOT_PRICE_MOMENTUM",
       "SPOT_VOLATILITY"
@@ -7543,7 +7589,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "75125ece3341b7b837fd46e388be17b5568dabc9b3d4c6becc7d0f8cf06d2d25",
+     "experiment_fingerprint": "09e21d57ac95ee470b026319bace34c8a8e79debfac6c801703626e2739881e8",
      "families": [
       "SPOT_PRICE_MOMENTUM",
       "SPOT_VOLATILITY"
@@ -8166,7 +8212,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "7c1084ba739922f61a23ff87c2a5525ee891580585b8447e9c7c8d8993970093",
+     "experiment_fingerprint": "c7ec6ea9cf2011979a958c4189f533a48b85cf5747a0596f733bb90ce1f93508",
      "families": [
       "PERP_FLOW"
      ],
@@ -8767,7 +8813,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "fc433c0bf867c5911eddd51f108aea2c6002acbd0a9e76c828a77a33860351d6",
+     "experiment_fingerprint": "ef8773ddfea08d460bd969e9091803287be5c09e8e19df0a323c8c1a9933e38d",
      "families": [
       "PERP_FLOW"
      ],
@@ -9455,7 +9501,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "5f710a35e84da905a6bda6b3a78085d56802f32b9275a82cca2c57d832f14832",
+     "experiment_fingerprint": "308649011d5e2aff8cdcd4b0647001573a4224348cfb12323db122d9e10a948d",
      "families": [
       "PERP_FLOW"
      ],
@@ -10058,7 +10104,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "3c1afa7b45c8d3f8e670d06341bcd88727dc4134b59f4415bd3e920d26a2a526",
+     "experiment_fingerprint": "d527a8f4ea3d934a2096dc930d0923fa776f6e163460f91812369cb8e2320dd6",
      "families": [
       "ORDER_FLOW"
      ],
@@ -10655,7 +10701,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "258bdae9284aa5951b3e38af7737c5f1f57d06e8bc20e0faeb3f641e6725fadf",
+     "experiment_fingerprint": "0f9f3c4e995e963c1457411a7ed4d128b46c07691126b41f8ca3151f876673fe",
      "families": [
       "ORDER_FLOW"
      ],
@@ -11350,7 +11396,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "f6620f8d0f325d8ae3c2f18565e1b81ef4a46d7ac4e1d2048422e43bddb325fe",
+     "experiment_fingerprint": "4d6c6a4af819d43ec39d2f1e3626594c80986913c941875249310aaae28e7271",
      "families": [
       "ORDER_FLOW"
      ],
@@ -11943,7 +11989,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "f3adfb0c9a8eaf44db0513ae86eb1f74b5b32f1c716253d59d658cb884efa02e",
+     "experiment_fingerprint": "f8e8bb44e4f022c6d6e81db17df8c5fd4a0d28ffce188e5eec75d0c5ebddca8d",
      "families": [
       "SETTLEMENT",
       "SPOT_PRICE_MOMENTUM",
@@ -12569,7 +12615,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "032beb52e8de9c2bac09bbc53010e41eb116f2f33745c010c4afabad65042458",
+     "experiment_fingerprint": "b456f983f5b6eebeedefddf297e5683a3c5cd339b838911ae1f70c4d2ee9448d",
      "families": [
       "SETTLEMENT",
       "SPOT_PRICE_MOMENTUM",
@@ -13287,7 +13333,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "40f97f00a69a1ba8ca388db2c056bd10f99a712c4c2560234bb4434a64036574",
+     "experiment_fingerprint": "e18675a92e077e87ee5f0a3814666469277749b13861a5b1c4b82f49f4d17bfa",
      "families": [
       "SETTLEMENT",
       "SPOT_PRICE_MOMENTUM",
@@ -13917,7 +13963,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "43113639d6dae711f7fa74afbd634d3b086a374d14cd35e00b706cee08bfac87",
+     "experiment_fingerprint": "acf569bee70a3abd6cc5462869fbd2674467847ed6b9c275ee84c1ac58cca34b",
      "families": [
       "PERP_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -14551,7 +14597,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "6a095db5c54766514db8dcac8f8a4dc7b360cf3030732514fa833243d31bd904",
+     "experiment_fingerprint": "a987a6bcbbe05d4845d26a39d1e8d67b2ad6225dab18aa233ef6782c2c6ee145",
      "families": [
       "PERP_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -15277,7 +15323,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "aa5bdb0ed83ee39066dd043a8c466c4e76ee0475a3750f3f188ac4e993d9a27d",
+     "experiment_fingerprint": "9290d459ae3d824a7b1ec5b5ce964247b71910752dbd6c4c2260f28542e291b3",
      "families": [
       "PERP_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -15915,7 +15961,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "3558be9b8a71f8200d1d149f75361a8ebe1410343be5d1f14dd33efea234e10f",
+     "experiment_fingerprint": "bdcf35aebac675f57a94680a10613e206d8e4c6bcd6483ff563dfcf2e2772beb",
      "families": [
       "ORDER_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -16549,7 +16595,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "63b01c706dc44cf1d491960fa2675692f490fa44540f72581f13ea43016f4e08",
+     "experiment_fingerprint": "cfea6e5e10db34c94d0f538863a22191d3260008c2f50966ae80022f4a1a067d",
      "families": [
       "ORDER_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -17275,7 +17321,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "b8fb3dbf2a7aaea7f36de6ab0d000d1a9f84fcfe0d4b70bb8017de214141d201",
+     "experiment_fingerprint": "d754af34b105284a04dca0d6b0882d4eb21dcbd53ebe2e1d3d7abd3c8f419178",
      "families": [
       "ORDER_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -17921,7 +17967,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "1b85ce256b1c74b498d00744baf822959ffc541f92722b9be67d5e23c4df4588",
+     "experiment_fingerprint": "b7ce977291134ba2667d6ab403eae9af850043d8568e735beccdadda0aca962d",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW"
@@ -18540,7 +18586,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "4fda564c43a2c7eacad6ed9ee173b7273aab378856e6e5f62f8e361dd47bf9c9",
+     "experiment_fingerprint": "e6bb03dfea843a00001be00970affd662b77006ef86cbe63d9941d5ffc5af47e",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW"
@@ -19257,7 +19303,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "42bda0d397f108ab88cd021dcfbad6da7fd9a15afd6ab4f2a0f3f02c5130dd1e",
+     "experiment_fingerprint": "684d784af3f54fe8b5598336114d52fe06ac80f09d1b255201e55f0855b33fdd",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW"
@@ -19874,7 +19920,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "60c4237ef2a67c7b9b494cbea0a90c09063703b4bea081685897ad6c1c63768b",
+     "experiment_fingerprint": "b16c3a4c331f699a0196effe3afc367a5272701f32db150f2aa6d7b6ea0e967f",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW",
@@ -20544,7 +20590,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "6b00eb74dec06ec11c3a0e5e6811d1d13be39c09cf77505da4f5ac2361d9e17d",
+     "experiment_fingerprint": "d78ebef147df256a639001d7e84366f95b1c781f2cf6db9df82f7a414d97b918",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW",
@@ -21306,7 +21352,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "1c730c2794ef20c443c9083b043f3a799376a47fe8e8ad27acaa3c8788d30833",
+     "experiment_fingerprint": "e9458b08b2ce9da7eeb764f73083f74e7a721b6306de1284a172848fdfebce98",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW",

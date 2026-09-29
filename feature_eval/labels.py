@@ -9,6 +9,9 @@ Label sources (per market)
     RECONSTRUCTED_VERIFIED   no official result, but the outcome reconstructed by the Step-2 settlement engine under a
                              window convention that the gate has VERIFIED on real markets
     SETTLEMENT_UNVERIFIED    reconstructed only, convention not verified -> excluded from model / promotion research
+    RULE_UNVERIFIED_FOR_MARKET  convention verified, but the contract rule is not evidenced for THIS market (e.g. a
+                             rule observed only after the market closed, conflicting / unparsed market rule text):
+                             diagnostic only, never gold (Step 6.2)
     UNLABELED                neither
 The convention gate (settlement.resolution.verify_all on REAL markets with official expiration values): the convention
 is chosen by RECONSTRUCTION AGREEMENT ONLY - never by model performance - and is VERIFIED only with enough compared
@@ -19,7 +22,8 @@ reported. Synthetic data -> SYNTHETIC_ONLY (never verifies anything).
 """
 from dataclasses import asdict, dataclass
 
-LABEL_SOURCES = ("OFFICIAL_RESULT", "RECONSTRUCTED_VERIFIED", "SETTLEMENT_UNVERIFIED", "LABEL_CONFLICT", "UNLABELED")
+LABEL_SOURCES = ("OFFICIAL_RESULT", "RECONSTRUCTED_VERIFIED", "SETTLEMENT_UNVERIFIED", "RULE_UNVERIFIED_FOR_MARKET",
+                 "LABEL_CONFLICT", "UNLABELED")
 GOLD_SOURCES = ("OFFICIAL_RESULT", "RECONSTRUCTED_VERIFIED")
 
 
@@ -101,8 +105,14 @@ def market_label(labels_row, gate_status):
             return None, "LABEL_CONFLICT"
         return (1 if official == "yes" else 0), "OFFICIAL_RESULT"
     if recon in ("yes", "no"):
-        if gate_status == "VERIFIED":
+        # Step 6.2: a reconstruction is gold only when the CONTRACT RULE is evidenced for this very market (its own
+        # captured rule text, or the series rule within its evidenced period) - never a rule observed only later
+        from settlement.market_rules import GOLD_RULE_STATUSES
+        rule_ok = labels_row.get("settlement_rule_status") in GOLD_RULE_STATUSES
+        if gate_status == "VERIFIED" and rule_ok:
             return (1 if recon == "yes" else 0), "RECONSTRUCTED_VERIFIED"
+        if gate_status == "VERIFIED":
+            return (1 if recon == "yes" else 0), "RULE_UNVERIFIED_FOR_MARKET"
         return (1 if recon == "yes" else 0), "SETTLEMENT_UNVERIFIED"
     return None, "UNLABELED"
 

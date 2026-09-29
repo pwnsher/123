@@ -23,11 +23,25 @@ from market_data.sources.coinbase import SYMBOLS as CB_SYMBOLS, CoinbaseAdapter
 from market_data.sources.kalshi import KalshiAdapter
 from market_data.sources.kraken import SYMBOLS as KR_SYMBOLS, KrakenAdapter
 from settlement.assets import ASSET_INDEX
+from settlement.rules import official_outcome, rule_for
 from settlement.synthetic import cf_frame, eastern_ticker, kalshi_message, lcg
 
 BASE = {"BTC": 100_000.0, "ETH": 3_500.0, "SOL": 180.0, "XRP": 2.5}
 STEP_MS = 250
 SERIES = {"BTC": "KXBTC15M", "ETH": "KXETH15M", "SOL": "KXSOL15M", "XRP": "KXXRP15M"}
+# SYNTHETIC rule text in the documented shape (Step 6.2). SOL deliberately carries no precision sentence: its
+# precision is not documented, so the deterministic parser must fail closed for it.
+_INDEX_NAME = {"BTC": "Bitcoin Real-Time Index (BRTI)", "ETH": "Ether Real-Time Index (ETHUSD_RTI)",
+               "SOL": "Solana Real-Time Index (SOLUSD_RTI)", "XRP": "XRP Real-Time Index (XRPUSD_RTI)"}
+_DP = {"BTC": 2, "ETH": 2, "XRP": 4}
+
+
+def synthetic_rules(a, strike):
+    primary = (f"If the simple average of the sixty seconds of the CF Benchmarks {_INDEX_NAME[a]} before the close "
+               f"is at least {strike}, then the market resolves to Yes.")
+    secondary = "SYNTHETIC. The 60-second average of the RTI prices is the official value"
+    secondary += f", rounded to the nearest {_DP[a]} decimal places." if a in _DP else "."
+    return primary, secondary
 
 
 def iso(ms):
@@ -131,8 +145,10 @@ class FakeKalshi:
 
     def _market(self, a, close, settled=False):
         k = round(self.world.cf(a, close - 900_000), 2)
+        rp, rs = synthetic_rules(a, k)
         m = {"ticker": eastern_ticker(SERIES[a], close), "close_time": iso(close), "open_time": iso(close - 900_000),
-             "floor_strike": k, "strike_type": "greater", "status": "active"}
+             "floor_strike": k, "strike_type": "greater", "status": "active", "rules_primary": rp,
+             "rules_secondary": rs, "event_ticker": eastern_ticker(SERIES[a], close)}
         now = self.clock.wall_ms()
         z = (math.log(self.world.cf(a, now) / k)) / max(1e-4 * math.sqrt(max((close - now) / 1000, 1)), 1e-9)
         p = min(max(0.5 * (1 + math.erf(z / math.sqrt(2))), 0.02), 0.98)
@@ -141,7 +157,10 @@ class FakeKalshi:
                   "no_bid_dollars": f"{1 - yb - 0.02:.4f}", "no_ask_dollars": f"{1 - yb:.4f}"})
         if settled:
             ev = self.world.settlement_mean(a, close)
-            m.update({"status": "settled", "result": "yes" if ev > k else "no", "expiration_value": f"{ev:.6f}"})
+            oc = official_outcome([ev], k, rule_for(SERIES[a], close))        # the contract rule (Step 6.2)
+            res = oc["outcome"] or ("yes" if ev >= k else "no")
+            val = oc["settlement_value"] if oc["settlement_value"] is not None else ev
+            m.update({"status": "settled", "result": res, "expiration_value": f"{val:.6f}"})
         return m
 
     def get_json(self, url, params=None):
@@ -158,6 +177,10 @@ class FakeKalshi:
             return {"trades": [{"trade_id": f"t{self._tid}", "ticker": params["ticker"], "yes_price_dollars": "0.4600",
                                 "count_fp": "5.00", "taker_side": "yes" if self._tid % 2 else "no",
                                 "created_time": iso(now - 300)}]}
+        if "/events/" in url:
+            et = url.rsplit("/", 1)[-1]
+            return {"event": {"event_ticker": et, "series_ticker": et.split("-")[0], "fee_type_override": None,
+                              "fee_multiplier_override": None}}
         ticker = url.rsplit("/", 1)[-1]
         for a, s in SERIES.items():
             if ticker.startswith(s):

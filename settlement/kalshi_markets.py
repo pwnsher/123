@@ -7,14 +7,17 @@ expiration_value is Kalshi's settled index value; result is "yes"/"no" once sett
 is kept as unresolved, never guessed).
 """
 from settlement.assets import ASSET_INDEX, asset_of, check_ticker_close, series_of
+from settlement.market_rules import contract_snapshot
 from settlement.schemas import KALSHI_MARKET, parse_iso_utc_ms, parse_value, validate
 from settlement.types import OfficialResolution, ParseIssue, SettlementMarket
 
 SOURCE = "kalshi_market_api"
 
 
-def parse_market(obj, source=SOURCE):
-    """Returns (SettlementMarket | None, OfficialResolution | None, [ParseIssue])."""
+def parse_market(obj, source=SOURCE, capture_ts_ms=None, event_obj=None):
+    """Returns (SettlementMarket | None, OfficialResolution | None, [ParseIssue]).
+    Step 6.2: the market's own rule text (rules_primary / rules_secondary) and fee metadata are RETAINED in
+    SettlementMarket.rule_snapshot (settlement.market_rules.contract_snapshot), never discarded."""
     if isinstance(obj, dict) and isinstance(obj.get("market"), dict):
         obj = obj["market"]                              # GET /markets/{ticker} envelope
     chk = validate(obj, KALSHI_MARKET)
@@ -46,9 +49,12 @@ def parse_market(obj, source=SOURCE):
     if check_ticker_close(ticker, close_ms) is False:
         issues.append(ParseIssue(source, "TICKER_CLOSE_MISMATCH", f"close_time {obj['close_time']} not the ticker's ET time",
                                  location=ticker))
+    snap = contract_snapshot(obj, source=source, capture_ts_ms=capture_ts_ms, schema_fingerprint=chk.fingerprint,
+                             event_obj=event_obj)
     market = SettlementMarket(ticker=ticker, asset=asset, close_ts_ms=close_ms, index_id=ASSET_INDEX[asset],
                               strike=strike, strike_source=strike_src, open_ts_ms=open_ms, series=series_of(ticker),
-                              metadata_source=source, metadata_schema_fingerprint=chk.fingerprint)
+                              metadata_source=source, metadata_schema_fingerprint=chk.fingerprint,
+                              rule_snapshot=snap if snap.get("rule_text_sha256") else None)
     res = obj.get("result")
     result = res.strip().lower() if isinstance(res, str) and res.strip().lower() in ("yes", "no") else None
     ev = None

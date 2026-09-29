@@ -476,7 +476,8 @@ def buckets(preds, fee):
         rows, p, key = preds[who]
         extra = []
         for r, pi in zip(rows, p):
-            e = row_economics(pi, r.get("execution"), fee, r["market_ticker"], (1,), ts_ms=r.get("checkpoint_ts_ms"))
+            e = row_economics(pi, r.get("execution"), fee, r["market_ticker"], (1,), ts_ms=r.get("checkpoint_ts_ms"),
+                              fee_context=r.get("fee_context"))
             if e["status"] != "OK":
                 extra.append(None)
                 continue
@@ -512,7 +513,8 @@ def economics_section(preds, fee):
                     path.append((r2["checkpoint_s"], yb, (100.0 - ya) if ya is not None else None))
                 later[(m, r["checkpoint_s"])] = path
         pr = [{"market": r["market_ticker"], "p_yes": pi, "y": r["y"], "execution": r.get("execution"),
-               "checkpoint_s": r["checkpoint_s"], "ticker": r["market_ticker"], "ts_ms": r.get("checkpoint_ts_ms")}
+               "checkpoint_s": r["checkpoint_s"], "ticker": r["market_ticker"], "ts_ms": r.get("checkpoint_ts_ms"),
+               "fee_context": r.get("fee_context")}
               for r, pi in zip(rows, p)]
         e = economics(pr, fee, later_bids=later)
         e["prediction_source"] = key

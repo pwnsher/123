@@ -7,6 +7,7 @@ event time + the reconstruction policy's explicit assumed_publication_lag_ms (fl
 RECEIVE_TIME_MISSING). seq records the element order in the response, for determinism only.
 """
 from settlement.assets import INDEX_ASSET
+from settlement.cf_live import value_text
 from settlement.schemas import CFB_REST_ELEMENT, CFB_REST_HISTORICAL, parse_epoch_ms, parse_value, validate
 from settlement.types import ParseIssue, SettlementObservation
 
@@ -39,5 +40,5 @@ def parse_cfb_historical(payload, index_id, source="cfb_rest_history"):
             continue
         obs.append(SettlementObservation(asset=INDEX_ASSET.get(index_id, "?"), index_id=index_id, source=source,
                                          value=val, event_ts_ms=ts, receive_ts_ms=None, seq=i, schema_id=schema_id,
-                                         schema_fingerprint=chk.fingerprint))
+                                         schema_fingerprint=chk.fingerprint, value_text=value_text(el["value"])))
     return obs, issues

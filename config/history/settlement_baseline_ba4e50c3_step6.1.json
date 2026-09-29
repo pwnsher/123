@@ -16,13 +16,12 @@
   "accumulator.py": "8648164882c3d7e45faa5406e62159447a5ad8eff0737d17c319219975766fcf",
   "assets.py": "d204178f86565729143b9b7fbc7cf38770de7135595bb13db48c188b2ec41af9",
   "cache.py": "ff698bfb135f62064387c8f10aee4cc089c326107bcc9f11a149d4e3bd223476",
-  "cf_history.py": "3e3a2b1ccc4e6e4e4b290c06ce2dfcd487d4aba0cd5d60c49a603ab824e4e75a",
-  "cf_live.py": "9f3804b3172d050fa3f426697a8c8c88f35090be15c2f2475e40c720bae7d98c",
-  "checkpoints.py": "fb67070a32f9972fe04d431f3e988a4d2f8983e68c818f73231d27a1b13100af",
-  "engine.py": "0e06cf7189bf6f32acbee4e96e9999be2997807abb24ff6cd5ac1335e737413c",
+  "cf_history.py": "50e37f0dd6966a27fbba29d49c8a01dea20b28aacf92e5c17585261b250d567a",
+  "cf_live.py": "9dfc049eeb984a969b7c61eb600baa27d45b53652b6398401318573706f6bd91",
+  "checkpoints.py": "6d2d386771419b424a995263fc38c8ba9642f7ce8d26e6720f497a6536810809",
+  "engine.py": "5d89ada139e129b4dc590a11586e55c6b8844d96a03dbdae4856f5b4cc6e8b08",
   "fingerprint.py": "a4c8ecf673940f348c8f17628e1f542df5f674fa4945a45d164cf6420a5266db",
-  "kalshi_markets.py": "607dc4febf204d9764a8cb5d5ff7c820b83d4341cfbd90a246a1a992baf52cf6",
-  "market_rules.py": "4ff4aaf59c95e4eb8f5e7d1223e637efe7e02a5534220c69780f24d3b022e789",
+  "kalshi_markets.py": "5bef3f75982d3c177503614ef98201e8b6a5bb3dee3b6236e438fbe457cb5d17",
   "overlap.py": "6c1d628be4a33407f64e2961ff523a8e80ca0102ab294c405578c7137e9e215e",
   "policy.py": "66166570cbf45a6977a38f936b3884f7b953fa149fb06c4289d4227e1a6a69c5",
   "proxy.py": "369db361b2756bce341eeba74fa57d1f913e92c39367870fe141f4b9a585ce22",
@@ -32,7 +31,7 @@
   "rules.py": "59cf009ee867b1c2ac6d158841749446ac2ffdadd0d2efa6f3502695a1c98ec5",
   "schemas.py": "48417287feb7b5f5feeb7544ffaa117d5dd355654c470e4693675be6dc0fc77b",
   "synthetic.py": "ba43ac7d2d5b59a3b4a115b1aca11c50aa00098a8c4d9d46326bc3faf86e550f",
-  "types.py": "3590be42c431ea10831375e8a3296bb15bfca7a5f356065990b70bd78336c494"
+  "types.py": "20628655d516fde47e5fb6d01336ed7e8ef30d1ea55e6384faf514caf02f39a7"
  },
  "note": "Research/observation code only; independent of the Step-1 strategy baseline.",
  "policies": {
@@ -77,5 +76,5 @@
    "version": 1
   }
  },
- "settlement_fingerprint": "4884524a795f0e2cc63bc561074d00e2a2351bba4f0f1ef3cf7092803db17aad"
+ "settlement_fingerprint": "ba4e50c39ab593599ab601bcd5ff0e3b6095d7f8523e252a881cdf6529e44f0a"
 }
