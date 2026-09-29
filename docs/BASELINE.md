@@ -159,6 +159,11 @@ ZIP, plus every fingerprint, the perp veto and LIVE refusal). After, 22/22 suite
 3.10.20, 3.11.15, 3.12.3 and 3.13.12 (the same 1 skip on 3.10/3.11). `scripts/mutation_test_step6.py`: 14/14 mutations
 (S1–S14) caught; the unmutated control passes.
 
+Step 6.1 (correctness hardening): before, 22/22 suites and 421 checks (re-verified from the delivered Step-6 ZIP, plus
+every fingerprint, the 47 fixtures and LIVE refusal). After, 22/22 suites, 426 checks passed, 0 failed on CPython
+3.10.20, 3.11.15, 3.12.3 and 3.13.12 (the same 1 skip on 3.10/3.11). `scripts/mutation_test_step6.py`: 20/20 mutations
+(S1–S20) caught; the unmutated control passes.
+
 Why 3.10/3.11 were red before: `kalshi_backtest.py` used a backslash inside an f-string expression
 (legal only from Python 3.12, PEP 701). It could not even be imported, and stages 7/8 failed because
 they re-run stage 3. Stage 12 test 6.1 assumed `FunctionDef.type_params`, an AST field that only
