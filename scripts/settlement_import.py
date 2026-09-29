@@ -12,6 +12,9 @@ Import CAPTURED settlement data into the offline settlement store (no network he
 Websocket capture files are JSON lines. Preferred line format (receive time recorded at capture):
     {"receive_ts_ms": 1790000000123, "seq": 42, "message": <the raw message object or text>}
 A bare message per line is accepted, but then receive time is unknown (RECEIVE_TIME_MISSING).
+CF values (Step 6.3): every CF capture (cf-ws-jsonl, kalshi-ws-jsonl, cf-rest-json) is decoded with
+settlement.schemas.loads_exact, so a JSON-number value keeps its original token (legacy / non-standard path);
+the documented form is a decimal string. Nothing CF-valued passes through a binary float before settlement.
 Markets: a GET /markets response ({"markets": [...]}), a list of market objects, or {"market": {...}}.
 """
 import argparse
@@ -22,10 +25,11 @@ import sys
 
 import _settlement_cli as cli  # noqa: F401  (path setup)
 from settlement.cache import SettlementStore
-from settlement.cf_history import parse_cfb_historical
+from settlement.cf_history import parse_cfb_historical_text
 from settlement.cf_live import parse_cfb_frame, parse_kalshi_cfb_message
 from settlement.kalshi_markets import parse_market
 from settlement.proxy import load_perp_reference_csv
+from settlement.schemas import loads_exact
 from settlement.synthetic import as_synthetic
 
 KINDS = ("kalshi-ws-jsonl", "cf-ws-jsonl", "cf-rest-json", "kalshi-markets-json", "perp-telemetry-csv")
@@ -45,14 +49,15 @@ def _ws_lines(path):
             if not line.strip():
                 continue
             try:
-                rec = json.loads(line)
+                rec = json.loads(line)             # capture envelope (receive time, seq) as before
+                exact = loads_exact(line)          # the message itself: CF value tokens preserved (Step 6.3)
             except ValueError:
                 yield n, None, None, line          # corrupt: reported by the parser
                 continue
             if isinstance(rec, dict) and "message" in rec and ("receive_ts_ms" in rec or "seq" in rec):
-                yield n, rec.get("receive_ts_ms"), rec.get("seq", n), rec["message"]
+                yield n, rec.get("receive_ts_ms"), rec.get("seq", n), exact["message"]
             else:
-                yield n, None, n, rec
+                yield n, None, n, exact
 
 
 def parse_file(kind, path, index_id=None):
@@ -66,7 +71,7 @@ def parse_file(kind, path, index_id=None):
             else:
                 if isinstance(msg, str):
                     try:
-                        msg = json.loads(msg)
+                        msg = loads_exact(msg)
                     except ValueError:
                         msg = None
                 obs, iss = parse_cfb_frame(msg if isinstance(msg, dict) else {}, rts, seq)
@@ -77,7 +82,7 @@ def parse_file(kind, path, index_id=None):
         if not index_id:
             raise SystemExit("--index-id is required for cf-rest-json (e.g. BRTI)")
         with open(path, encoding="utf-8") as f:
-            obs, iss = parse_cfb_historical(json.load(f), index_id)
+            obs, iss = parse_cfb_historical_text(f.read(), index_id)
         recs += [("observation", o) for o in obs]
         issues += iss
     elif kind == "kalshi-markets-json":

@@ -20,7 +20,14 @@ patched with round()), with schedules VERSIONED BY EFFECTIVE TIME and their own 
 A trade uses the schedule whose effective interval covers the TRADE timestamp (never a later schedule applied
 retroactively). The multiplier M comes from the captured Kalshi metadata: a market / event fee_multiplier_override
 takes precedence over the (series / market) fee_multiplier; the schedule default applies only for pricing, never as
-evidence. FEE_VERIFIED requires ALL of: schedule version known and verified, trade timestamp covered by an interval
+evidence. Step 6.3: TAKER and MAKER defaults are separate. July-2026 general schedule: default taker multiplier 1,
+default maker multiplier 0 ("unless otherwise indicated"). The captured fee_multiplier / fee_multiplier_override are
+applied to TAKER fees only: their maker semantics are undocumented, so no maker override is inferred from them. A maker
+multiplier other than the schedule default is used only from an explicitly maker-scoped field (MAKER_MULTIPLIER_FIELDS)
+in the fee context; the capture layer records none today. Maker economics stay NOT_EVALUATED for research.
+Provenance: schedule_definition_sha256 is the SHA-256 of the schedule's normalized definition text as encoded here; it is
+NOT the hash of the official PDF. source_document_sha256 is set only from captured official document bytes ("" = the
+document bytes were never captured). FEE_VERIFIED requires ALL of: schedule version known and verified, trade timestamp covered by an interval
 with a known start, override state known (captured field, null or a value), multiplier known, rounding rule known.
 Otherwise FEE_UNVERIFIED (or FEE_UNKNOWN when no schedule covers the trade). The 15-minute crypto series are NOT
 hardcoded as general-fee markets: the captured fee_type / override decides, per event.
@@ -66,11 +73,13 @@ class FeeSchedule:
     excluded_series: Tuple[str, ...] = ()        # series with their own (special) schedules
     taker_coefficient: str = "0.07"
     maker_coefficient: str = "0.0175"
-    default_multiplier: str = "1"
+    default_taker_multiplier: str = "1"
+    default_maker_multiplier: str = "0"
     rounding: str = "ROUND_UP_FEE_TO_CENT"
     fee_type: str = "general"                    # the Kalshi fee type this schedule prices
     verified: bool = False
-    source_sha256: str = ""
+    schedule_definition_sha256: str = ""         # sha256 of the normalized definition text encoded here (not the PDF)
+    source_document_sha256: str = ""             # sha256 of CAPTURED official document bytes; "" = not captured
     note: str = ""
 
     def __post_init__(self):
@@ -98,14 +107,18 @@ KALSHI_GENERAL_2026_07_07 = FeeSchedule(
     schedule_id="kalshi_general_2026_07_07", version="7.7.26", source=_JULY_TEXT,
     source_url="https://kalshi.com/docs/kalshi-fee-schedule.pdf", effective_from_ms=JULY_2026_START_MS,
     effective_to_ms=None, rounding="ROUND_UP_FEE_PLUS_COST_TO_CENTICENT", verified=True,
-    source_sha256=hashlib.sha256(_JULY_TEXT.encode()).hexdigest(),
-    note="general schedule; specific listed products are excepted (the list is not encoded: the captured fee_type / "
+    default_taker_multiplier="1", default_maker_multiplier="0",
+    schedule_definition_sha256=hashlib.sha256(_JULY_TEXT.encode()).hexdigest(), source_document_sha256="",
+    note="general schedule; taker multiplier default 1, maker multiplier default 0 unless otherwise indicated; specific listed products are excepted (the list is not encoded: the captured fee_type / "
          "override decides per event)")
+_PRE_TEXT = "earlier general schedule as previously modelled: fee = round up (0.07 x C x P x (1 - P)) to a cent"
 KALSHI_GENERAL_PRE_2026_07_07 = FeeSchedule(
-    schedule_id="kalshi_general_pre_2026_07_07", version="pre-7.7.26",
-    source="earlier general schedule as previously modelled: fee = round up (0.07 x C x P x (1 - P)) to a cent",
+    schedule_id="kalshi_general_pre_2026_07_07", version="pre-7.7.26", source=_PRE_TEXT,
     source_url="", effective_from_ms=None, effective_to_ms=JULY_2026_START_MS, rounding="ROUND_UP_FEE_TO_CENT",
-    verified=False, note="historical arithmetic preserved for old periods; start and exceptions unknown -> unverified")
+    default_taker_multiplier="1", default_maker_multiplier="1",
+    schedule_definition_sha256=hashlib.sha256(_PRE_TEXT.encode()).hexdigest(), source_document_sha256="",
+    verified=False, note="historical arithmetic preserved for old periods (both multipliers 1 as previously modelled); "
+                         "start, maker default and exceptions unknown -> unverified, never a future schedule")
 # kept for callers of the Step-6.1 name (the pre-July behaviour, unverified)
 GENERAL_UNVERIFIED = KALSHI_GENERAL_PRE_2026_07_07
 
@@ -134,8 +147,15 @@ def _num(v):
     return d if d.is_finite() and d > 0 else None
 
 
-def resolve_multiplier(fee_context, schedule):
-    """-> (multiplier Decimal, override_state, multiplier_known, reasons). An override takes precedence."""
+# explicitly MAKER-scoped multiplier fields a fee context may carry (Step 6.3). No documented Kalshi market / event
+# field is known to be maker-scoped, so the capture layer records none; the generic fee_multiplier(_override) fields
+# are never read as maker multipliers.
+MAKER_MULTIPLIER_FIELDS = ("maker_fee_multiplier",)
+
+
+def resolve_multiplier(fee_context, schedule, maker=False):
+    """-> (multiplier Decimal, override_state, multiplier_known, reasons). An override takes precedence (taker).
+    Maker: an explicit maker-scoped field, else the schedule's MAKER default (pricing only, never evidence)."""
     meta = (fee_context or {}).get("fee_metadata") or {}
     reasons = []
     if "fee_multiplier_override" in meta or "fee_type_override" in meta:
@@ -147,6 +167,19 @@ def resolve_multiplier(fee_context, schedule):
     fee_type = meta.get("fee_type_override") if meta.get("fee_type_override") is not None else meta.get("fee_type")
     if fee_type is not None and str(fee_type).lower() != schedule.fee_type:
         reasons.append(f"captured fee type {fee_type!r} is not priced by schedule {schedule.schedule_id}")
+    if maker:
+        for k in MAKER_MULTIPLIER_FIELDS:
+            v = meta.get(k)
+            if v is not None and not isinstance(v, bool):
+                try:
+                    mm = dec(v)
+                except Exception:                    # noqa: BLE001
+                    mm = None
+                if mm is not None and mm.is_finite() and mm >= 0:
+                    return mm, override_state, True, reasons
+        reasons.append("maker multiplier not captured (schedule maker default used for pricing only; the generic "
+                       "fee_multiplier fields are not applied to maker fees)")
+        return Decimal(schedule.default_maker_multiplier), override_state, False, reasons
     om = _num(meta.get("fee_multiplier_override"))
     if om is not None:
         return om, override_state, True, reasons
@@ -154,12 +187,12 @@ def resolve_multiplier(fee_context, schedule):
     if bm is not None:
         return bm, override_state, True, reasons
     reasons.append("fee multiplier not captured (schedule default used for pricing only)")
-    return Decimal(schedule.default_multiplier), override_state, False, reasons
+    return Decimal(schedule.default_taker_multiplier), override_state, False, reasons
 
 
 @dataclass(frozen=True)
 class FeeModel:
-    version: str = "fee_model_v3"
+    version: str = "fee_model_v4"
     schedules: Tuple[FeeSchedule, ...] = (KALSHI_GENERAL_2026_07_07, KALSHI_GENERAL_PRE_2026_07_07)
 
     def to_dict(self):
@@ -180,7 +213,7 @@ class FeeModel:
         x = self.resolve(ticker, ts_ms)
         if x is None:
             return {"status": "FEE_UNKNOWN", "reasons": ["no fee schedule covers this series / trade time"]}
-        mult, ov_state, m_known, reasons = resolve_multiplier(fee_context, x)
+        mult, ov_state, m_known, reasons = resolve_multiplier(fee_context, x, maker)
         out = fee_for_fills(fills, x, mult, maker)
         verified = (x.verified and x.effective_from_ms is not None and ov_state != "UNKNOWN" and m_known
                     and x.rounding in ROUNDING_RULES and not any("not priced" in r for r in reasons))
@@ -188,7 +221,9 @@ class FeeModel:
             reasons = reasons + [f"schedule {x.schedule_id} is not verified"]
         out.update(status="FEE_VERIFIED" if verified else "FEE_UNVERIFIED", override_state=ov_state,
                    multiplier_known=m_known, reasons=reasons, schedule_version=x.version,
-                   schedule_effective=[x.effective_from_ms, x.effective_to_ms], schedule_source_sha256=x.source_sha256)
+                   schedule_effective=[x.effective_from_ms, x.effective_to_ms],
+                   schedule_definition_sha256=x.schedule_definition_sha256,
+                   source_document_sha256=x.source_document_sha256)
         return out
 
     def fee_dollars(self, contracts, price_prob, ticker="", maker=False, ts_ms=None, fee_context=None):

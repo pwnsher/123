@@ -4,7 +4,7 @@
   "unmutated": {
    "caught": false,
    "returncode": 0,
-   "seconds": 36.2,
+   "seconds": 41.2,
    "failed_test": null,
    "passed_tests": [
     "4 frozen feature universe (2047): fields, roles, aliases, finer ",
@@ -28,7 +28,10 @@
     "29g Step 6.2 per-market rule text retained; deterministic parser",
     "29h Step 6.2 dataset fingerprint covers the per-market rule-text",
     "29i Step 6.2 July-2026 schedule: exact centicent fee + cost, ove",
-    "29j Step 6.2 CF exact decimal text survives to the settlement ro"
+    "29j Step 6.2 CF exact decimal text survives to the settlement ro",
+    "29k Step 6.3 CF exact decimal on every ingestion path (direct WS",
+    "29l Step 6.3 Kalshi event metadata marked fetched only after a p",
+    "29m Step 6.3 separate taker (1) / maker (0) default multipliers;"
    ]
   }
  },
@@ -56,8 +59,8 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
-    "failed_test": "FAIL  16 train-only scaler / selection / ridge; future-only feature not selected; holdout leak refused: AssertionError: ('mom.syn.noise', 0.010283732104335874, 0.018432066446273543)",
+    "seconds": 0.4,
+    "failed_test": "FAIL  16 train-only scaler / selection / ridge; future-only feature not selected; holdout leak refused: AssertionError: ('mom.syn.noise', 0.01028373210433583, 0.01843206644627352)",
     "passed_tests": []
    }
   },
@@ -70,8 +73,8 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
-    "failed_test": "FAIL  16 train-only scaler / selection / ridge; future-only feature not selected; holdout leak refused: AssertionError: ({'vol.syn.noise': 0.23703947881016363, 'vol.cf.rv.5m': -0.0366665847955236}, {'vol.cf.rv.5m': -0.03971493823448502, 'vol.syn.noise': -0.011174979917105997})",
+    "seconds": 0.4,
+    "failed_test": "FAIL  16 train-only scaler / selection / ridge; future-only feature not selected; holdout leak refused: AssertionError: ({'vol.syn.noise': 0.23703947881016357, 'vol.cf.rv.5m': -0.0366665847955236}, {'vol.cf.rv.5m': -0.039714938234485075, 'vol.syn.noise': -0.011174979917106021})",
     "passed_tests": []
    }
   },
@@ -98,7 +101,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.3,
     "failed_test": "FAIL  18 market-clustered bootstrap + sign-flip p-values: AssertionError: ",
     "passed_tests": []
    }
@@ -112,7 +115,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 4.3,
+    "seconds": 4.5,
     "failed_test": "FAIL  9 research matrix from a session, real mode skips synthetic, immutable cache, raw change invalidates: AssertionError: a settlement outcome changed a feature value",
     "passed_tests": []
    }
@@ -140,7 +143,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 23.7,
+    "seconds": 28.1,
     "failed_test": "FAIL  27 outputs: synthetic refused in real files; INSUFFICIENT_DATA files name requirements: AssertionError: synthetic written to real outputs",
     "passed_tests": []
    }
@@ -154,7 +157,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  14 missing data never zero: train mean + indicator, complete case, native: AssertionError: ",
     "passed_tests": []
    }
@@ -168,7 +171,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  10 dataset fingerprint covers every session, raw checksum, universe, labels, grid, assets: AssertionError: ",
     "passed_tests": []
    }
@@ -182,7 +185,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  24 research ledger: hash chain, tamper detection, holdout single use: AssertionError: holdout reused",
     "passed_tests": []
    }
@@ -210,7 +213,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.3,
     "failed_test": "FAIL  6 Coinbase sequence validator: consistent / contradicts / unverified / synthetic; features fail closed: AssertionError: ambiguous: global 0.008002667555851951, per-channel 0.027685123415610406, per-product 1.0",
     "passed_tests": []
    }
@@ -266,7 +269,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  29e Step 6.1 ridge lambda: market-level, close-group, purged inner split: AssertionError: ",
     "passed_tests": []
    }
@@ -294,7 +297,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.3,
     "failed_test": "FAIL  29a Step 6.1 contract rules: AT_LEAST equality -> YES, official precision, ties, unknown rules fail closed, versions: AssertionError: ",
     "passed_tests": []
    }
@@ -364,7 +367,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  29i Step 6.2 July-2026 schedule: exact centicent fee + cost, overrides, historical schedules: AssertionError: (1, '0.50', {'raw_fee': Decimal('0.017500'), 'fee': Decimal('0.02'), 'position_cost': Decimal('0.50'), 'total': Decimal('0.52'), 'rounding': 'ROUND_UP_FEE_PLUS_COST_TO_CENTICENT', 'sch",
     "passed_tests": []
    }
@@ -378,7 +381,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  29i Step 6.2 July-2026 schedule: exact centicent fee + cost, overrides, historical schedules: AssertionError: ",
     "passed_tests": []
    }
@@ -408,6 +411,48 @@
     "returncode": 1,
     "seconds": 0.2,
     "failed_test": "FAIL  29j Step 6.2 CF exact decimal text survives to the settlement rounding: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S28",
+   "mutation": "direct CF ingestion accepts a lossy binary-float round trip and loses value_text",
+   "tests": [
+    "cfpaths"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  29k Step 6.3 CF exact decimal on every ingestion path (direct WS, Kalshi wrapper, offline import, REST); lossy floats fail closed: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S29",
+   "mutation": "an event ticker is marked fetched before the event metadata request succeeds",
+   "tests": [
+    "eventretry"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  29l Step 6.3 Kalshi event metadata marked fetched only after a parsed + retained response; retries back off: AssertionError: (True, 1, {'KXBTC15M-26SEP211030': (1, 1790000402000)})",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S30",
+   "mutation": "maker fee calculation silently reuses the taker default multiplier of 1",
+   "tests": [
+    "makerfee"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  29m Step 6.3 separate taker (1) / maker (0) default multipliers; no inferred maker override; fee provenance names: AssertionError: ",
     "passed_tests": []
    }
   }

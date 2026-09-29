@@ -53,8 +53,8 @@ from feature_eval import universe as UV                                         
 EARLIER_FINGERPRINTS = {
     "legacy_strategy": "8d94f241e8fc8edadc76058e1f12f430b6e4f499f4c0a30fba1cb5cf07dad82a",
     "extended_strategy": "784141876a1b7f4c9f605036ef1358a6a3ea51ef32fced1f80f74045a6adef8c",
-    "settlement": "4884524a795f0e2cc63bc561074d00e2a2351bba4f0f1ef3cf7092803db17aad",    # Step 6.2; OLD ba4e50c3... (6.1), 3eba791c... (Steps 2-6)
-    "market_data": "609905956c9e6120c1021f3f72017db87ee5eeaeedac236bf822d630473e3f5f",   # Step 6.2 metadata extension; OLD 969cec83e8b9912e1fb91d02e8663acc943424dce7d33456b8850b0fb58297fd
+    "settlement": "b205709349492b71c5d50a93232bdceeb0be514151b554132e46d466bff8ad5c",    # Step 6.3; OLD 4884524a... (6.2), ba4e50c3... (6.1), 3eba791c... (Steps 2-6)
+    "market_data": "ca98d418bf40075a36a86d277390a9a093cbf02e468bc44474bc538c597c0212",   # Step 6.3 exact CF decode + event retry; OLD 609905956c9e6120... (6.2), 969cec83e8b9912e... (Steps 3-6.1)
     "perp_data": "90543ddff68e9dece7443fd9a7d876070f14a06d008a013e8980cb6aa292758c",
     "microstructure": "695d8e7741287c0bbac40ae9835148e4a0fbcd0e517669784aae647a8dcb0799",
 }
@@ -1468,6 +1468,265 @@ def test_cf_exact_decimal():
         assert repr(float(t)) == t or __import__("decimal").Decimal(repr(float(t))) == __import__("decimal").Decimal(t)
 
 
+# ═══════════════════ 29k-29m Step 6.3 final pre-collection hardening ═══════════════════
+RAW_TIE = "99999.994999999999999"            # 20 significant digits: the binary float is 99999.995, a 2-dp .5 tie
+
+
+def _cf_market():
+    from settlement.types import SettlementMarket
+    return SettlementMarket("KXBTC15M-T63EX", "BTC", LATER, "BRTI", strike=100000.0, series="KXBTC15M")
+
+
+def _cf_ticks():
+    return range(LATER - 61_000, LATER + 1, 1000)
+
+
+def _assert_exact_settlement(obs):
+    from settlement.reconstruction import reconstruct
+    assert obs and all(o.value_text == RAW_TIE for o in obs), {o.value_text for o in obs}
+    r = reconstruct(_cf_market(), obs)
+    assert r.settlement_value == 99999.99 and r.reconstructed_outcome == "no" and r.settlement["status"] == "OK", \
+        (r.settlement_value, r.reconstructed_outcome, r.settlement)
+
+
+def _import_script():
+    import importlib
+    sd = os.path.join(HERE, "scripts")
+    if sd not in sys.path:
+        sys.path.insert(0, sd)
+    return importlib.import_module("settlement_import")
+
+
+def test_cf_exact_all_paths():
+    """Step 6.3: the exact CF decimal survives EVERY ingestion path (direct websocket, Kalshi wrapper, offline
+    websocket import, REST / history import); a value that already went through a binary float fails closed."""
+    from market_data.clock import FakeClock
+    from market_data.collector import Collector
+    from market_data.replay import load_sessions
+    from market_data.sources.base import Ctx, Sequencer
+    from market_data.sources.cf import CfDirectAdapter, CfViaKalshiAdapter
+    from market_data.types import EventType
+    from settlement.cache import load as load_store
+    from settlement.cf_history import parse_cfb_historical, parse_cfb_historical_text
+    from settlement.cf_live import parse_cfb_frame, parse_kalshi_cfb_message
+    from settlement.schemas import (CF_DOC_VALUE, CFB_REST_ELEMENT, CFB_REST_HISTORICAL, CFB_WS_VALUE,
+                                    LEGACY_NUMERIC_SCHEMA_SUFFIX)
+    from settlement.types import SettlementObservation
+    assert float(RAW_TIE) == 99999.995 and repr(float(RAW_TIE)) != RAW_TIE          # the adversarial boundary
+    # documented provider contract: value is a decimal STRING; JSON numbers are legacy / non-standard only
+    assert CF_DOC_VALUE == ("str",)
+    assert CFB_WS_VALUE.version == CFB_REST_HISTORICAL.version == CFB_REST_ELEMENT.version == 2
+    assert "STRING" in CFB_WS_VALUE.notes and "legacy" in CFB_WS_VALUE.notes and "legacy" in CFB_REST_HISTORICAL.notes
+
+    def frame_text(t, numeric):
+        v = RAW_TIE if numeric else f'"{RAW_TIE}"'
+        return '{"type":"value","id":"BRTI","value":%s,"time":%d}' % (v, t)
+
+    # (1) DIRECT CF websocket raw text -> Collector -> adapter -> MarketEvent (stored, replayed) -> settlement store
+    #     -> SettlementObservation -> reconstruction. Documented STRING and legacy NUMBER both keep the exact text.
+    for numeric in (False, True):
+        d, store = tmpdir(), os.path.join(tmpdir(), "settle.jsonl")
+        clock = FakeClock(LATER - 62_000)
+        ad = CfDirectAdapter(["BTC"])
+        col = Collector(d, ["BTC"], {"cf_direct": {"adapter": ad, "enabled": True, "critical": True}}, clock,
+                        settlement_store_path=store, fsync=False,
+                        live_features=False)
+        for t in _cf_ticks():
+            clock.advance(t + 100 - clock.wall_ms())
+            col.on_message(ad, frame_text(t, numeric), clock.wall_ms(), clock.mono_ns())
+        col.close()
+        assert col.counts["failures"] == 0, col.counts
+        evs = [e for e in load_sessions([col.dir]).events if e.event_type == EventType.INDEX_VALUE]
+        assert len(evs) == 62 and all(e.payload["observation"]["value_text"] == RAW_TIE for e in evs)
+        replayed = [SettlementObservation.from_dict(e.payload["observation"]) for e in evs]
+        assert all(o.schema_id.endswith(LEGACY_NUMERIC_SCHEMA_SUFFIX) == numeric for o in replayed)
+        _assert_exact_settlement(replayed)
+        stored = [o for o in load_store(store).observations if o.index_id == "BRTI"]
+        assert len(stored) == 62
+        _assert_exact_settlement(stored)
+    # an already-decoded object (binary float) is NOT accepted lossily: it fails closed, no event, no observation
+    lossy = json.loads(frame_text(LATER, True))
+    assert isinstance(lossy["value"], float)
+    r = CfDirectAdapter(["BTC"]).parse(lossy, Ctx("s", Sequencer(), LATER + 100))
+    assert not r.events and r.failures and "VALUE_PRECISION_LOST" in r.failures[0].reason
+    o, iss = parse_cfb_frame(lossy)
+    assert o is None and iss[-1].kind == "VALUE_PRECISION_LOST"
+
+    # (2) Kalshi CF wrapper (live adapter): a numeric upstream token keeps its text, and is labelled legacy
+    ka, seq, wrapped = CfViaKalshiAdapter(["BTC"]), Sequencer(), []
+    for t in _cf_ticks():
+        msg = json.dumps({"type": "cfbenchmarks_value", "sid": 1, "seq": t // 1000,
+                          "msg": {"data": frame_text(t, True)}})
+        r = ka.parse(msg, Ctx("s", seq, t + 100))
+        assert not r.failures and len(r.events) == 1
+        wrapped.append(SettlementObservation.from_dict(r.events[0].payload["observation"]))
+    assert all(o.schema_id.endswith(LEGACY_NUMERIC_SCHEMA_SUFFIX) for o in wrapped)
+    _assert_exact_settlement([SettlementObservation(**dict(o.to_dict(), source="cfb_ws")) for o in wrapped])
+    o, _a, _i = parse_kalshi_cfb_message(json.dumps({"type": "cfbenchmarks_value",
+                                                     "msg": {"data": frame_text(LATER, False)}}))
+    assert o.value_text == RAW_TIE and not o.schema_id.endswith(LEGACY_NUMERIC_SCHEMA_SUFFIX)
+
+    # (3) OFFLINE websocket import (cf-ws-jsonl, capture envelope with an OBJECT message; kalshi-ws-jsonl)
+    si = _import_script()
+    t_dir = tmpdir()
+    cf_path, k_path = os.path.join(t_dir, "cf.jsonl"), os.path.join(t_dir, "k.jsonl")
+    with open(cf_path, "w") as f:
+        for i, t in enumerate(_cf_ticks()):
+            f.write('{"receive_ts_ms": %d, "seq": %d, "message": %s}\n' % (t + 100, i, frame_text(t, True)))
+    with open(k_path, "w") as f:
+        for i, t in enumerate(_cf_ticks()):
+            f.write(json.dumps({"receive_ts_ms": t + 100, "seq": i, "message": {
+                "type": "cfbenchmarks_value", "sid": 1, "msg": {"data": frame_text(t, True)}}}) + "\n")
+    recs, iss = si.parse_file("cf-ws-jsonl", cf_path)
+    assert not [i for i in iss if i.kind != "SCHEMA_EXTRA_FIELDS"], iss
+    _assert_exact_settlement([o for k, o in recs if k == "observation"])
+    recs, iss = si.parse_file("kalshi-ws-jsonl", k_path)
+    kobs = [o for k, o in recs if k == "observation"]
+    assert len(kobs) == 62 and all(o.value_text == RAW_TIE for o in kobs)
+    _assert_exact_settlement([SettlementObservation(**dict(o.to_dict(), source="cfb_ws")) for o in kobs])
+
+    # (4) CF REST / history raw JSON -> importer / parser -> SettlementObservation -> reconstruction
+    body = ('{"serverTime":"2026-09-29T00:00:00.000Z","payload":[%s]}'
+            % ",".join('{"value":%s,"time":%d}' % (RAW_TIE if i % 2 else f'"{RAW_TIE}"', t)
+                       for i, t in enumerate(_cf_ticks())))
+    hist, iss = parse_cfb_historical_text(body, "BRTI")
+    assert not iss and len(hist) == 62 and all(h.value_text == RAW_TIE for h in hist)
+    assert {h.schema_id for h in hist} == {"cfb_rest_historical_values@2",
+                                           "cfb_rest_historical_values@2" + LEGACY_NUMERIC_SCHEMA_SUFFIX}
+    rest_path = os.path.join(t_dir, "brti.json")
+    open(rest_path, "w").write(body)
+    recs, iss = si.parse_file("cf-rest-json", rest_path, "BRTI")
+    robs = [o for k, o in recs if k == "observation"]
+    assert not iss and [o.value_text for o in robs] == [RAW_TIE] * 62
+    # history carries no receive time; give it the live receipt so the same reconstruction applies
+    _assert_exact_settlement([SettlementObservation(**dict(o.to_dict(), source="cfb_ws", receive_ts_ms=o.event_ts_ms + 100))
+                              for o in robs])
+    # an already-decoded REST payload: numeric elements are rejected one by one (never lossy), strings survive
+    hist, iss = parse_cfb_historical(json.loads(body), "BRTI")
+    assert len(hist) == 31 and all(h.value_text == RAW_TIE for h in hist)
+    assert [i.kind for i in iss] == ["VALUE_PRECISION_LOST"] * 31
+
+
+def test_kalshi_event_retry():
+    """Step 6.3: an event ticker is marked fetched only after its event object was parsed and retained; transport
+    failures and malformed bodies stay retryable (capped exponential backoff, no hammering)."""
+    from market_data.clock import FakeClock
+    from market_data.collector import Collector
+    from market_data.kalshi_poller import KalshiPoller
+    from market_data.replay import load_sessions
+    from market_data.sources.kalshi import KalshiAdapter
+    from market_data.synthetic import FakeKalshi, World
+    from market_data.types import EventType
+
+    class Flaky(FakeKalshi):
+        def __init__(self, world, clock, script):
+            super().__init__(world, clock)
+            self.script, self.event_calls = list(script), 0
+
+        def get_json(self, url, params=None):
+            if "/events/" in url:
+                self.event_calls += 1
+                self.requests.append(("GET", url, dict(params or {})))
+                step = self.script.pop(0) if self.script else "ok"
+                if step == "transport":
+                    raise ConnectionError("HTTP 503 (transient)")
+                if step == "malformed":
+                    return {"unexpected": "shape"}
+                if step == "other":
+                    return {"event": {"event_ticker": "KXBTC15M-OTHER", "fee_multiplier_override": None}}
+            return super().get_json(url, params)
+
+    def run_scenario(script, polls=40):
+        w = World(["BTC"], C - 900_000, C + 900_000, seed=2)
+        clock = FakeClock(C - 600_000)
+        col = Collector(tmpdir(), ["BTC"], {}, clock, fsync=False, live_features=False)
+        fk = Flaky(w, clock, script)
+        ad = KalshiAdapter(["BTC"])
+        p = KalshiPoller(ad, fk, col, clock, trades_every=1, event_retry_s=2, event_retry_max_s=8)
+        et, first = None, None
+        for i in range(polls):
+            p.poll()
+            if first is None:
+                et = next(iter(ad.event_of.values()))
+                first = (et in p.events_fetched, fk.event_calls, dict(p.event_attempts))
+            clock.advance(1000)
+        col.close()
+        return p, ad, fk, et, first, col
+
+    # attempt 1 -> transport failure, attempt 2 -> valid event: metadata eventually captured
+    p, ad, fk, et, first, col = run_scenario(["transport"])
+    assert first[0] is False and first[1] == 1 and first[2][et][0] == 1, first      # retry eligible after failure
+    assert et in p.events_fetched and isinstance(ad.events.get(et), dict) and fk.event_calls == 2
+    assert not p.event_attempts
+    states = [e for e in load_sessions([col.dir]).events if e.event_type == EventType.MARKET_STATE]
+    fee_meta = [((e.payload.get("contract") or {}).get("fee_metadata") or {}) for e in states]
+    assert fee_meta and "fee_multiplier_override" in fee_meta[-1], fee_meta[-1]       # later snapshots carry it
+    assert col.manifest.disconnects.get("kalshi_event") == 1
+    # malformed body and a DIFFERENT event object: both remain retryable, then succeed
+    for bad in (["malformed"], ["other"], ["malformed", "transport", "malformed"]):
+        p, ad, fk, et, first, _col = run_scenario(bad)
+        assert first[0] is False and et in first[2], (bad, first)
+        assert et in p.events_fetched and fk.event_calls == len(bad) + 1, (bad, fk.event_calls)
+    # backoff: persistent failure is retried with capped exponential spacing, never every poll
+    p, ad, fk, et, first, _col = run_scenario(["transport"] * 100, polls=60)
+    assert et not in p.events_fetched and p.event_attempts[et][0] == fk.event_calls
+    assert 5 <= fk.event_calls <= 12, fk.event_calls                    # 60 s: 2, 4, 8, 8, ... s, not 60 attempts
+    # success path: exactly one GET per event, never re-fetched
+    p, ad, fk, et, first, _col = run_scenario([])
+    assert first[0] is True and fk.event_calls == 1
+
+
+def test_maker_taker_multipliers():
+    """Step 6.3: separate default taker / maker multipliers; maker never reuses the taker default; overrides apply
+    only where their semantics are documented; fee provenance hashes named accurately."""
+    D = __import__("decimal").Decimal
+    new = EC.KALSHI_GENERAL_2026_07_07
+    old = EC.KALSHI_GENERAL_PRE_2026_07_07
+    assert new.default_taker_multiplier == "1" and new.default_maker_multiplier == "0"
+    assert not hasattr(new, "default_multiplier") and not hasattr(new, "source_sha256")
+    fm = EC.FeeModel()
+    NEW = EC.JULY_2026_START_MS + 3_600_000
+    OLD = EC.JULY_2026_START_MS - 3_600_000
+    meta = {"fee_type": "general", "fee_multiplier": "1", "fee_type_override": None, "fee_multiplier_override": None}
+    ctx = {"fee_metadata": meta}
+    fills = [(D("0.50"), D(10))]
+    # taker: unchanged Step-6.2 arithmetic (default 1, captured multiplier, override precedence)
+    t = fm.fee(fills, "KXBTC15M-A", NEW, ctx)
+    assert t["fee"] == D("0.1750") and t["multiplier"] == D(1) and t["status"] == "FEE_VERIFIED"
+    assert fm.fee(fills, "KXBTC15M-A", NEW, {"fee_metadata": dict(meta, fee_multiplier_override="2")})["fee"] == D("0.3500")
+    assert fm.fee(fills, "KXBTC15M-A", NEW, None)["multiplier"] == D(1)                     # taker default 1
+    # maker: default 0 under the July-2026 schedule, never the taker default 1
+    mk = fm.fee(fills, "KXBTC15M-A", NEW, ctx, maker=True)
+    assert mk["multiplier"] == D(0) and mk["fee"] == D(0) and mk["multiplier_known"] is False
+    assert mk["status"] == "FEE_UNVERIFIED" and any("maker" in r for r in mk["reasons"])
+    assert fm.fee(fills, "KXBTC15M-A", NEW, None, maker=True)["multiplier"] == D(0)
+    # the generic (taker) fee_multiplier / override are NOT inferred to apply to maker fees
+    for m2 in (dict(meta, fee_multiplier="3"), dict(meta, fee_multiplier_override="2")):
+        assert fm.fee(fills, "KXBTC15M-A", NEW, {"fee_metadata": m2}, maker=True)["multiplier"] == D(0)
+    # an explicit maker-scoped multiplier in the fee context overrides the maker default
+    assert EC.MAKER_MULTIPLIER_FIELDS == ("maker_fee_multiplier",)
+    ex = fm.fee(fills, "KXBTC15M-A", NEW, {"fee_metadata": dict(meta, maker_fee_multiplier="1")}, maker=True)
+    assert ex["multiplier"] == D(1) and ex["fee"] == D("0.0438") and ex["multiplier_known"] is True
+    assert ex["status"] == "FEE_VERIFIED"
+    for bad in (True, "x", "-1"):
+        assert fm.fee(fills, "KXBTC15M-A", NEW, {"fee_metadata": dict(meta, maker_fee_multiplier=bad)},
+                      maker=True)["multiplier"] == D(0)
+    # the capture layer records no maker-scoped field (nothing undocumented is inferred at capture time)
+    from settlement.market_rules import FEE_FIELDS
+    assert not any("maker" in f for f in FEE_FIELDS)
+    # the pre-July schedule keeps its preserved (unverified) historical arithmetic, and is never used after July 7
+    assert old.default_maker_multiplier == "1" and fm.fee_dollars(10, 0.5, maker=True, ts_ms=OLD) == 0.05
+    assert fm.resolve("KXBTC15M-A", NEW) is new
+    # maker economics stay NOT_EVALUATED for research
+    assert EC.evaluate([])["maker"]["status"] == "NOT_EVALUATED"
+    # provenance naming: a hash of the locally encoded definition text is not the official document hash
+    import hashlib as _h
+    assert new.schedule_definition_sha256 == _h.sha256(new.source.encode()).hexdigest()
+    assert new.source_document_sha256 == "" and old.source_document_sha256 == ""
+    assert t["schedule_definition_sha256"] == new.schedule_definition_sha256 and t["source_document_sha256"] == ""
+    assert "schedule_source_sha256" not in t and fm.version == "fee_model_v4"
+
+
 # ═══════════════════ 27-29 fingerprint, docs, previous ═══════════════════
 def test_step6_fingerprint():
     ok, problems = S6FP.verify()
@@ -1513,6 +1772,12 @@ def test_docs_and_outputs():
                "fee_verified", "s27", "609905956c9e6120"):
         assert s_ in doc, s_
     assert {m["id"] for m in mut["mutations"]} >= {f"S{i}" for i in range(1, 28)}
+    for s_ in ("step 6.3", "loads_exact", "value_precision_lost", "legacy", "events_fetched", "default_maker_multiplier",
+               "schedule_definition_sha256", "source_document_sha256", "s28", "s29", "s30", "b205709349492b71",
+               "ca98d418bf40075a"):
+        assert s_ in doc, s_
+    assert "9c. exact cf decimals" in sdoc.lower() and "b2057093" in sdoc
+    assert {m["id"] for m in mut["mutations"]} >= {f"S{i}" for i in range(1, 31)}
 
 
 def test_previous_stages():
@@ -1564,6 +1829,9 @@ TESTS = [
     ("rulefp", "29h Step 6.2 dataset fingerprint covers the per-market rule-text hashes", test_rule_fingerprinting),
     ("fees62", "29i Step 6.2 July-2026 schedule: exact centicent fee + cost, overrides, historical schedules", test_fee_schedules_centicent),
     ("cfexact", "29j Step 6.2 CF exact decimal text survives to the settlement rounding", test_cf_exact_decimal),
+    ("cfpaths", "29k Step 6.3 CF exact decimal on every ingestion path (direct WS, Kalshi wrapper, offline import, REST); lossy floats fail closed", test_cf_exact_all_paths),
+    ("eventretry", "29l Step 6.3 Kalshi event metadata marked fetched only after a parsed + retained response; retries back off", test_kalshi_event_retry),
+    ("makerfee", "29m Step 6.3 separate taker (1) / maker (0) default multipliers; no inferred maker override; fee provenance names", test_maker_taker_multipliers),
     ("fingerprint", "29 separate Step-6 fingerprint; detects module changes; refuses silent rewrites", test_step6_fingerprint),
     ("docs", "30 docs + benchmark / mutation outputs", test_docs_and_outputs),
     ("previous", "31 all previous stage suites", test_previous_stages),

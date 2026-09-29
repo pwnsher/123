@@ -4,7 +4,8 @@ Mutation tests for the Step-6 evaluation framework's methodological rules (offli
 
     py scripts/mutation_test_step6.py [--out analysis_output/step6_mutation_results.json] [--only S1,S7]
 
-Each mutation breaks ONE rule (S1-S14 of the Step-6 brief, S15-S20 of Step 6.1, S21-S27 of Step 6.2) in a TEMPORARY copy of the repository and runs the relevant
+Each mutation breaks ONE rule (S1-S14 of the Step-6 brief, S15-S20 of Step 6.1, S21-S27 of Step 6.2, S28-S30 of
+Step 6.3) in a TEMPORARY copy of the repository and runs the relevant
 Stage-22 tests there; CAUGHT = those tests fail. Control: the unmutated copy must PASS the same tests. The working tree
 is never modified.
 """
@@ -132,6 +133,20 @@ MUTATIONS = [
     ("S27", "settlement sample values are forced through a lossy float round-trip before the official rounding",
      [("settlement/engine.py", "        key = exact(obs.value_text or obs.value)", "        key = exact(obs.value)", 1)],
      ["cfexact"]),
+    ("S28", "direct CF ingestion accepts a lossy binary-float round trip and loses value_text",
+     [("market_data/sources/cf.py", "        return loads_exact(text)            # CF values keep their exact decimal token (Step 6.3)",
+       "        return json.loads(text)", 1),
+      ("settlement/cf_live.py", "    if value_origin(raw) == VALUE_BINARY_FLOAT:\n        return ParseIssue(",
+       "    if False:\n        return ParseIssue(", 1)],
+     ["cfpaths"]),
+    ("S29", "an event ticker is marked fetched before the event metadata request succeeds",
+     [("market_data/kalshi_poller.py", "        url, params = self.adapter.event_url(et)\n        counts = (0, 0, 0)\n",
+       "        self.events_fetched.add(et)\n        url, params = self.adapter.event_url(et)\n        counts = (0, 0, 0)\n", 1)],
+     ["eventretry"]),
+    ("S30", "maker fee calculation silently reuses the taker default multiplier of 1",
+     [("feature_eval/economics.py", "        return Decimal(schedule.default_maker_multiplier), override_state, False, reasons",
+       "        return Decimal(schedule.default_taker_multiplier), override_state, False, reasons", 1)],
+     ["makerfee"]),
 ]
 
 

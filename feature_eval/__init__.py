@@ -28,7 +28,7 @@ Layers
 """
 
 STEP6_SCHEMA_VERSION = 1
-FEATURE_UNIVERSE_VERSION = "feature_universe_v3"     # v3 (Step 6.2): settlement source fingerprint re-baselined
+FEATURE_UNIVERSE_VERSION = "feature_universe_v4"     # v4 (Step 6.3): settlement + market-data source fingerprints re-baselined (v3: Step 6.2)
 LABEL_VERSION = "labels_v3"                         # v3 (Step 6.2): per-market rule provenance gates gold labels
 APP_VERSION = "kalshi-local-step6"
 RESEARCH_ONLY = True

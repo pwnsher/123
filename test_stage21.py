@@ -99,12 +99,13 @@ PRODUCTION_UNTOUCHED = {
     "kalshi_bot.py": "8278bdc4d2adaa117e2fdcce101924181d4bc64d3987b584a69741eeb474cd5d",
     "run_local.py": "0749c2a83b3c219ed63dc5d994253883983f9b6b4ebc81a2b72f46b067e53044",
 }
-EARLIER_FINGERPRINTS = {"market_data": "609905956c9e6120c1021f3f72017db87ee5eeaeedac236bf822d630473e3f5f",   # Step 6.2 (versioned Kalshi rule/fee metadata); OLD 969cec83e8b9912e1fb91d02e8663acc943424dce7d33456b8850b0fb58297fd
+EARLIER_FINGERPRINTS = {"market_data": "ca98d418bf40075a36a86d277390a9a093cbf02e468bc44474bc538c597c0212",   # Step 6.3 (exact CF decode + event-metadata retry); OLD 609905956c9e6120c1021f3f72017db87ee5eeaeedac236bf822d630473e3f5f (6.2), 969cec83e8b9912e1fb91d02e8663acc943424dce7d33456b8850b0fb58297fd (Steps 3-6.1)
                         "perp_data": "90543ddff68e9dece7443fd9a7d876070f14a06d008a013e8980cb6aa292758c",
                         # Step 6.1 deliberately re-baselined settlement (versioned contract rules):
                         # OLD 3eba791cfe8163cc17406ecdbd0c0e04abfe178afb7b6695565a3484318ff2be (Steps 2-6)
                         # Step 6.2 OLD ba4e50c39ab593599ab601bcd5ff0e3b6095d7f8523e252a881cdf6529e44f0a (per-market rule provenance)
-                        "settlement": "4884524a795f0e2cc63bc561074d00e2a2351bba4f0f1ef3cf7092803db17aad"}
+                        # Step 6.3 OLD 4884524a795f0e2cc63bc561074d00e2a2351bba4f0f1ef3cf7092803db17aad (exact CF decimals on every path)
+                        "settlement": "b205709349492b71c5d50a93232bdceeb0be514151b554132e46d466bff8ad5c"}
 C = 1_790_001_000_000                         # the close of the test market (15-minute boundary)
 START = C - 420_000
 DUR_S = 520

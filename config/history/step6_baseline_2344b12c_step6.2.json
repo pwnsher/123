@@ -111,57 +111,53 @@
    "UNSTABLE",
    "UNAVAILABLE"
   ],
-  "feature_universe_version": "feature_universe_v4",
+  "feature_universe_version": "feature_universe_v3",
   "fee_model": {
    "schedules": [
     {
-     "default_maker_multiplier": "0",
-     "default_taker_multiplier": "1",
+     "default_multiplier": "1",
      "effective_from_ms": 1783396800000,
      "effective_to_ms": null,
      "excluded_series": [],
      "fee_type": "general",
      "maker_coefficient": "0.0175",
-     "note": "general schedule; taker multiplier default 1, maker multiplier default 0 unless otherwise indicated; specific listed products are excepted (the list is not encoded: the captured fee_type / override decides per event)",
+     "note": "general schedule; specific listed products are excepted (the list is not encoded: the captured fee_type / override decides per event)",
      "rounding": "ROUND_UP_FEE_PLUS_COST_TO_CENTICENT",
-     "schedule_definition_sha256": "661381de03ccddc767236376f1791686a04b0e7ddaf2357b66d868eaa13f8b06",
      "schedule_id": "kalshi_general_2026_07_07",
      "series_scope": [
       "*"
      ],
      "source": "General taker fee M * 0.07 * C * P * (1-P); maker M * 0.0175 * C * P * (1-P); fee + positionCost rounded up to a centicent (Fee Schedule for July 2026 - 7.7.26 Update, as supplied by the project owner)",
-     "source_document_sha256": "",
+     "source_sha256": "661381de03ccddc767236376f1791686a04b0e7ddaf2357b66d868eaa13f8b06",
      "source_url": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
      "taker_coefficient": "0.07",
      "verified": true,
      "version": "7.7.26"
     },
     {
-     "default_maker_multiplier": "1",
-     "default_taker_multiplier": "1",
+     "default_multiplier": "1",
      "effective_from_ms": null,
      "effective_to_ms": 1783396800000,
      "excluded_series": [],
      "fee_type": "general",
      "maker_coefficient": "0.0175",
-     "note": "historical arithmetic preserved for old periods (both multipliers 1 as previously modelled); start, maker default and exceptions unknown -> unverified, never a future schedule",
+     "note": "historical arithmetic preserved for old periods; start and exceptions unknown -> unverified",
      "rounding": "ROUND_UP_FEE_TO_CENT",
-     "schedule_definition_sha256": "bd0ef424b9d9e731dd12e49a4dce98ad75f34ad01efecbd33b6b7287cc121db7",
      "schedule_id": "kalshi_general_pre_2026_07_07",
      "series_scope": [
       "*"
      ],
      "source": "earlier general schedule as previously modelled: fee = round up (0.07 x C x P x (1 - P)) to a cent",
-     "source_document_sha256": "",
+     "source_sha256": "",
      "source_url": "",
      "taker_coefficient": "0.07",
      "verified": false,
      "version": "pre-7.7.26"
     }
    ],
-   "version": "fee_model_v4"
+   "version": "fee_model_v3"
   },
-  "fee_model_fingerprint": "882ec30ac0efa786ede5895b4cbc13de4455ea3f668fcd8d2b118065a1449501",
+  "fee_model_fingerprint": "b1b0843cf51ae0cc861237134a4162d1b1053db60fec97b0795dcb8eb27aff5c",
   "hypotheses": [
    [
     "H01",
@@ -292,7 +288,7 @@
   },
   "step6_schema_version": 1
  },
- "defaults_sha256": "21361474234f8ccaffde1de9f27ab93dfee4656df2278008664209c8709e3030",
+ "defaults_sha256": "23b89b5b1e4056e7a138f6fb956e8f63485197c2d3229e12718929ca6b7861c6",
  "existing_perp_veto_files": {
   "analyze_perp_integration.py": "d34215be9b8a8fc8c9a51534dae47428b5b6000e0adb4b57f09362a8b2694c35",
   "analyze_perp_predictive.py": "6a783a753a9f1f9b118f1936aec5c2835dadc9f741f36b0ecf4758561403773d",
@@ -310,17 +306,17 @@
   "step5_baseline_manifest.json": "6a2994ff8bdc2d36b41608515c77a13d71fd371030487b5e62b2b064cd096db8"
  },
  "existing_perp_veto_fingerprint": "499c1e16da5d9cc763babe7dea31db7104ebc3f1460a17241af83240c8de523b",
- "feature_universe_fingerprint": "cc25a506c35a4adbb5aa46e12f56eb48e376119726090895e5d75808e4a14ef8",
+ "feature_universe_fingerprint": "edef198fb82913f244982a75382d61a5d7db9b0d21d9bd3218c587c8d1013fd8",
  "feature_universe_records": 2047,
  "format": "step6_fingerprint_v1/canonical_ast_v2_sha256",
  "modules": {
-  "feature_eval/__init__.py": "6701ca2be0349a1c0b1290fc3a00d3136183b67978d15acd2c4719a7844ec41a",
+  "feature_eval/__init__.py": "65c71bb4179ec6daa442e4423d2b364f5f74d29b630cb2d01652c02d1f3af80d",
   "feature_eval/ablation.py": "0c277ae1ec80d6504ddedc6fc0c5bfa9e80eab0fab265b854d125c29c96f9ef6",
   "feature_eval/bootstrap.py": "87197870e8e90cc3533cd568d870b0f6014d4b78e41410e900c94b2b1f5daece",
   "feature_eval/calibration.py": "d9c4915cccc1202fe21649a2d6904d7f5a6668359934643dda3de174a4c9d575",
   "feature_eval/coinbase_seq.py": "9033fa9aaa23b6149e6d795bf54d49fdf83e6a611743f9b86fc229ea0e30034e",
   "feature_eval/dataset.py": "d21a03dc3bbeead8ab665e2c85ca2df822224da198b51c3e1645523277070eac",
-  "feature_eval/economics.py": "672e023bc5ecad5dff0674f287d7052606528406ed7d26e045bd5b7e8706e519",
+  "feature_eval/economics.py": "76330e5d5c4658a81ca8297fcc6ae476d3d9bf0364edb67415457ada948018ba",
   "feature_eval/experiment.py": "3f26809d40b80789bed6afe9f1c0effbee7a3432f9ede4a08b0a62fcd52eaf12",
   "feature_eval/fingerprint.py": "ac6aa648f95fb4d0e8525f41d767b7df41505c2a8a3a1044ec90e50f51a3f9c3",
   "feature_eval/gates.py": "d422a82be40d39480d2f51cc789d47dbd40924595d03b15bcaa0dfdd06ca35bc",
@@ -349,5 +345,5 @@
   "run_local.py": "0749c2a83b3c219ed63dc5d994253883983f9b6b4ebc81a2b72f46b067e53044",
   "strategy_fingerprint.py": "4b8a3383d08d75f896fc36c0f0032f780ac37736f923b2186c5c6d11f6256eec"
  },
- "step6_fingerprint": "7fa394cfe38c37b8ed54cedee679ab32190e40a90ab0ce74b43b375e57a362fb"
+ "step6_fingerprint": "2344b12c3ab803609d79d57815023e97783f5e8e8a2be462213a4f6c9a9a2d1c"
 }

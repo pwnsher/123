@@ -222,6 +222,7 @@ no issues. `compileall`: clean on 3.10–3.13.
 | 2026-09-28 | Step 6 | **none** for the strategy, settlement, market-data, perp-data, microstructure engines and the EXISTING perp veto chain (fingerprints unchanged). New, separate `config/step6_baseline.json` (`7469fc0f…`) and frozen `config/step6_feature_universe.json` (`e4c856ba…`) | Step-1 artifacts identical (stage 22 test 1); 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…`, settlement `3eba791c…`, market-data `969cec83…`, perp-data `90543ddf…`, microstructure `695d8e77…`, perp veto `499c1e16…` verify unchanged; stages 1–22 green on 3.10–3.13 (421 checks); 14/14 mutations caught; real-data result INSUFFICIENT_DATA |
 | 2026-09-29 | Step 6.1 | **Deliberate, versioned research-settlement correction.** The settlement fingerprint `3eba791c…` → `ba4e50c3…` (versioned contract rules: AT_LEAST equality → YES, official precision, precision-aware verification, engine v2). Step-6 universe v1 `e4c856ba…` → v2 `920c0a8a…`; Step-6 baseline `7469fc0f…` → `bc7f1b47…` (OLD / NEW / WHY in STEP6_FEATURE_EVALUATION.md §18 and SETTLEMENT_ENGINE.md; old files archived in `config/history/`) | Step-1 artifacts identical; 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…`, market-data `969cec83…`, perp-data `90543ddf…`, microstructure `695d8e77…`, perp veto `499c1e16…` unchanged; production P(UP), calls, thresholds, windows, stops, sizing, execution and LIVE refusal unchanged; mutations S1–S20 caught; real-data result INSUFFICIENT_DATA |
 | 2026-09-29 | Step 6.2 | **Deliberate, versioned provenance pass.** Settlement `ba4e50c3…` → `4884524a…` (per-market rule provenance, exact CF text); market-data `969cec83…` → `60990595…` (versioned Kalshi rule / fee metadata capture; no feature changed); universe v2 → v3 `edef198f…`; Step-6 baseline `bc7f1b47…` → `2344b12c…`; fee model v3 (OLD / NEW / WHY in STEP6_FEATURE_EVALUATION.md §19; old files archived in `config/history/`) | Step-1 artifacts identical; 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…`, perp-data `90543ddf…`, microstructure `695d8e77…`, perp veto `499c1e16…` unchanged; production P(UP), calls, thresholds, windows, stops, sizing, execution and LIVE refusal unchanged; mutations S1–S27 caught; real-data result INSUFFICIENT_DATA |
+| 2026-09-29 | Step 6.3 | **Final pre-collection hardening (small, versioned).** Settlement `4884524a…` → `b2057093…` (exact CF decimals on every ingestion path; CF value schemas v2, documented value = string, JSON numbers legacy / exact-token only, lossy floats fail closed); market-data `60990595…` → `ca98d418…` (exact CF decoding in both CF adapters; Kalshi event-metadata retry with backoff; no feature changed); universe v3 → v4 `cc25a506…` (embedded source fingerprints only); Step-6 baseline `2344b12c…` → `7fa394cf…`; fee model v4 (separate maker / taker default multipliers; `schedule_definition_sha256` / `source_document_sha256`) (OLD / NEW / WHY in STEP6_FEATURE_EVALUATION.md §20; old files archived in `config/history/`) | Step-1 artifacts identical; 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…`, perp-data `90543ddf…`, microstructure `695d8e77…`, perp veto `499c1e16…` unchanged; production P(UP), confidence, calls, NO_CALL, thresholds, entry window, stops, sizing, execution and LIVE refusal unchanged; mutations S1–S30 caught; real-data result INSUFFICIENT_DATA |
 
 ### Step 2 notes
 
@@ -272,6 +273,18 @@ no issues. `compileall`: clean on 3.10–3.13.
   * docs.
 * No existing module changed: `market_data/` and `settlement/` are untouched (their fingerprints verify), and
   so are all perp-veto chain files and `kalshi_dashboard.py`. No OLD/NEW/WHY re-baseline was needed.
+
+### Step 6.3 notes (final pre-collection hardening)
+
+* Every CF ingestion path (direct websocket, Kalshi wrapper, offline websocket import, REST / history import) decodes
+  with `settlement.schemas.loads_exact`. The documented value is a decimal string; a JSON number is a legacy path
+  that keeps its exact token. A value that already went through a binary float fails closed (`VALUE_PRECISION_LOST`).
+* A Kalshi event ticker is marked fetched only after its event object was parsed and retained. Failures stay
+  retryable, with capped exponential backoff.
+* Fee schedules carry separate default taker (1) and maker (0, July 2026) multipliers. Maker economics stay
+  NOT_EVALUATED. `source_sha256` is renamed `schedule_definition_sha256`, plus `source_document_sha256` (empty: the
+  official document bytes were not captured).
+* Earlier-stage test edits: `test_stage21.py` (new settlement and market-data pins, OLD values in comments).
 
 ### Step 6.2 notes (provenance)
 

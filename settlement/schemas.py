@@ -28,9 +28,57 @@ VERIFIED = "VERIFIED_AGAINST_REPOSITORY_CODE"
 UNVERIFIED = "UNVERIFIED_FROM_PUBLIC_DOC_DESCRIPTIONS"
 
 
+class JsonNumberText(str):
+    """The VERBATIM source text of a JSON NUMBER token, decoded without ever building a binary float (Step 6.3).
+    Structurally it is still a JSON number (_jtype -> "float"); its value is the provider's exact decimal."""
+    __slots__ = ()
+
+
+def loads_exact(text):
+    """json.loads that keeps every non-integer JSON number as its original token (JsonNumberText). Integers are
+    already exact (Python int). Used by EVERY CF Benchmarks ingestion path (direct websocket, Kalshi wrapper,
+    offline websocket import, REST / history import) so a numeric value can never lose its representation."""
+    return json.loads(text, parse_float=JsonNumberText)
+
+
+def plain_json(obj):
+    """Undo loads_exact for NON-settlement uses (control / note records): JsonNumberText -> float, recursively."""
+    if isinstance(obj, JsonNumberText):
+        return float(obj)
+    if isinstance(obj, dict):
+        return {k: plain_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [plain_json(v) for v in obj]
+    return obj
+
+
+# CF value provenance (Step 6.3): how the value arrived on the wire
+VALUE_STRING = "STRING"                          # documented provider contract: a decimal STRING
+VALUE_JSON_NUMBER_EXACT = "LEGACY_JSON_NUMBER"   # non-standard JSON number, original token preserved exactly
+VALUE_JSON_INTEGER = "LEGACY_JSON_INTEGER"       # non-standard JSON integer (exact by construction)
+VALUE_BINARY_FLOAT = "BINARY_FLOAT_LOSSY"        # already decoded to a binary float: token lost -> REJECTED
+LEGACY_NUMERIC_SCHEMA_SUFFIX = "+legacy_numeric_value"
+
+
+def value_origin(raw):
+    if isinstance(raw, JsonNumberText):
+        return VALUE_JSON_NUMBER_EXACT
+    if isinstance(raw, str):
+        return VALUE_STRING
+    if isinstance(raw, bool):
+        return None
+    if isinstance(raw, int):
+        return VALUE_JSON_INTEGER
+    if isinstance(raw, float):
+        return VALUE_BINARY_FLOAT
+    return None
+
+
 def _jtype(v):
     if v is None:
         return "null"
+    if isinstance(v, JsonNumberText):
+        return "float"
     if isinstance(v, bool):
         return "bool"
     if isinstance(v, int):
@@ -141,15 +189,24 @@ def validate(obj, spec):
 # ───────────────────────── specs ─────────────────────────
 NUM = ("int", "float", "str")          # numeric values may arrive as JSON numbers or decimal strings
 INT_TS = ("int",)
+# CF Benchmarks index values (Step 6.3). The DOCUMENTED provider contract is a decimal STRING (websocket value
+# frame example: "value": "8835.56"; REST values / history likewise). A JSON number is NOT part of the documented
+# schema: it is accepted only as a LEGACY / NON-STANDARD compatibility path, and only when the raw JSON was decoded
+# with loads_exact (token preserved). An already-decoded binary float fails closed (VALUE_PRECISION_LOST).
+CF_DOC_VALUE = ("str",)
+CF_LEGACY_NUMERIC_VALUE = ("int", "float")
+CF_VALUE = CF_DOC_VALUE + CF_LEGACY_NUMERIC_VALUE
 
 CFB_WS_VALUE = SchemaSpec(
-    "cfb_ws_value", 1,
-    (FieldSpec("type", ("str",), True, "value"), FieldSpec("id", ("str",)), FieldSpec("value", NUM),
+    "cfb_ws_value", 2,
+    (FieldSpec("type", ("str",), True, "value"), FieldSpec("id", ("str",)), FieldSpec("value", CF_VALUE),
      FieldSpec("time", INT_TS), FieldSpec("amendTime", ("int", "null"), False),
      FieldSpec("repeatOfPreviousValue", ("bool",), False)),
     timestamp_field="time", value_field="value", strict_extra=True, verification=UNVERIFIED,
     notes="CF Benchmarks websocket 'value' frame: {type:'value', id, value, time(ms), amendTime?, "
-          "repeatOfPreviousValue?}. Also the raw upstream frame inside Kalshi's cfbenchmarks_value channel.")
+          "repeatOfPreviousValue?}. Also the raw upstream frame inside Kalshi's cfbenchmarks_value channel. "
+          "v2 (Step 6.3): value is documented as a decimal STRING; a JSON number is legacy / non-standard and is "
+          "accepted only with its exact token (observation schema_id gets " + LEGACY_NUMERIC_SCHEMA_SUFFIX + ").")
 
 KALSHI_WS_CFB_VALUE = SchemaSpec(
     "kalshi_ws_cfbenchmarks_value", 1,
@@ -163,15 +220,16 @@ KALSHI_WS_CFB_VALUE = SchemaSpec(
           "msg.data plus Kalshi-computed trailing 60-s and quarter-hour final-minute averages.")
 
 CFB_REST_HISTORICAL = SchemaSpec(
-    "cfb_rest_historical_values", 1,
-    (FieldSpec("payload", ("list",)), FieldSpec("payload[].value", NUM), FieldSpec("payload[].time", INT_TS)),
+    "cfb_rest_historical_values", 2,
+    (FieldSpec("payload", ("list",)), FieldSpec("payload[].value", CF_VALUE), FieldSpec("payload[].time", INT_TS)),
     timestamp_field="payload[].time", value_field="payload[].value", strict_extra=False, verification=UNVERIFIED,
     notes="CF Benchmarks REST historical values (directly or via Kalshi's REST passthrough): "
-          "{payload:[{value, time(ms)}, ...]} sorted by time ascending.")
+          "{payload:[{value, time(ms)}, ...]} sorted by time ascending. v2 (Step 6.3): value documented as a "
+          "decimal STRING; JSON numbers are legacy / non-standard (exact token required).")
 
 CFB_REST_ELEMENT = SchemaSpec(
-    "cfb_rest_historical_values.element", 1,
-    (FieldSpec("value", NUM), FieldSpec("time", INT_TS)),
+    "cfb_rest_historical_values.element", 2,
+    (FieldSpec("value", CF_VALUE), FieldSpec("time", INT_TS)),
     timestamp_field="time", value_field="value", strict_extra=True, verification=UNVERIFIED)
 
 KALSHI_MARKET = SchemaSpec(

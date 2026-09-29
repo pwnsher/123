@@ -376,12 +376,18 @@ quantity; Step 6.2):
   trades.
 * The multiplier M comes from captured Kalshi metadata. A market / event `fee_multiplier_override` beats the series /
   market `fee_multiplier`. `fee_type_override` must be one the schedule prices.
+* **Default multipliers (Step 6.3).** Taker and maker defaults are separate: July-2026 general schedule taker **1**,
+  maker **0** ("unless otherwise indicated").
+  * The captured multipliers apply to taker fees only.
+  * A maker multiplier comes only from an explicitly maker-scoped field (`maker_fee_multiplier`, never captured today).
+* Every schedule is in the fee-model fingerprint, including its effective dates and its `schedule_definition_sha256`
+  (the hash of the definition text encoded here, NOT of the official PDF). `source_document_sha256` is empty: the
+  document bytes were not captured.
 * The 15-minute crypto series are **not** hardcoded as general-fee markets: the schedule lists excepted products, and
   the captured fee type or override decides for each event.
 * **`FEE_VERIFIED`** requires all of: a verified schedule version, the trade time inside an interval with a known
   start, a captured override state, a captured multiplier, and a known rounding rule.
 * Otherwise the result is `FEE_UNVERIFIED`, or `FEE_UNKNOWN` when no schedule covers the trade.
-* Every schedule, including its source hash and effective dates, is in the fee-model fingerprint.
 
 **Maker EV is `NOT_EVALUATED`.** The fill probability of a resting order is unknown from the displayed book; a maker
 EV needs a fill model.
@@ -651,3 +657,93 @@ met.
 
 The previous files are archived in `config/history/`. The legacy / extended strategy, perp-data, microstructure and
 perp-veto fingerprints are unchanged.
+
+## 20. Step 6.3 — final pre-collection hardening
+
+A small patch. It adds no features and no models, does not change production, and does not start Step 7.
+
+**CF documented schema audit.**
+
+* **WebSocket.** The CF Benchmarks value-channel documentation example gives `"value": "8835.56"`, a decimal
+  STRING.
+* **REST.** The values / history endpoints are documented by the project owner as also exposing `value` as a STRING.
+  The docs host was not reachable from the build environment, so this was not re-read here.
+* **Schema versions.** `cfb_ws_value`, `cfb_rest_historical_values` and its element spec are now **v2**. The value
+  type is `CF_DOC_VALUE = ("str",)`, the documented form.
+* **JSON numbers.** A JSON number is **not** claimed as part of the documented schema. It is accepted only as a
+  LEGACY / NON-STANDARD compatibility path, and only with its exact token preserved (policy B). Observations taken
+  on that path carry the `schema_id` suffix `+legacy_numeric_value`.
+
+**Exact decimals on every CF ingestion path.** One decoder, `settlement.schemas.loads_exact`, keeps every
+non-integer JSON number as its verbatim token (`JsonNumberText`). The structure fingerprint is unchanged: the token
+still reads as a JSON number. The decoder is used by:
+
+* direct CF websocket capture (`CfDirectAdapter.decode`);
+* the Kalshi CF wrapper (`CfViaKalshiAdapter.decode` and `parse_kalshi_cfb_message` for `msg.data`);
+* offline websocket import (`settlement_import.py` cf-ws-jsonl / kalshi-ws-jsonl, the capture envelope and the
+  message);
+* CF REST / history import (`parse_cfb_historical_text`; `settlement_import.py` cf-rest-json).
+
+A value that already went through a binary float (a caller used plain `json.loads`) **fails closed** with
+`VALUE_PRECISION_LOST`:
+
+* a direct / wrapped frame is rejected;
+* a history element is rejected individually.
+
+It is never accepted with an empty `value_text`. The feature-side float still exists. Settlement reconstruction
+uses `value_text`.
+
+**Kalshi event-metadata retry** (`market_data/kalshi_poller.py`).
+
+* An event ticker enters `events_fetched` only after all three hold:
+  * the GET returned;
+  * the body parsed to an event object;
+  * that object was retained under the SAME ticker.
+* A transport error, a malformed body or a different event stays retryable, with backoff of `event_retry_s` (15 s)
+  doubling up to `event_retry_max_s` (300 s).
+* Only the current market's event is retried, so retries stop when the series rolls over.
+
+**Maker / taker multipliers** (`feature_eval/economics.py`, fee model v4).
+
+* `FeeSchedule.default_multiplier` is split into `default_taker_multiplier` and `default_maker_multiplier`:
+  * July-2026 general schedule: taker **1**, maker **0** ("unless otherwise indicated");
+  * pre-July schedule: both 1, preserving the historical arithmetic. It is unverified and never covers a trade after
+    2026-07-07.
+* The captured `fee_multiplier` / `fee_multiplier_override` apply to TAKER fees only. Their maker semantics are
+  undocumented, so no maker override is inferred.
+* A maker multiplier comes only from an explicitly maker-scoped field (`MAKER_MULTIPLIER_FIELDS =
+  ("maker_fee_multiplier",)`). The capture layer records none today.
+* Taker economics are unchanged. Maker economics stay `NOT_EVALUATED`.
+
+**Fee provenance naming.** `source_sha256` was the hash of a locally written summary string, not of the official
+PDF. It is now:
+
+* `schedule_definition_sha256`: the sha256 of the normalized definition text as encoded here;
+* `source_document_sha256`: set only from CAPTURED official document bytes. It is `""` now, because the PDF was never
+  captured.
+
+The schedule remains version `7.7.26`, effective 2026-07-07.
+
+**Mutations S28–S30** (all caught, each by its own test):
+
+* S28: the direct CF adapter decodes with plain `json.loads` AND the fail-closed gate is removed, so a lossy float is
+  accepted with no `value_text`. Caught by `cfpaths`, independently of S27 / `cfexact`.
+* S29: the event ticker is marked fetched before the request succeeds. Caught by `eventretry`.
+* S30: the maker fee reuses the taker default multiplier 1. Caught by `makerfee`.
+
+**Fingerprints (OLD → NEW, WHY)**
+
+| Fingerprint | OLD | NEW | WHY |
+|---|---|---|---|
+| settlement | `4884524a795f0e2c…` | `b205709349492b71…` | `schemas.py` (`loads_exact`, `plain_json`, value origin, CF specs v2); `cf_live.py` / `cf_history.py` (exact decoding, `VALUE_PRECISION_LOST` gate, legacy schema suffix, `parse_cfb_historical_text`) |
+| market-data | `609905956c9e6120…` | `ca98d418bf40075a…` | `sources/base.py` (`decode` hook); `sources/cf.py` (exact CF decoding; control notes keep plain JSON numbers); `kalshi_poller.py` (event retry / backoff). No feature changed |
+| feature universe | v3 `edef198fb82913f2…` | v4 `cc25a506c35a4adb…` | the settlement + market-data source fingerprints embedded in the records changed. Same 2047 features |
+| Step-6 baseline | `2344b12c3ab80360…` | `7fa394cfe38c37b8…` | `economics.py` (fee model v4), universe v4 |
+| fee model | `fee_model_v3` `b1b0843cf51ae0cc…` | `fee_model_v4` `882ec30ac0efa786…` | separate maker / taker defaults; provenance fields renamed |
+| dataset fingerprints | — | change with universe v4 | they embed the universe fingerprint |
+
+The Step-6.2 baselines are archived in `config/history/`. The legacy (`8d94f241…`) / extended (`784141876…`)
+strategy, perp-data (`90543ddf…`), microstructure (`695d8e77…`) and perp-veto (`499c1e16…`) fingerprints are
+unchanged. The real-data status is still INSUFFICIENT_DATA (zero real sessions). No feature ranking, no final
+holdout, no predictive claims.
+

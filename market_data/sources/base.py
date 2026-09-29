@@ -54,9 +54,12 @@ class SourceAdapter:
         raise NotImplementedError
 
     # ---------- helpers ----------
+    def decode(self, text):
+        return json.loads(text)
+
     def load(self, text, ctx, res):
         try:
-            return json.loads(text) if isinstance(text, (str, bytes)) else text
+            return self.decode(text) if isinstance(text, (str, bytes)) else text
         except ValueError as e:
             self.fail(res, ctx, f"invalid JSON: {e}", text)
             return None

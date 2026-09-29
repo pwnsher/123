@@ -17,6 +17,12 @@ Two transports, both AUTHENTICATED and read-only (the collector never sends anyt
 Without credentials the source is DISABLED and reported as such. It is never replaced by exchange spot.
 The subscribe formats above follow the providers' public documentation descriptions and are marked
 UNVERIFIED until the first real capture (the parser rejects unknown shapes as parse failures).
+
+Exact decimals (Step 6.3): both adapters decode the RAW frame text with settlement.schemas.loads_exact, so a CF
+value is either the documented decimal STRING or (legacy / non-standard) a JSON-number token kept verbatim; it is
+never turned into a binary float before settlement. An already-decoded object whose value is a binary float fails
+closed in the parser (VALUE_PRECISION_LOST). The event payload's "value" float is for features only; settlement
+reads payload["observation"]["value_text"].
 """
 import json
 import os
@@ -25,6 +31,7 @@ from market_data.sources.base import SourceAdapter, new_result
 from market_data.types import EventType, IngestMode
 from settlement.assets import ASSET_INDEX, INDEX_ASSET
 from settlement.cf_live import parse_cfb_frame, parse_kalshi_cfb_message
+from settlement.schemas import loads_exact, plain_json
 
 KALSHI_WS_URL = os.environ.get("KALSHI_WS_URL", "wss://api.elections.kalshi.com/trade-api/ws/v2")
 KALSHI_WS_PATH = "/trade-api/ws/v2"
@@ -47,7 +54,12 @@ def _index_events(adapter, obs, avgs, ctx):
     return out
 
 
-class CfViaKalshiAdapter(SourceAdapter):
+class _ExactCfAdapter(SourceAdapter):
+    def decode(self, text):
+        return loads_exact(text)            # CF values keep their exact decimal token (Step 6.3)
+
+
+class CfViaKalshiAdapter(_ExactCfAdapter):
     source = "cf_via_kalshi"
     stream = "ws"
     transport = "ws"
@@ -70,7 +82,7 @@ class CfViaKalshiAdapter(SourceAdapter):
         if m is None:
             return res
         if isinstance(m, dict) and m.get("type") in _CONTROL_TYPES:
-            res.control.append(m)
+            res.control.append(plain_json(m))    # notes keep plain JSON numbers
             return res
         seq = m.get("seq") if isinstance(m, dict) else None
         obs, avgs, issues = parse_kalshi_cfb_message(m, receive_ts_ms=ctx.receive_ts_ms, seq=seq)
@@ -81,7 +93,7 @@ class CfViaKalshiAdapter(SourceAdapter):
         return res
 
 
-class CfDirectAdapter(SourceAdapter):
+class CfDirectAdapter(_ExactCfAdapter):
     source = "cf_direct"
     stream = "ws"
     transport = "ws"
@@ -102,7 +114,7 @@ class CfDirectAdapter(SourceAdapter):
         if m is None:
             return res
         if isinstance(m, dict) and m.get("type") != "value":
-            res.control.append(m)
+            res.control.append(plain_json(m))    # notes keep plain JSON numbers
             return res
         obs, issues = parse_cfb_frame(m if isinstance(m, dict) else {}, receive_ts_ms=ctx.receive_ts_ms,
                                       seq=None, source="cfb_ws")
