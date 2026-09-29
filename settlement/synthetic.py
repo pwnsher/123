@@ -17,8 +17,11 @@ import json
 import math
 from dataclasses import replace
 
-from settlement.assets import ASSET_INDEX, MARKET_TZ
+from settlement.assets import ASSET_INDEX, MARKET_TZ, SERIES_ASSET
+from settlement.rules import official_outcome, rule_for
 from settlement.types import SettlementObservation
+
+SERIES_OF = {a: s for s, a in SERIES_ASSET.items()}
 
 SYNTHETIC_SOURCE = "synthetic"
 _MON = ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
@@ -114,10 +117,11 @@ def demo_dataset(n_markets=40, asset="BTC", first_close_ms=1_790_000_100_000, se
     path = price_path(closes[0] - 900_000 - 120_000, closes[-1] + 30_000, base, 1000, vol_bp=2.0, seed=seed)
     markets = []
     for i, c in enumerate(closes):
-        settle = true_settlement(path, wpol.grid(c))
         strike = round(true_settlement(path, wpol.grid(c - 900_000)), 2)
-        result = "yes" if settle > strike else "no"
-        markets.append(market_json(asset, c, strike, result, settle, open_ms=c - 900_000))
+        # the synthetic 'official' settlement follows the market's contract rule (official precision + comparator)
+        oc = official_outcome([path[g] for g in wpol.grid(c)], strike, rule_for(SERIES_OF[asset], c))
+        settle = oc["settlement_value"] if oc["settlement_value"] is not None else true_settlement(path, wpol.grid(c))
+        markets.append(market_json(asset, c, strike, oc["outcome"], settle, open_ms=c - 900_000))
     gap_lo, gap_hi = closes[gap_market] - 20_000, closes[gap_market] - 15_000
     live_lines, seq = [], 0
     for t in sorted(path):

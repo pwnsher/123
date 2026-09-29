@@ -101,7 +101,9 @@ PRODUCTION_UNTOUCHED = {
 }
 EARLIER_FINGERPRINTS = {"market_data": "969cec83e8b9912e1fb91d02e8663acc943424dce7d33456b8850b0fb58297fd",
                         "perp_data": "90543ddff68e9dece7443fd9a7d876070f14a06d008a013e8980cb6aa292758c",
-                        "settlement": "3eba791cfe8163cc17406ecdbd0c0e04abfe178afb7b6695565a3484318ff2be"}
+                        # Step 6.1 deliberately re-baselined settlement (versioned contract rules):
+                        # OLD 3eba791cfe8163cc17406ecdbd0c0e04abfe178afb7b6695565a3484318ff2be (Steps 2-6)
+                        "settlement": "ba4e50c39ab593599ab601bcd5ff0e3b6095d7f8523e252a881cdf6529e44f0a"}
 C = 1_790_001_000_000                         # the close of the test market (15-minute boundary)
 START = C - 420_000
 DUR_S = 520

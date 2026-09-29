@@ -68,12 +68,16 @@ def feature_sources(rec):
 
 def dataset_fingerprint(session_meta, universe_fp, settlement_status, checkpoint_grid, assets, source_exclusions, extra=None):
     """Deterministic: covers every session id and its raw-store checksums, the feature universe, the settlement
-    convention status / label version, the checkpoint grid, source and asset inclusion and the date range."""
+    convention status / label version, the versioned contract settlement rule set (Step 6.1), the checkpoint grid,
+    source and asset inclusion and the date range."""
+    from settlement.rules import RULE_SET_VERSION, rule_set_fingerprint
     body = {"schema": STEP6_SCHEMA_VERSION, "sessions": sorted(
                 ({"session_id": s["session_id"], "raw_store_sha256": s["raw_store_sha256"]} for s in session_meta),
                 key=lambda x: x["session_id"]),
             "feature_universe": universe_fp, "feature_universe_version": FEATURE_UNIVERSE_VERSION,
-            "label_version": LABEL_VERSION, "settlement": settlement_status, "checkpoint_grid_s": list(checkpoint_grid),
+            "label_version": LABEL_VERSION, "settlement": settlement_status,
+            "settlement_rule_set": {"version": RULE_SET_VERSION, "fingerprint": rule_set_fingerprint()},
+            "checkpoint_grid_s": list(checkpoint_grid),
             "assets": sorted(assets), "source_exclusions": sorted(source_exclusions),
             "date_range": [min((s.get("first_close_ms") or 0) for s in session_meta) if session_meta else None,
                            max((s.get("last_close_ms") or 0) for s in session_meta) if session_meta else None],
@@ -141,15 +145,52 @@ def _quotes_asof(s3_events):
     return q
 
 
+SETTLEMENT_OBSERVATION_SOURCES = ("cf_via_kalshi", "cf_direct")     # the CF RTI capture paths
+RESOLUTION_SOURCES = ("kalshi",)                                     # the Kalshi market API (read-only GET)
+
+
+def settlement_inputs(s3_events, rejected_sources):
+    """Settlement observations and official resolutions that may build LABELS. A source/asset pair whose quality verdict
+    is REJECT contributes nothing - not to the convention verification, the reconstructed values / outcomes, nor the
+    official result labels - exactly as its feature columns are excluded. A session is not rejected for this: other,
+    independent sources still contribute. Events from any other path (not a CF RTI capture / the Kalshi market API)
+    are untrusted for labels. -> (observations by index id, {ticker: OfficialResolution}, exclusion report)"""
+    from market_data.types import EventType
+    from settlement.types import OfficialResolution, SettlementObservation
+    obs_by_index, resolutions = {}, {}
+    rep = {"index_values_used": 0, "index_values_rejected_source": 0, "index_values_untrusted_path": 0,
+           "resolutions_used": 0, "resolutions_rejected_source": 0, "resolutions_untrusted_path": 0,
+           "rejected_pairs": sorted(rejected_sources)}
+    for ev in s3_events:
+        key = f"{ev.source}:{ev.asset}"
+        if ev.event_type == EventType.INDEX_VALUE:
+            if ev.source not in SETTLEMENT_OBSERVATION_SOURCES:
+                rep["index_values_untrusted_path"] += 1
+            elif key in rejected_sources:
+                rep["index_values_rejected_source"] += 1
+            else:
+                obs_by_index.setdefault(ev.symbol, []).append(SettlementObservation.from_dict(ev.payload["observation"]))
+                rep["index_values_used"] += 1
+        elif ev.event_type == EventType.RESOLUTION:
+            if ev.source not in RESOLUTION_SOURCES:
+                rep["resolutions_untrusted_path"] += 1
+            elif key in rejected_sources:
+                rep["resolutions_rejected_source"] += 1
+            else:
+                p = ev.payload
+                resolutions[p["ticker"]] = OfficialResolution(p["ticker"], p["result"], p["expiration_value"],
+                                                              "kalshi_market_api")
+                rep["resolutions_used"] += 1
+    return obs_by_index, resolutions, rep
+
+
 def build_session_rows(session_dir, assets, columns, rec_by_name, quality, coinbase_status, gate, checkpoints_s,
                        include_perp=True, include_micro=True):
     from market_data.replay import load_sessions
-    from market_data.types import EventType
     from microstructure.dataset import build_joint_dataset
     from microstructure.replay import load_micro_sessions
     from perp_data.replay import load_perp_sessions
     from settlement.checkpoints import labels_for
-    from settlement.types import OfficialResolution, SettlementObservation
     from feature_eval.labels import market_label
     from feature_eval.legacy import LegacyEvaluator, tapes_from_events
     s3 = load_sessions([session_dir])
@@ -171,14 +212,8 @@ def build_session_rows(session_dir, assets, columns, rec_by_name, quality, coinb
     for a in assets:
         excl_cols[a] = [i for i, c in enumerate(columns)
                         if any(f"{s}:{a}" in rejected for s in feature_sources(rec_by_name[c]))]
-    # labels
-    obs_by_index, resolutions = {}, {}
-    for ev in s3.events:
-        if ev.event_type == EventType.INDEX_VALUE:
-            obs_by_index.setdefault(ev.symbol, []).append(SettlementObservation.from_dict(ev.payload["observation"]))
-        elif ev.event_type == EventType.RESOLUTION:
-            p = ev.payload
-            resolutions[p["ticker"]] = OfficialResolution(p["ticker"], p["result"], p["expiration_value"], "kalshi_market_api")
+    # labels: only settlement observations / resolutions from sources that passed quality (Step 6.1)
+    obs_by_index, resolutions, label_exclusions = settlement_inputs(s3.events, rejected)
     from market_data.features.dataset import discover_markets
     markets = discover_markets(s3.events, assets)
     labels = {tk: labels_for(m, obs_by_index.get(m.index_id, []), resolutions.get(tk)) for tk, (m, _k) in markets.items()}
@@ -220,6 +255,7 @@ def build_session_rows(session_dir, assets, columns, rec_by_name, quality, coinb
     meta = {"session_id": quality.get("session_id"), "rows": len(rows), "markets": len(markets),
             "first_close_ms": min(closes) if closes else None, "last_close_ms": max(closes) if closes else None,
             "rejected_sources": sorted(rejected), "raw_store_sha256": quality.get("raw_store_sha256"),
+            "settlement_label_exclusions": label_exclusions,
             "synthetic": bool(quality.get("synthetic")), "quality_verdict": quality.get("verdict"),
             "settlement_inputs": {"markets": [m for m, _ in markets.values()], "resolutions": resolutions,
                                   "observations": [o for v in obs_by_index.values() for o in v]}}

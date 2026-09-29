@@ -22,8 +22,10 @@ SettlementWindowPolicy answers (see grid() / membership() / sample semantics in 
         ASOF        latest observation with g - max_sample_age_ms <= event_ts <= g
         EXACT       an observation with event_ts == g, nothing else
         BUCKET_LAST last observation with g <= event_ts < g + interval (known only once the bucket ends)
-    final value        arithmetic mean of the sample values (no rounding; round_decimals=None)
-    outcome            "yes" if final > strike, "no" if final < strike, None + AT_STRIKE flag if equal
+    final value        arithmetic mean of the sample values, kept UNROUNDED (diagnostic)
+    settlement value   the mean at the contract's OFFICIAL precision and the outcome by the contract's comparator:
+                       both come from the versioned per-series rule in settlement/rules.py (Step 6.1), never from
+                       this window policy (round_decimals must stay None); unknown rules fail closed
 
 ReconstructionPolicy answers:
     duplicates         identical (event_ts, value) from any source -> one observation, DUPLICATE_DROPPED
@@ -82,6 +84,9 @@ class SettlementWindowPolicy:
             raise ValueError("window must be a positive whole number of sample intervals")
         if self.max_sample_age_ms < 0:
             raise ValueError("max_sample_age_ms must be >= 0")
+        if self.round_decimals is not None:
+            raise ValueError("rounding is a CONTRACT rule (settlement.rules: settlement_decimal_places), not a window "
+                             "convention; round_decimals must stay None")
 
     @property
     def window_ms(self):

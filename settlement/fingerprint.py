@@ -6,7 +6,8 @@ Settlement-research fingerprint — SEPARATE from the Step-1 strategy baseline.
     py -m settlement.fingerprint --write --i-intend-to-change-the-settlement-baseline
 
 Pins every module of the settlement package (canonical AST: comments/docstrings/whitespace ignored,
-any semantic change detected) and every named window / reconstruction policy. Stored in
+any semantic change detected), every named window / reconstruction policy and (v2, Step 6.1) every versioned
+contract settlement rule (comparator, official precision, rounding / tie behaviour, provenance). Stored in
 config/settlement_baseline.json. The Step-1 files (config/strategy_baseline.json,
 step5_baseline_manifest.json, regression/strategy_cases.json) are neither read nor written here.
 Source is parsed, never imported for hashing. No network.
@@ -25,11 +26,12 @@ if HERE not in sys.path:
 import strategy_fingerprint as sf                                                    # noqa: E402
 from settlement import ENGINE_VERSION, RECONSTRUCTION_VERSION, RECORD_SCHEMA_VERSION  # noqa: E402
 from settlement.policy import RECONSTRUCTION_POLICIES, WINDOW_POLICIES               # noqa: E402
+from settlement.rules import RULE_SET_VERSION, RULES, rule_set_fingerprint           # noqa: E402
 from settlement.schemas import SPECS                                                 # noqa: E402
 
 BASELINE_PATH = os.path.join(HERE, "config", "settlement_baseline.json")
 PKG = os.path.join(HERE, "settlement")
-FORMAT = "settlement_fingerprint_v1/canonical_ast_v2_sha256"
+FORMAT = "settlement_fingerprint_v2/canonical_ast_v2_sha256+contract_rules"      # v2 (Step 6.1): pins the rules
 
 
 def module_hashes(pkg_dir=PKG):
@@ -47,8 +49,11 @@ def build(pkg_dir=PKG):
     pols = {"window": {k: v.fingerprint() for k, v in sorted(WINDOW_POLICIES.items())},
             "reconstruction": {k: v.fingerprint() for k, v in sorted(RECONSTRUCTION_POLICIES.items())}}
     schemas = {k: {"version": v.version, "verification": v.verification} for k, v in sorted(SPECS.items())}
+    rules = {"rule_set_version": RULE_SET_VERSION, "rule_set_fingerprint": rule_set_fingerprint(),
+             "rules": {f"{r.series}@v{r.version}": r.fingerprint() for r in sorted(RULES, key=lambda r: (r.series, r.version))}}
     core = {"format": FORMAT, "engine_version": ENGINE_VERSION, "reconstruction_version": RECONSTRUCTION_VERSION,
-            "record_schema_version": RECORD_SCHEMA_VERSION, "modules": mods, "policies": pols, "schemas": schemas}
+            "record_schema_version": RECORD_SCHEMA_VERSION, "modules": mods, "policies": pols, "schemas": schemas,
+            "contract_rules": rules}
     core["settlement_fingerprint"] = hashlib.sha256(sf.canonical_json(core).encode()).hexdigest()
     core["note"] = "Research/observation code only; independent of the Step-1 strategy baseline."
     return core
@@ -76,6 +81,8 @@ def verify(path=BASELINE_PATH, pkg_dir=PKG):
                 problems.append(f"policy {kind}/{name} changed")
     if stored.get("schemas") != cur["schemas"]:
         problems.append("schema specs changed")
+    if stored.get("contract_rules") != cur["contract_rules"]:
+        problems.append("contract settlement rules changed (a new rule VERSION is required, never an edit in place)")
     if stored.get("settlement_fingerprint") != cur["settlement_fingerprint"] and not problems:
         problems.append("settlement fingerprint differs")
     return not problems, problems

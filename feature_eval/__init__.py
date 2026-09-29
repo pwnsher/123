@@ -28,8 +28,8 @@ Layers
 """
 
 STEP6_SCHEMA_VERSION = 1
-FEATURE_UNIVERSE_VERSION = "feature_universe_v1"
-LABEL_VERSION = "labels_v1"
+FEATURE_UNIVERSE_VERSION = "feature_universe_v2"     # v2 (Step 6.1): settlement source fingerprint re-baselined
+LABEL_VERSION = "labels_v2"                         # v2 (Step 6.1): contract-rule outcomes, official precision
 APP_VERSION = "kalshi-local-step6"
 RESEARCH_ONLY = True
 

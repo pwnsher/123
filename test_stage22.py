@@ -53,7 +53,7 @@ from feature_eval import universe as UV                                         
 EARLIER_FINGERPRINTS = {
     "legacy_strategy": "8d94f241e8fc8edadc76058e1f12f430b6e4f499f4c0a30fba1cb5cf07dad82a",
     "extended_strategy": "784141876a1b7f4c9f605036ef1358a6a3ea51ef32fced1f80f74045a6adef8c",
-    "settlement": "3eba791cfe8163cc17406ecdbd0c0e04abfe178afb7b6695565a3484318ff2be",
+    "settlement": "ba4e50c39ab593599ab601bcd5ff0e3b6095d7f8523e252a881cdf6529e44f0a",    # Step 6.1 re-baseline; OLD 3eba791cfe8163cc17406ecdbd0c0e04abfe178afb7b6695565a3484318ff2be
     "market_data": "969cec83e8b9912e1fb91d02e8663acc943424dce7d33456b8850b0fb58297fd",
     "perp_data": "90543ddff68e9dece7443fd9a7d876070f14a06d008a013e8980cb6aa292758c",
     "microstructure": "695d8e7741287c0bbac40ae9835148e4a0fbcd0e517669784aae647a8dcb0799",
@@ -564,8 +564,12 @@ def test_models():
     X = [[z[1], None if i % 5 == 0 else z[1] * 0 + rng.gauss(0, 1)] for i, z in enumerate(Z)]
     a2 = MD.LegacyRecalibrated().fit(None, leg, y, [1.0] * n)
     assert a2.n_params == 2
-    rid = MD.RidgeLogisticModel().fit(X, leg, y, [1.0] * n, order=list(range(n)))
-    assert rid.l2 in MD.RIDGE_GRID and set(rid.inner_scores) == set(MD.RIDGE_GRID)
+    meta = [{"market_ticker": f"M{i // 2:05d}", "asset": "BTC", "close_ts_ms": 1_700_000_000_000 + (i // 2) * 900_000,
+             "checkpoint_ts_ms": 1_700_000_000_000 + (i // 2) * 900_000 - 60_000} for i in range(n)]
+    rid = MD.RidgeLogisticModel().fit(X, leg, y, [1.0] * n, meta=meta)
+    assert rid.l2 in MD.RIDGE_GRID and set(rid.inner_scores) == set(MD.RIDGE_GRID) and rid.inner_info["status"] == "OK"
+    nometa = MD.RidgeLogisticModel().fit(X, leg, y, [1.0] * n)
+    assert nometa.l2 == max(MD.RIDGE_GRID) and nometa.inner_info["status"] == "NO_MARKET_METADATA"   # fail closed
     bst = MD.BoostedStumps(rounds=20).fit(X, leg, y, [1.0] * n)
     pb = bst.predict(X[:5], leg[:5])
     assert all(0 < p < 1 for p in pb) and bst.n_params == len(bst.trees) <= 20
@@ -718,7 +722,7 @@ def test_calibration_gates():
 # ═══════════════════ 20 economics ═══════════════════
 def test_executable_economics():
     fm = EC.FeeModel()
-    assert not fm.verified and fm.taker_rate == 0.07
+    assert fm.status("KXBTC15M-X", 1_800_000_000_000) == "FEE_UNVERIFIED" and fm.schedules[0].taker_rate == 0.07
     assert fm.fee_dollars(1, 0.5) == 0.02                                # ceil(0.07*0.25*100)/100 = ceil(1.75)/100
     assert fm.fee_dollars(100, 0.5) == 1.75 and fm.fee_dollars(10, 0.9) == 0.07
     assert fm.fee_dollars(10, 0.5, maker=True) == 0.05
@@ -734,10 +738,24 @@ def test_executable_economics():
                        "execution": {"yes_ask_ladder": [[50, 100]], "no_ask_ladder": [[52, 100]]}}])
     assert ev["status"] == "FEE_UNVERIFIED" and ev["maker"]["status"] == "NOT_EVALUATED"
     assert ev["by_size"]["1"]["labels"] == "SIMULATED" and ev["by_size"]["50"]["executable"] == 1
-    fm2 = EC.FeeModel(taker_rate=0.05)
+    from dataclasses import replace as _rp
+    fm2 = EC.FeeModel(schedules=(_rp(EC.GENERAL_UNVERIFIED, taker_rate=0.05),))
     assert fm2.fingerprint() != fm.fingerprint()
-    ex = EC.FeeModel(market_exceptions={"KXSPECIAL": {"taker_rate": 0.0, "maker_rate": 0.0}})
-    assert ex.fee_dollars(10, 0.5, "KXSPECIAL-1") == 0.0 and ex.fee_dollars(10, 0.5, "KXBTC") == 0.18
+    # a verified schedule is VERIFIED only for its series and inside its effective range; the general formula never
+    # becomes verified globally
+    t0, t1 = 1_790_000_000_000, 1_800_000_000_000
+    spec = EC.FeeSchedule("crypto15m_special", "v1", "test", "u", t0, t1, series_scope=("KXBTC15M",), taker_rate=0.05,
+                          maker_rate=0.0, verified=True)
+    gen = _rp(EC.GENERAL_UNVERIFIED, excluded_series=("KXBTC15M",))
+    fmv = EC.FeeModel(schedules=(gen, spec))
+    assert fmv.status("KXBTC15M-26SEP291015", t0 + 1) == "VERIFIED" and fmv.fee_dollars(10, 0.5, "KXBTC15M-A", ts_ms=t0 + 1) == 0.13
+    assert fmv.status("KXBTC15M-26SEP291015", t1) == "FEE_UNKNOWN"             # outside the effective range
+    assert fmv.status("KXBTC15M-26SEP291015", None) == "FEE_UNKNOWN"           # unknown trade time
+    assert fmv.status("KXETH15M-26SEP291015", t0 + 1) == "FEE_UNVERIFIED"      # general, unverified
+    assert EC.FeeModel(schedules=(_rp(EC.GENERAL_UNVERIFIED, verified=True),)).status("KXBTC15M-A", t0) == "FEE_UNVERIFIED"
+    evv = EC.evaluate([{"market": "M", "p_yes": 0.7, "y": 1, "checkpoint_s": 60, "ticker": "KXBTC15M-A", "ts_ms": t0 + 5,
+                        "execution": {"yes_ask_ladder": [[50, 100]], "no_ask_ladder": [[52, 100]]}}], fmv)
+    assert evv["status"] == "SIMULATED_RESEARCH_ONLY" and evv["by_size"]["1"]["fee_status_counts"] == {"VERIFIED": 1}
     res = pipeline_result()["economic_metrics"]
     assert res["primary"].startswith("TAKER") and res["best"]["status"] == "FEE_UNVERIFIED"
     assert res["best"]["by_size"]["50"]["not_executable"] > 0            # thin synthetic books are NOT_EXECUTABLE
@@ -823,8 +841,9 @@ def test_experiment_fingerprint():
             "split_config": SP.SplitConfig().to_dict(), "fee_model_fingerprint": EC.FeeModel().fingerprint(),
             "seed": EXP.SEED, "bootstrap": {"reps": 1000}}
     f0, _ = EXP.experiment_fingerprint("d", spec)
+    from dataclasses import replace as _rp
     for k, v in (("model", "D"), ("families", ["B"]), ("missing_strategy", "complete_case"), ("seed", 1),
-                 ("fee_model_fingerprint", EC.FeeModel(taker_rate=0.05).fingerprint()),
+                 ("fee_model_fingerprint", EC.FeeModel(schedules=(_rp(EC.GENERAL_UNVERIFIED, taker_rate=0.05),)).fingerprint()),
                  ("split_config", SP.SplitConfig(label_horizon_ms=1000).to_dict())):
         assert EXP.experiment_fingerprint("d", dict(spec, **{k: v}))[0] != f0, k
     assert EXP.experiment_fingerprint("d2", spec)[0] != f0
@@ -949,6 +968,286 @@ def test_clis():
     assert "not estimated" in p.stdout and "synthetic sessions ignored: 1" in p.stdout
 
 
+# ═══════════════════ Step 6.1 corrections ═══════════════════
+LATER = 1_791_000_000_000                             # a close after the rule observation date (2026-09-29)
+
+
+def _flat_obs(index_id, value, close, source="cfb_ws", asset="BTC"):
+    from settlement.types import SettlementObservation
+    return [SettlementObservation(asset, index_id, source, value, t, receive_ts_ms=t + 100)
+            for t in range(close - 61_000, close + 1, 1000)]
+
+
+def test_contract_rules():
+    from dataclasses import replace as _rp
+    from settlement import rules as RL
+    from settlement.policy import SettlementWindowPolicy
+    from settlement.reconstruction import reconstruct
+    from settlement.types import Flag, SettlementMarket
+    for series, dp in (("KXBTC15M", 2), ("KXETH15M", 2), ("KXXRP15M", 4)):
+        r = RL.rule_for(series, LATER)
+        assert r.known and r.comparison_operator == RL.GTE and r.settlement_decimal_places == dp, series
+        assert r.rounding_method == "NEAREST" and r.tie_behavior == "UNSPECIFIED" and r.rule_url and r.observed_date
+    sol = RL.rule_for("KXSOL15M", LATER)
+    assert sol is not None and not sol.known and sol.comparison_operator is None and sol.settlement_decimal_places is None
+    btc, eth, xrp = (RL.rule_for(x, LATER) for x in ("KXBTC15M", "KXETH15M", "KXXRP15M"))
+    for rule, k, below, above, onto_yes, onto_no in ((btc, 100000.0, 99999.5, 100000.5, 99999.996, 99999.994),
+                                                    (eth, 3500.25, 3500.0, 3500.5, 3500.246, 3500.244),
+                                                    (xrp, 0.5124, 0.5120, 0.5130, 0.51236, 0.51234)):
+        oc = RL.official_outcome
+        assert oc([below], k, rule)["outcome"] == "no" and oc([above], k, rule)["outcome"] == "yes"
+        eq = oc([k], k, rule)
+        assert eq["outcome"] == "yes" and eq["at_strike"] and eq["status"] == "OK"   # equality under AT_LEAST -> YES
+        up = oc([onto_yes], k, rule)
+        assert up["settlement_value"] == k and up["outcome"] == "yes"              # rounds ONTO the strike -> YES
+        assert oc([onto_no], k, rule)["outcome"] == "no"                            # rounds below -> NO
+    # exact .5 ties: the documentation does not define the tie rule -> never invented
+    tie = RL.official_outcome([99999.995], 100000.0, btc)
+    assert tie["status"] == "ROUNDING_TIE_UNRESOLVED" and tie["outcome"] is None and tie["tie_candidates"] == (99999.99, 100000.0)
+    inv = RL.official_outcome([99999.995], 99000.0, btc)
+    assert inv["status"] == "ROUNDING_TIE_OUTCOME_INVARIANT" and inv["outcome"] == "yes" and inv["settlement_value"] is None
+    assert RL.official_outcome([0.51245], 0.5125, xrp)["status"] == "ROUNDING_TIE_UNRESOLVED"
+    # unknown semantics fail closed
+    assert RL.official_outcome([1.0], 1.0, None)["status"] == "RULE_UNKNOWN"
+    assert RL.official_outcome([150.0], 150.0, sol)["status"] == "RULE_UNVERIFIED"
+    assert RL.rule_for("KXDOGE15M", LATER) is None
+    for bad in ({"comparison_operator": "ABOVE_ISH"}, {"rounding_method": "BANKERS"}, {"tie_behavior": "COIN_FLIP"}):
+        try:
+            _rp(btc, **bad); raise AssertionError(f"accepted {bad}")
+        except ValueError:
+            pass
+    try:
+        RL.compare(1.0, 1.0, "WEIRD"); raise AssertionError("unknown comparator accepted")
+    except ValueError:
+        pass
+    try:
+        SettlementWindowPolicy("x", 1, round_decimals=2); raise AssertionError("window-policy rounding accepted")
+    except ValueError:
+        pass
+    # through the engine: the unrounded mean is kept, the official-precision value decides
+    m = SettlementMarket("KXBTC15M-TEST61", "BTC", LATER, "BRTI", strike=100000.0, series="KXBTC15M")
+    r = reconstruct(m, _flat_obs("BRTI", 99999.996, LATER))
+    assert abs(r.final_value - 99999.996) < 1e-9 and r.settlement_value == 100000.0 and r.reconstructed_outcome == "yes"
+    assert Flag.AT_STRIKE.value in r.state.flags and r.settlement["rule_fingerprint"] == btc.fingerprint()
+    rs = reconstruct(SettlementMarket("KXSOL15M-T", "SOL", LATER, "SOLUSD_RTI", strike=150.0, series="KXSOL15M"),
+                     _flat_obs("SOLUSD_RTI", 151.0, LATER, asset="SOL"))
+    assert rs.final_value is not None and rs.reconstructed_outcome is None and Flag.RULE_UNVERIFIED.value in rs.state.flags
+    ru = reconstruct(SettlementMarket("KXFOO15M-T", "BTC", LATER, "BRTI", strike=1.0, series="KXFOO15M"),
+                     _flat_obs("BRTI", 2.0, LATER))
+    assert ru.reconstructed_outcome is None and Flag.RULE_UNKNOWN.value in ru.state.flags
+    # versioned binding: markets stay tied to the version covering their close
+    v1 = _rp(btc, effective_to_ms=LATER)
+    v2 = _rp(btc, rule_id="kxbtc15m_rules_v2", version=2, comparison_operator=RL.GT, effective_from_ms=LATER)
+    assert RL.rule_for("KXBTC15M", LATER - 1, (v1, v2)) is v1 and RL.rule_for("KXBTC15M", LATER, (v1, v2)) is v2
+    try:
+        RL.rule_for("KXBTC15M", LATER, (btc, v2)); raise AssertionError("overlapping versions accepted")
+    except ValueError:
+        pass
+    assert v1.fingerprint() != btc.fingerprint() and RL.rule_set_fingerprint((v1, v2)) != RL.rule_set_fingerprint()
+    from settlement import fingerprint as sfp
+    assert sfp.build()["contract_rules"]["rule_set_fingerprint"] == RL.rule_set_fingerprint()
+    from settlement.checkpoints import labels_for
+    lab = labels_for(m, _flat_obs("BRTI", 99999.996, LATER))
+    assert lab["final_settlement_value"] == 100000.0 and abs(lab["final_unrounded_mean"] - 99999.996) < 1e-9
+    assert lab["settlement_rule_id"] == "kxbtc15m_rules_v1" and lab["settlement_rule_fingerprint"] == btc.fingerprint()
+
+
+def test_precision_aware_verification():
+    from settlement.resolution import summarize_rows, value_checks, verify_market, index_observations
+    from settlement.policy import reconstruction_policy, window_policy
+    from settlement.types import OfficialResolution, SettlementMarket
+    ok = value_checks(0.51239, 0.5124, None, 0.5124, 4)
+    assert ok["expiration_value_exact_after_rounding"] is True and ok["expiration_value_within_half_unit"] is True
+    far = value_checks(0.5174, 0.5174, None, 0.5124, 4)          # 0.005 off: inside a universal 0.01 tolerance ...
+    assert far["expiration_value_exact_after_rounding"] is False and far["expiration_value_within_half_unit"] is False
+    assert abs(far["expiration_value_raw_abs_diff"] - 0.005) < 1e-12 and far["half_unit"] == 0.00005
+    btc = value_checks(100000.004, 100000.0, None, 100000.0, 2)
+    assert btc["expiration_value_exact_after_rounding"] and btc["expiration_value_within_half_unit"]
+    unk = value_checks(151.0, None, None, 151.0, None)
+    assert unk["expiration_value_exact_after_rounding"] is None and unk["expiration_value_raw_abs_diff"] == 0.0
+    tie = value_checks(99999.995, None, (99999.99, 100000.0), 100000.0, 2)
+    assert tie["expiration_value_exact_after_rounding"] is True
+    m = SettlementMarket("KXXRP15M-T61", "XRP", LATER, "XRPUSD_RTI", strike=0.5100, series="KXXRP15M")
+    by = index_observations(_flat_obs("XRPUSD_RTI", 0.5174, LATER, asset="XRP"))
+    row = verify_market(m, OfficialResolution(m.ticker, "yes", 0.5124, "t"), by, window_policy(), reconstruction_policy())
+    assert row["agreement"] is True and row["expiration_value_exact_after_rounding"] is False
+    assert row["official_precision_dp"] == 4 and row["reconstructed_value"] == 0.5174
+    s = summarize_rows([row])
+    assert s["expiration_value"]["exact_after_rounding"] == 0 and s["expiration_value"]["by_asset"]["XRP"]["official_precision_dp"] == 4
+    import settlement.resolution as SR
+    assert not hasattr(SR, "VALUE_TOLERANCE")                        # no universal tolerance exists any more
+
+
+def _gate_with(policies, verdict, **cfg):
+    import settlement.resolution as SR
+    orig = SR.verify_all
+    SR.verify_all = lambda *a, **k: {"policies": policies, "convention_verdict": verdict}
+    try:
+        return LB.convention_gate([], {}, [], synthetic=cfg.pop("synthetic", False), config=LB.LabelGateConfig(**cfg))
+    finally:
+        SR.verify_all = orig
+
+
+def _pol(compared, exact, agree):
+    return {"expiration_value": {"compared": compared, "exact_after_rounding": exact, "within_half_unit": exact,
+                                 "max_raw_abs_diff": 0.0}, "compared": compared, "agree": agree, "disagree": compared - agree}
+
+
+def test_convention_ambiguity():
+    P, ALT = LB.LabelGateConfig().label_window_policy, "cf_rti_60s_end_incl_asof_v1"
+    g = _gate_with({P: _pol(60, 60, 60), ALT: _pol(60, 5, 40)}, {"status": "EVALUATED", "best_policies": [P]})
+    assert g["status"] == "VERIFIED" and g["reason_code"] == "UNIQUE_CONVENTION" and g["convention"] == P
+    g = _gate_with({P: _pol(60, 60, 60), ALT: _pol(60, 60, 60)}, {"status": "EVALUATED_TIED", "best_policies": [P, ALT]})
+    assert g["status"] == "SETTLEMENT_UNVERIFIED" and g["reason_code"] == "AMBIGUOUS_CONVENTION" and g["convention"] is None
+    g = _gate_with({P: _pol(60, 60, 60), ALT: _pol(60, 59, 60)}, {"status": "EVALUATED", "best_policies": [P]})
+    assert g["status"] == "SETTLEMENT_UNVERIFIED" and g["reason_code"] == "AMBIGUOUS_CONVENTION"   # both pass the gate
+    g = _gate_with({P: _pol(60, 60, 60), ALT: _pol(60, 1, 60)}, {"status": "EVALUATED_TIED", "best_policies": [P, ALT]})
+    assert g["status"] == "SETTLEMENT_UNVERIFIED" and g["reason_code"] == "AMBIGUOUS_CONVENTION"   # verifier tie respected
+    g = _gate_with({P: _pol(60, 10, 50), ALT: _pol(60, 60, 60)}, {"status": "EVALUATED", "best_policies": [ALT]})
+    assert g["status"] == "SETTLEMENT_UNVERIFIED" and g["reason_code"] == "REQUIRES_VERSIONED_POLICY_MIGRATION"
+    assert g["convention"] is None
+    g = _gate_with({P: _pol(60, 10, 50), ALT: _pol(60, 11, 50)}, {"status": "EVALUATED", "best_policies": [ALT]})
+    assert g["status"] == "SETTLEMENT_UNVERIFIED" and g["reason_code"] == "NO_CONVENTION_PASSES"
+    g = _gate_with({P: _pol(10, 10, 10)}, {"status": "INSUFFICIENT_DATA"})
+    assert g["status"] == "SETTLEMENT_UNVERIFIED" and g["reason_code"] == "INSUFFICIENT_MARKETS"
+    g = _gate_with({P: _pol(60, 60, 60)}, {"status": "EVALUATED", "best_policies": [P]}, synthetic=True)
+    assert g["status"] == "SYNTHETIC_ONLY"
+    # the realistic case: an exact 1-s feed makes ASOF / EXACT / BUCKET indistinguishable -> never VERIFIED
+    from settlement.cf_live import parse_kalshi_cfb_message
+    from settlement.kalshi_markets import parse_market
+    from settlement.synthetic import demo_dataset
+    d = demo_dataset(40)
+    ms, rs = [], {}
+    for mj in d["markets"]:
+        m, r, _ = parse_market(mj)
+        ms.append(m)
+        rs[m.ticker] = r
+    obs = [parse_kalshi_cfb_message(ln["message"], ln["receive_ts_ms"], ln["seq"])[0] for ln in d["live_lines"]]
+    g = LB.convention_gate(ms, rs, obs, config=LB.LabelGateConfig(min_markets_compared=30))
+    assert g["status"] == "SETTLEMENT_UNVERIFIED" and g["reason_code"] == "AMBIGUOUS_CONVENTION"
+    assert len(g["competing_conventions_passing"]) == 3 and P in g["competing_conventions_passing"]
+    # reconstructed labels stay non-gold; official results stay gold
+    assert LB.market_label({"reconstructed_outcome": "yes"}, g["status"]) == (1, "SETTLEMENT_UNVERIFIED")
+    assert LB.market_label({"official_result": "no", "reconstructed_outcome": "no"}, g["status"]) == (0, "OFFICIAL_RESULT")
+
+
+def _cf_events(source, obs_source, value, close, seq0, asset="BTC", index_id="BRTI"):
+    from market_data.types import EventType, MarketEvent
+    from settlement.types import SettlementObservation
+    out = []
+    for i, t in enumerate(range(close - 61_000, close + 1, 1000)):
+        o = SettlementObservation(asset, index_id, obs_source, value, t, receive_ts_ms=t + 100)
+        out.append(MarketEvent(source, asset, EventType.INDEX_VALUE, index_id, t, t + 100, seq0 + i,
+                               {"index_id": index_id, "value": value, "amend_ts_ms": None, "repeat_of_previous": None,
+                                "observation": o.to_dict()}))
+    return out
+
+
+def _resolution(ticker, result, ev, close, source="kalshi", asset="BTC"):
+    from market_data.types import EventType, MarketEvent
+    return MarketEvent(source, asset, EventType.RESOLUTION, ticker, close + 60_000, close + 60_000, 999_999,
+                       {"ticker": ticker, "result": result, "expiration_value": ev})
+
+
+def test_rejected_source_labels():
+    from settlement.checkpoints import labels_for
+    from settlement.types import SettlementMarket
+    close, tk = LATER, "KXBTC15M-T61REJ"
+    m = SettlementMarket(tk, "BTC", close, "BRTI", strike=100000.0, series="KXBTC15M")
+    good = _cf_events("cf_via_kalshi", "cfb_ws_via_kalshi", 100010.0, close, 0)
+    wrong = _cf_events("cf_direct", "cfb_ws", 99000.0, close, 10_000)             # source B: REJECT + wrong values
+    res = _resolution(tk, "yes", 100010.0, close)
+    rej = {"cf_direct:BTC"}
+
+    def lab(events, rejected):
+        obs, rs, rep = DS.settlement_inputs(events, rejected)
+        flat = [o for v in obs.values() for o in v]
+        return labels_for(m, flat, rs.get(tk)), obs, rs, rep, flat
+    with_b, obs1, rs1, rep1, flat1 = lab(good + wrong + [res], rej)
+    without_b, obs2, rs2, _rep2, flat2 = lab(good + [res], rej)
+    assert with_b == without_b and obs1 == obs2 and rs1 == rs2                       # B is invisible to labels
+    assert rep1["index_values_rejected_source"] == len(wrong) and with_b["reconstructed_outcome"] == "yes"
+    assert with_b["final_settlement_value"] == 100010.0
+    import settlement.resolution as SR
+    v1 = SR.verify_all([m], rs1, flat1)
+    v2 = SR.verify_all([m], rs2, flat2)
+    assert v1["policies"] == v2["policies"]                                          # convention verifier identical
+    leaked, *_ = lab(good + wrong + [res], set())                                   # (what a leak would do)
+    assert leaked != with_b
+    # every settlement source rejected -> no reconstructed value / outcome; nothing can become a gold reconstruction
+    none_lab, obs3, rs3, _r, _f = lab(good + wrong, {"cf_direct:BTC", "cf_via_kalshi:BTC"})
+    assert obs3 == {} and none_lab["final_settlement_value"] is None and none_lab["reconstructed_outcome"] is None
+    assert LB.market_label(none_lab, "VERIFIED") == (None, "UNLABELED")
+    # a rejected Kalshi resolution source contributes no official label
+    k_lab, _o, rs4, rep4, _f = lab(good + [res], {"kalshi:BTC"})
+    assert rs4 == {} and rep4["resolutions_rejected_source"] == 1 and k_lab["official_result"] is None
+    assert LB.market_label(k_lab, "SETTLEMENT_UNVERIFIED") == (1, "SETTLEMENT_UNVERIFIED")
+    # an untrusted resolution path is never an official label
+    _o, rs5, rep5 = DS.settlement_inputs(good + [_resolution(tk, "yes", 100010.0, close, source="coinbase")], set())
+    assert rs5 == {} and rep5["resolutions_untrusted_path"] == 1
+    # a DEGRADED session keeps its surviving sources: only the rejected pair is dropped
+    assert rep1["index_values_used"] == len(good)
+
+
+def _awkward_meta(n_slots=5, cps=(300, 120, 60), assets=("BTC",), start=1_700_000_000_000):
+    rows = []
+    for sl in range(n_slots):
+        close = start + (sl + 1) * 900_000
+        for a in assets:
+            for cp in cps:
+                rows.append({"market_ticker": f"KX{a}15M-{sl:04d}", "asset": a, "close_ts_ms": close,
+                             "checkpoint_ts_ms": close - cp * 1000})
+    return rows
+
+
+def test_ridge_inner_split():
+    # the OLD row-based 75/25 cut splits a market (5 markets x 3 checkpoints = 15 rows; cut at row 11)
+    meta = _awkward_meta()
+    order = sorted(range(len(meta)), key=lambda i: (meta[i]["close_ts_ms"], meta[i]["market_ticker"]))
+    cut = int(len(order) * 0.75)
+    old_a = {meta[i]["market_ticker"] for i in order[:cut]}
+    old_b = {meta[i]["market_ticker"] for i in order[cut:]}
+    assert old_a & old_b, "the awkward dataset must defeat the old row cut"
+    cfg0 = SP.SplitConfig(max_causal_lookback_ms=0, label_horizon_ms=0)
+    tr, va, pg, info = SP.inner_split(SP.market_table(meta), 0.25, cfg0)
+    assert not set(tr) & set(va) and info["status"] == "OK" and pg == []
+    # same-close BTC / ETH / SOL / XRP markets stay together
+    meta4 = _awkward_meta(n_slots=9, assets=("BTC", "ETH", "SOL", "XRP"))
+    tab = SP.market_table(meta4)
+    tr, va, pg, info = SP.inner_split(tab, 0.25, cfg0)
+    side = {m: "T" for m in tr} | {m: "V" for m in va} | {m: "P" for m in pg}
+    for c in {e["close_ts_ms"] for e in tab}:
+        assert len({side[e["market"]] for e in tab if e["close_ts_ms"] == c}) == 1
+    close = {e["market"]: e["close_ts_ms"] for e in tab}
+    assert max(close[m] for m in tr) < min(close[m] for m in va)
+    # the causal purge removes the boundary neighbours (lookback 25 min + label horizon)
+    cfgp = SP.SplitConfig(max_causal_lookback_ms=1_500_000, label_horizon_ms=0)
+    trp, vap, pgp, infop = SP.inner_split(tab, 0.25, cfgp)
+    first_val_cp = min(e["first_checkpoint_ts_ms"] for e in tab if e["market"] in set(vap))
+    assert pgp and all(close[m] > first_val_cp - 1_500_000 for m in pgp)
+    assert all(close[m] <= first_val_cp - 1_500_000 for m in trp) and infop["purge_ms"] == 1_500_000
+    # the ridge model uses exactly that split (market level), fits candidate scalers on inner-training rows only
+    rng = random.Random(9)
+    meta_r = _awkward_meta(n_slots=60, assets=("BTC", "ETH"))
+    X = [[rng.gauss(0, 1)] for _ in meta_r]
+    y = [rng.randint(0, 1) for _ in meta_r]
+    leg = [0.5] * len(meta_r)
+    rm = MD.RidgeLogisticModel(inner_split_cfg=cfgp).fit(X, leg, y, [1.0] * len(meta_r), meta=meta_r)
+    ii = rm.inner_info
+    assert ii["used_train_markets"] == sorted(ii["train_markets"]) and ii["used_validation_markets"] == sorted(ii["validation_markets"])
+    assert not set(ii["used_train_markets"]) & set(ii["used_validation_markets"]) and ii["purged_markets"]
+    assert ii["scaler_rows"] == sum(1 for r in meta_r if r["market_ticker"] in set(ii["train_markets"]))
+    # inside a real fold: outer DEVELOPMENT test blocks and the FINAL_HOLDOUT never enter the inner training
+    m, recs, st, parts, folds = _fold_setup()
+    trf, tef = st.fold_rows(folds[-1])
+    _p, _b, info = AB.fit_fold(trf, tef, ["SPOT_PRICE_MOMENTUM"], st.fam_names, st.col_index, st.role_of,
+                               "C_ridge_logistic", st.cfg, st.holdout)
+    ri = info["ridge_inner"]
+    assert ri["status"] == "OK" and set(ri["used_train_markets"]) <= set(folds[-1]["train"])
+    assert not set(ri["used_train_markets"]) & (set(folds[-1]["test"]) | st.holdout)
+    assert not set(ri["used_validation_markets"]) & (set(folds[-1]["test"]) | st.holdout)
+
+
 # ═══════════════════ 27-29 fingerprint, docs, previous ═══════════════════
 def test_step6_fingerprint():
     ok, problems = S6FP.verify()
@@ -983,7 +1282,12 @@ def test_docs_and_outputs():
     assert perf["synthetic"] is True and "SYNTHETIC" in perf["note"]
     mut = json.load(open(os.path.join(HERE, "analysis_output", "step6_mutation_results.json")))
     assert mut["all_caught_and_controls_pass"] is True
-    assert {m["id"] for m in mut["mutations"]} >= {f"S{i}" for i in range(1, 15)}
+    assert {m["id"] for m in mut["mutations"]} >= {f"S{i}" for i in range(1, 21)}
+    for s in ("step 6.1", "ambiguous_convention", "greater_than_or_equal", "requires_versioned_policy_migration",
+              "fee_unknown", "inner_split", "settlement_inputs", "old", "new", "why"):
+        assert s in doc, s
+    sdoc = open(os.path.join(HERE, "docs", "SETTLEMENT_ENGINE.md"), encoding="utf-8").read()
+    assert "settlement/rules.py" in sdoc and "ba4e50c3" in sdoc and "3eba791c" in sdoc
 
 
 def test_previous_stages():
@@ -1025,6 +1329,11 @@ TESTS = [
     ("pipeline", "26 synthetic self-test: planted family found, noise rejected, SYNTHETIC_ONLY, deterministic with workers", test_synthetic_pipeline),
     ("outputs", "27 outputs: synthetic refused in real files; INSUFFICIENT_DATA files name requirements", test_outputs_real_vs_synthetic),
     ("cli", "28 CLIs: dry run writes nothing, no-data run, report, validator, status, synthetic never real", test_clis),
+    ("rules", "29a Step 6.1 contract rules: AT_LEAST equality -> YES, official precision, ties, unknown rules fail closed, versions", test_contract_rules),
+    ("precision", "29b Step 6.1 precision-aware expiration-value verification (no universal 0.01 tolerance)", test_precision_aware_verification),
+    ("convention", "29c Step 6.1 ambiguous / tied window conventions never VERIFIED; migration required", test_convention_ambiguity),
+    ("rejected", "29d Step 6.1 rejected settlement / resolution sources never reach labels", test_rejected_source_labels),
+    ("ridge", "29e Step 6.1 ridge lambda: market-level, close-group, purged inner split", test_ridge_inner_split),
     ("fingerprint", "29 separate Step-6 fingerprint; detects module changes; refuses silent rewrites", test_step6_fingerprint),
     ("docs", "30 docs + benchmark / mutation outputs", test_docs_and_outputs),
     ("previous", "31 all previous stage suites", test_previous_stages),

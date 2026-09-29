@@ -39,7 +39,10 @@ def _spec(study, fams, model, split_cfg, fee, cal_gates, strategy):
     cfg = study.cfg
     return {"model": model, "families": list(fams), "missing_strategy": strategy,
             "hyperparameters": {"max_selected_features": cfg.max_selected_features, "boosted_rounds": cfg.boosted_rounds,
-                                "ridge_grid": [0.1, 1.0, 10.0, 100.0], "logistic_l2": 1e-4},
+                                "ridge_grid": [0.1, 1.0, 10.0, 100.0], "logistic_l2": 1e-4,
+                                "ridge_inner_split": {"unit": "market close group", "fraction": cfg.ridge_inner_fraction,
+                                                      "lookback_ms": cfg.ridge_inner_lookback_ms,
+                                                      "label_horizon_ms": cfg.ridge_inner_label_horizon_ms}},
             "calibration": {"primary": "none", "gates": cal_gates.to_dict()}, "split_config": split_cfg.to_dict(),
             "prune": cfg.prune.to_dict(), "complexity": cfg.complexity.to_dict(),
             "fee_model_fingerprint": fee.fingerprint(), "seed": cfg.seed,
@@ -56,6 +59,11 @@ def _strip(res):
                     c[s].pop("classification", None)
     for a in res.get("folds", []):
         a.pop("selection_markets", None)
+        ri = a.get("ridge_inner")
+        if isinstance(ri, dict):
+            for k in ("train_markets", "validation_markets", "purged_markets", "used_train_markets",
+                      "used_validation_markets"):
+                ri.pop(k, None)
     return res
 
 
@@ -468,7 +476,7 @@ def buckets(preds, fee):
         rows, p, key = preds[who]
         extra = []
         for r, pi in zip(rows, p):
-            e = row_economics(pi, r.get("execution"), fee, r["market_ticker"], (1,))
+            e = row_economics(pi, r.get("execution"), fee, r["market_ticker"], (1,), ts_ms=r.get("checkpoint_ts_ms"))
             if e["status"] != "OK":
                 extra.append(None)
                 continue
@@ -504,7 +512,8 @@ def economics_section(preds, fee):
                     path.append((r2["checkpoint_s"], yb, (100.0 - ya) if ya is not None else None))
                 later[(m, r["checkpoint_s"])] = path
         pr = [{"market": r["market_ticker"], "p_yes": pi, "y": r["y"], "execution": r.get("execution"),
-               "checkpoint_s": r["checkpoint_s"], "ticker": r["market_ticker"]} for r, pi in zip(rows, p)]
+               "checkpoint_s": r["checkpoint_s"], "ticker": r["market_ticker"], "ts_ms": r.get("checkpoint_ts_ms")}
+              for r, pi in zip(rows, p)]
         e = economics(pr, fee, later_bids=later)
         e["prediction_source"] = key
         out[who] = e

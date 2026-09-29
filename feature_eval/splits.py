@@ -125,6 +125,41 @@ def calibration_split(train_markets, table, cfg=None):
     return [e["market"] for e in fit], [e["market"] for e in cal], [e["market"] for e in purged]
 
 
+def inner_split(table, validation_fraction, cfg=None):
+    """Hyperparameter-selection split INSIDE one training block (Step 6.1). Market level, never row level:
+        * rows are grouped by market ticker (market_table) and markets with the same close time stay together;
+        * close-time groups are sorted chronologically and cut by GROUP count (the latest share validates);
+        * inner-training markets are purged with the same causal rule as the outer splits (max causal lookback +
+          label horizon), so no inner-training information window overlaps the validation block's.
+    -> (inner_train_markets, inner_validation_markets, purged_markets, info). Guarantees (asserted): zero market
+    overlap, every inner-training market closes before every validation market, information windows disjoint."""
+    cfg = cfg or SplitConfig()
+    groups = _close_groups(table)
+    info = {"close_groups": len(groups), "validation_fraction": validation_fraction, "purge_ms": cfg.purge_ms,
+            "max_causal_lookback_ms": cfg.max_causal_lookback_ms, "label_horizon_ms": cfg.label_horizon_ms}
+    if len(groups) < 2:
+        info["status"] = "TOO_FEW_CLOSE_GROUPS"
+        return [], [], [], info
+    cut = int(round(len(groups) * (1 - validation_fraction)))
+    cut = max(1, min(cut, len(groups) - 1))
+    tr = [e for g in groups[:cut] for e in g]
+    va = [e for g in groups[cut:] for e in g]
+    tr, purged = _purge(tr, va, cfg)
+    trm, vam = [e["market"] for e in tr], [e["market"] for e in va]
+    if set(trm) & set(vam):
+        raise AssertionError("inner split: a market is in both inner training and inner validation")
+    if tr and max(e["close_ts_ms"] for e in tr) >= min(e["close_ts_ms"] for e in va):
+        raise AssertionError("inner split: an inner-training market closes at / after a validation market")
+    if tr:
+        start = min(e["first_checkpoint_ts_ms"] for e in va) - cfg.max_causal_lookback_ms
+        if max(e["close_ts_ms"] for e in tr) + cfg.label_horizon_ms > start:
+            raise AssertionError("inner split: information windows overlap across the inner boundary")
+    info.update(status="OK" if tr and va else "EMPTY_SIDE", inner_train_markets=len(trm),
+                inner_validation_markets=len(vam), purged=len(purged),
+                boundary_close_ts_ms=[tr[-1]["close_ts_ms"] if tr else None, va[0]["close_ts_ms"]])
+    return trm, vam, [e["market"] for e in purged], info
+
+
 def assert_chronological(folds, table):
     """Every training market closes strictly before every test market of its fold (tested; mutation S1)."""
     close = {e["market"]: e["close_ts_ms"] for e in table}

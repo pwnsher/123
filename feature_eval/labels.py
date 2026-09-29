@@ -12,8 +12,10 @@ Label sources (per market)
     UNLABELED                neither
 The convention gate (settlement.resolution.verify_all on REAL markets with official expiration values): the convention
 is chosen by RECONSTRUCTION AGREEMENT ONLY - never by model performance - and is VERIFIED only with enough compared
-markets, a high share within the expiration-value tolerance and near-perfect outcome agreement. Competing conventions
-are reported. Synthetic data -> SYNTHETIC_ONLY (never verifies anything).
+markets, a high share of EXACT expiration-value matches at each contract's official precision (Step 6.1; no universal
+tolerance) and near-perfect outcome agreement, AND only when it is the UNIQUE passing convention: tied /
+indistinguishable passing conventions stay SETTLEMENT_UNVERIFIED (AMBIGUOUS_CONVENTION). Competing conventions are
+reported. Synthetic data -> SYNTHETIC_ONLY (never verifies anything).
 """
 from dataclasses import asdict, dataclass
 
@@ -24,7 +26,7 @@ GOLD_SOURCES = ("OFFICIAL_RESULT", "RECONSTRUCTED_VERIFIED")
 @dataclass(frozen=True)
 class LabelGateConfig:
     min_markets_compared: int = 50
-    min_within_tolerance_share: float = 0.98
+    min_exact_match_share: float = 0.98          # exact expiration-value match at the contract's OFFICIAL precision
     min_outcome_agreement_share: float = 0.99
     label_window_policy: str = "cf_rti_60s_start_incl_asof_v1"
 
@@ -33,41 +35,60 @@ class LabelGateConfig:
 
 
 def convention_gate(markets, resolutions, observations, synthetic=False, config=None):
-    """-> {status: VERIFIED | SETTLEMENT_UNVERIFIED | SYNTHETIC_ONLY, convention, competing, reason, verify_all summary}"""
+    """-> {status: VERIFIED | SETTLEMENT_UNVERIFIED | SYNTHETIC_ONLY, reason_code, convention, passing, ...}
+
+    VERIFIED only when the real data UNIQUELY identifies the declared label convention: it is the ONLY policy that
+    passes the empirical gate (exact expiration-value matches at official precision + outcome agreement) and the
+    verifier did not report a tie. Several passing / indistinguishable policies -> SETTLEMENT_UNVERIFIED
+    (AMBIGUOUS_CONVENTION), even when the declared policy is among them. The declared policy failing while another
+    passes -> SETTLEMENT_UNVERIFIED (REQUIRES_VERSIONED_POLICY_MIGRATION): the label convention is never switched
+    silently. Official Kalshi results do not depend on this gate."""
     from settlement.resolution import verify_all
+    from settlement.rules import rule_set_fingerprint
     cfg = config or LabelGateConfig()
     va = verify_all(markets, resolutions, observations)
     pol = va["policies"]
-    summary = {pid: {"compared": s["expiration_value"]["compared"], "within_tolerance": s["expiration_value"]["within_tolerance"],
+    summary = {pid: {"compared": s["expiration_value"]["compared"],
+                     "exact_after_rounding": s["expiration_value"]["exact_after_rounding"],
+                     "within_half_unit": s["expiration_value"]["within_half_unit"],
                      "outcome_compared": s["compared"], "outcome_agree": s["agree"], "outcome_disagree": s["disagree"],
-                     "max_abs_diff": s["expiration_value"]["max_abs_diff"]} for pid, s in pol.items()}
+                     "max_raw_abs_diff": s["expiration_value"]["max_raw_abs_diff"]} for pid, s in pol.items()}
     out = {"config": cfg.to_dict(), "by_convention": summary, "verify_all_verdict": va["convention_verdict"],
-           "label_window_policy": cfg.label_window_policy}
+           "label_window_policy": cfg.label_window_policy, "settlement_rule_set_fingerprint": rule_set_fingerprint()}
     if synthetic:
-        out.update(status="SYNTHETIC_ONLY", convention=None, reason="synthetic data never verifies a settlement convention")
+        out.update(status="SYNTHETIC_ONLY", reason_code="SYNTHETIC", convention=None,
+                   reason="synthetic data never verifies a settlement convention")
         return out
     compared = max((s["compared"] for s in summary.values()), default=0)
     if compared < cfg.min_markets_compared:
-        out.update(status="SETTLEMENT_UNVERIFIED", convention=None,
-                   reason=f"only {compared} real markets with an official expiration value (< {cfg.min_markets_compared})")
+        out.update(status="SETTLEMENT_UNVERIFIED", reason_code="INSUFFICIENT_MARKETS", convention=None,
+                   reason=f"only {compared} real markets with an official expiration value at a known official "
+                          f"precision (< {cfg.min_markets_compared})")
         return out
 
     def ok(s):
-        return (s["compared"] and s["within_tolerance"] / s["compared"] >= cfg.min_within_tolerance_share and
-                s["outcome_compared"] and s["outcome_agree"] / s["outcome_compared"] >= cfg.min_outcome_agreement_share)
+        return bool(s["compared"] and s["exact_after_rounding"] / s["compared"] >= cfg.min_exact_match_share and
+                    s["outcome_compared"] and s["outcome_agree"] / s["outcome_compared"] >= cfg.min_outcome_agreement_share)
     passing = sorted(pid for pid, s in summary.items() if ok(s))
     out["competing_conventions_passing"] = passing
-    if cfg.label_window_policy in passing:
-        out.update(status="VERIFIED", convention=cfg.label_window_policy,
-                   reason=f"{cfg.label_window_policy} agrees on {summary[cfg.label_window_policy]['within_tolerance']}/"
-                          f"{summary[cfg.label_window_policy]['compared']} markets"
-                          + ("" if len(passing) == 1 else f"; indistinguishable from {[p for p in passing if p != cfg.label_window_policy]}"))
+    tied = va["convention_verdict"].get("status") == "EVALUATED_TIED" and \
+        cfg.label_window_policy in va["convention_verdict"].get("best_policies", [])
+    if passing == [cfg.label_window_policy] and not tied:
+        out.update(status="VERIFIED", reason_code="UNIQUE_CONVENTION", convention=cfg.label_window_policy,
+                   reason=f"{cfg.label_window_policy} is the only passing convention: exact official-precision match "
+                          f"on {summary[cfg.label_window_policy]['exact_after_rounding']}/"
+                          f"{summary[cfg.label_window_policy]['compared']} markets")
+    elif len(passing) > 1 or (passing == [cfg.label_window_policy] and tied):
+        out.update(status="SETTLEMENT_UNVERIFIED", reason_code="AMBIGUOUS_CONVENTION", convention=None,
+                   reason=f"conventions {passing} pass equally / indistinguishably: the data does not identify a "
+                          "unique window convention, so reconstructed labels stay non-gold")
     elif passing:
-        out.update(status="SETTLEMENT_UNVERIFIED", convention=None,
-                   reason=f"the label convention {cfg.label_window_policy} fails while {passing} pass: re-generate labels "
-                          f"with a verified convention (a deliberate, versioned change) before using reconstructed labels")
+        out.update(status="SETTLEMENT_UNVERIFIED", reason_code="REQUIRES_VERSIONED_POLICY_MIGRATION", convention=None,
+                   reason=f"the declared label convention {cfg.label_window_policy} fails while {passing} passes: "
+                          "adopt it only through a deliberate, versioned policy migration")
     else:
-        out.update(status="SETTLEMENT_UNVERIFIED", convention=None, reason="no convention reaches the agreement gate")
+        out.update(status="SETTLEMENT_UNVERIFIED", reason_code="NO_CONVENTION_PASSES", convention=None,
+                   reason="no convention reaches the agreement gate")
     return out
 
 

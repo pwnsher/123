@@ -1,37 +1,26 @@
 {
- "contract_rules": {
-  "rule_set_fingerprint": "49113ba7c27674b0b8a171fa403f0b539c7f7092f9679056e5810faca5c2363c",
-  "rule_set_version": "kalshi_crypto15m_rules_v1",
-  "rules": {
-   "KXBTC15M@v1": "0e26e8c256897b8ee9a7d19066b031412c85d76190c57ca7177ce12fc6e6694b",
-   "KXETH15M@v1": "3f6f93d93e60434d8b826b1ea4123e6387f83f21d143729cd02e902cc82c9890",
-   "KXSOL15M@v1": "c3e1811cbc716be072e96dd883a5cac96fb7142db3db48862e5ba75c3730cdc6",
-   "KXXRP15M@v1": "a6f01b1f6b256acc6d70217c0d3567be5a844521da699d40903d572ee3261fab"
-  }
- },
- "engine_version": "settlement_engine_v2",
- "format": "settlement_fingerprint_v2/canonical_ast_v2_sha256+contract_rules",
+ "engine_version": "settlement_engine_v1",
+ "format": "settlement_fingerprint_v1/canonical_ast_v2_sha256",
  "modules": {
-  "__init__.py": "687103ba78b090c9c834361b19f83ba63d38c17d2a4cc9078eb4c4641686d2d1",
-  "accumulator.py": "8648164882c3d7e45faa5406e62159447a5ad8eff0737d17c319219975766fcf",
+  "__init__.py": "86aae833c683ba1f9e69072a98e69b392b1cc4f42d6fb44b0ccc4355d03cd844",
+  "accumulator.py": "4e1fdfb38497cea79a2de6dea72fa8bd10652a9b236d7f483c731de0082b9301",
   "assets.py": "d204178f86565729143b9b7fbc7cf38770de7135595bb13db48c188b2ec41af9",
   "cache.py": "ff698bfb135f62064387c8f10aee4cc089c326107bcc9f11a149d4e3bd223476",
   "cf_history.py": "50e37f0dd6966a27fbba29d49c8a01dea20b28aacf92e5c17585261b250d567a",
   "cf_live.py": "9dfc049eeb984a969b7c61eb600baa27d45b53652b6398401318573706f6bd91",
-  "checkpoints.py": "6d2d386771419b424a995263fc38c8ba9642f7ce8d26e6720f497a6536810809",
-  "engine.py": "5d89ada139e129b4dc590a11586e55c6b8844d96a03dbdae4856f5b4cc6e8b08",
-  "fingerprint.py": "a4c8ecf673940f348c8f17628e1f542df5f674fa4945a45d164cf6420a5266db",
+  "checkpoints.py": "6d4871d4fcca170cb4203c15bf9ffd515296882cba0c1524093d929428d4898f",
+  "engine.py": "c947bcf55c396f26434141795c766a7d981a6804237d1fff564e2c7752ef23f5",
+  "fingerprint.py": "a1b979bd446869291ae7c9af04d7a3eed30992d39679f38b86e33c8c30e69df0",
   "kalshi_markets.py": "5bef3f75982d3c177503614ef98201e8b6a5bb3dee3b6236e438fbe457cb5d17",
   "overlap.py": "6c1d628be4a33407f64e2961ff523a8e80ca0102ab294c405578c7137e9e215e",
-  "policy.py": "66166570cbf45a6977a38f936b3884f7b953fa149fb06c4289d4227e1a6a69c5",
+  "policy.py": "395119e5eb26141c99c8070da09235984d6278201d52c0f745599aee212d8e55",
   "proxy.py": "369db361b2756bce341eeba74fa57d1f913e92c39367870fe141f4b9a585ce22",
   "quality.py": "a57cb7252980b69b2adbbc5c40cc53b2cfc0ecf0ef90f3c9d71e49e3ae3d38d5",
-  "reconstruction.py": "575ae99e2e72914b368aecfa6ef5d8d39e77118cace949e1b6b1e1e2323d84f2",
-  "resolution.py": "f9b0b6a810ea1c8649950ea49759a58524ba285c7aeb5ca7fd661fc090a13e5b",
-  "rules.py": "59cf009ee867b1c2ac6d158841749446ac2ffdadd0d2efa6f3502695a1c98ec5",
+  "reconstruction.py": "7cd271dfc45fccbf9c5dc3512ad4379719f2793ffe768a233c4861a2907c063d",
+  "resolution.py": "7ef432d495f9fbbda0af6d7eaa377743e4784849a3d29d15ce476f919709ae99",
   "schemas.py": "48417287feb7b5f5feeb7544ffaa117d5dd355654c470e4693675be6dc0fc77b",
-  "synthetic.py": "ba43ac7d2d5b59a3b4a115b1aca11c50aa00098a8c4d9d46326bc3faf86e550f",
-  "types.py": "20628655d516fde47e5fb6d01336ed7e8ef30d1ea55e6384faf514caf02f39a7"
+  "synthetic.py": "3995f47302206410106805f2a710f72f1c4df39efd44f2f21c31fe118f56ae0a",
+  "types.py": "68ecfe026b36342f722f2910ae7a23db9bf8b3e16755ac9fa319ab0750aec65b"
  },
  "note": "Research/observation code only; independent of the Step-1 strategy baseline.",
  "policies": {
@@ -76,5 +65,5 @@
    "version": 1
   }
  },
- "settlement_fingerprint": "ba4e50c39ab593599ab601bcd5ff0e3b6095d7f8523e252a881cdf6529e44f0a"
+ "settlement_fingerprint": "3eba791cfe8163cc17406ecdbd0c0e04abfe178afb7b6695565a3484318ff2be"
 }

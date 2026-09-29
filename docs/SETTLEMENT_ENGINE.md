@@ -89,8 +89,8 @@ Default policy `cf_rti_60s_start_incl_asof_v1` (`verified=False`):
 | Beginning instant (close − 60 s) | **included** (`start_inclusive=True`) |
 | Closing instant (close) | **excluded** (`end_inclusive=False`); instants are close−60 s … close−1 s |
 | Sample at instant *g* | the latest observation with *g* − 1000 ms ≤ event time ≤ *g* (`ASOF`, `max_sample_age_ms=1000`); `OBSERVED_EXACT` if exactly at *g* |
-| Final value | arithmetic mean of the 60 sample values (`math.fsum`), no rounding |
-| Outcome | `yes` if final > strike, `no` if final < strike, **none + `AT_STRIKE` flag** if equal |
+| Final value | arithmetic mean of the 60 sample values (`math.fsum`), kept **unrounded** (`final_value`, diagnostic) |
+| Settlement value + outcome | from the market's **versioned contract rule** (`settlement/rules.py`, Step 6.1, §9a): the mean at the official precision, then the rule's comparator. BTC / ETH / XRP: "at least" — **equality with the strike is YES**. Unknown rules fail closed (no outcome) |
 | Membership of an event time | `BEFORE_WINDOW` / `IN_WINDOW` / `AFTER_WINDOW`, per the inclusivity flags |
 
 Candidate conventions, all evaluated by the resolution verifier:
@@ -238,6 +238,41 @@ Three deliberately leaky builders must be **detected**:
 
 Mutation checks confirmed that removing the receive-time filter from `reconstruct` is caught.
 
+## 9a. Contract settlement rules (`settlement/rules.py`, Step 6.1)
+
+How a reconstructed mean becomes the official expiration value and outcome is a property of the CONTRACT, versioned
+per series (never one global comparator):
+
+| Series | Comparator | Official precision | Rounding | Tie (.5) | Status |
+|---|---|---|---|---|---|
+| KXBTC15M | `GREATER_THAN_OR_EQUAL` ("at least") | 2 dp | nearest | UNSPECIFIED | DOCUMENTED |
+| KXETH15M | `GREATER_THAN_OR_EQUAL` | 2 dp | nearest | UNSPECIFIED | DOCUMENTED |
+| KXXRP15M | `GREATER_THAN_OR_EQUAL` | 4 dp | nearest | UNSPECIFIED | DOCUMENTED |
+| KXSOL15M | unknown | unknown | — | — | **UNVERIFIED → fails closed** |
+
+* Sources:
+  * Kalshi's CRYPTO contract terms (`kalshi-public-docs.s3.amazonaws.com/contract_terms/CRYPTO.pdf`: "at least X"
+    means X or greater; "above X" strictly greater).
+  * The current 15-minute market pages, reviewed by the project owner on 2026-09-29. kalshi.com was not reachable
+    from the build environment.
+  * SOL's precision is **not inferred** from another asset.
+* Arithmetic is exact: the samples are exact decimal fractions, and the mean is rounded to the official precision
+  with exact arithmetic.
+* The documentation does not say how an exact .5 tie is rounded, so no tie-breaking convention is invented:
+  * if both candidate values give the same outcome: `ROUNDING_TIE_OUTCOME_INVARIANT`;
+  * otherwise: `ROUNDING_TIE_UNRESOLVED`, with no outcome.
+* Unknown series, unverified rule and unknown operator all fail closed (`RULE_UNKNOWN` / `RULE_UNVERIFIED`).
+* The unrounded mean is never destroyed: `SettlementResult.final_value` holds it, and `settlement_value` holds the
+  official-precision value. The labels carry `final_settlement_value` (official precision), `final_unrounded_mean`,
+  `settlement_rule_id`, `settlement_rule_fingerprint` and `settlement_status`.
+* Versioning:
+  * a market uses the rule version whose effective range covers its close time, so old sessions stay tied to their
+    rule;
+  * v1's start is unknown (observed 2026-09-29), and earlier closes carry `RULE_OBSERVED_AFTER_CLOSE`;
+  * a changed rule must be a new version; the settlement fingerprint refuses an in-place edit.
+* The rule-set fingerprint enters the settlement fingerprint (format v2) and every Step-6 dataset fingerprint.
+* `SettlementWindowPolicy.round_decimals` must stay `None`: rounding is a contract rule, not a window convention.
+
 ## 10. Resolution verification and overlap
 
 * `scripts/verify_settlement_resolution.py` produces one row per market × convention:
@@ -245,12 +280,16 @@ Mutation checks confirmed that removing the receive-time filter from `reconstruc
   * strike;
   * official result and `expiration_value`, and the absolute difference;
   * agreement and category (`AGREE`, `DISAGREE`, `NO_RECONSTRUCTION`, `NO_OFFICIAL_RESULT`,
-    `AT_STRIKE`, `NO_STRIKE`);
+    `RULE_UNKNOWN`, `RULE_UNVERIFIED`, `ROUNDING_TIE_UNRESOLVED`, `NO_STRIKE`); `at_strike` is informational;
+  * precision-aware value checks (Step 6.1; there is no universal tolerance): exact match after the official rounding,
+    within half an official display unit, the raw unrounded difference, and the official precision used;
   * coverage, quality, flags and input digest;
   * a research **strike check**: the previous window's reconstructed average vs `floor_strike`.
 
-  A convention verdict is issued only with ≥ 30 markets that have an `expiration_value`
-  (`INSUFFICIENT_DATA` otherwise). Tied conventions are reported as tied. Outcome agreement alone
+  A convention verdict is issued only with ≥ 30 markets that have an `expiration_value` at a known official
+  precision (`INSUFFICIENT_DATA` otherwise); it ranks conventions by EXACT official-precision matches. Tied
+  conventions are reported as tied (`EVALUATED_TIED`), and a tie never verifies a convention (Step-6 label gate:
+  `AMBIGUOUS_CONVENTION`). Outcome agreement alone
   rarely distinguishes conventions; `expiration_value` does.
 * `scripts/compare_settlement_overlap.py`: live vs history.
   * Point level: exact matches, tolerance matches, max / mean / median error, missing-in-live,
@@ -331,3 +370,4 @@ back-history. The collector never marks a convention verified.
 |---|---|---|
 | 2026-09-24 | initial settlement baseline | Step 2 |
 | 2026-09-25 | `assets.py`: `INDEX_ID_PROVENANCE` added; the docstring now marks the asset→index mapping as DOCUMENTED. Mapping values are unchanged, and window policies stay `verified=False`. OLD `b665778b47cc1d49…` → NEW `3eba791cfe8163cc…` | Step 3: the index ids are confirmed by Kalshi documentation (owner-supplied, corroborated by search). The only source change is the added provenance constant; no settlement behaviour changed. |
+| 2026-09-29 | **Step 6.1 (semantic correction, versioned).** New `rules.py` (versioned contract rules); the engine takes outcomes from the rule (AT_LEAST equality → YES, official precision, unresolved ties fail closed, unknown rules fail closed); `resolution.py` is precision-aware (`VALUE_TOLERANCE = 0.01` removed); labels carry rule provenance; `ENGINE_VERSION` v1 → v2; fingerprint format v2 pins the rules. OLD `3eba791cfe8163cc…` → NEW `ba4e50c39ab59359…` (old baseline archived in `config/history/`) | The earlier engine treated equality as an unresolved `AT_STRIKE` and compared unrounded values against a universal 0.01 tolerance. Both conflict with the current Kalshi 15-minute crypto rules ("at least" the target; official values rounded to 2 dp for BTC / ETH and 4 dp for XRP). Research labels only; production is untouched. |

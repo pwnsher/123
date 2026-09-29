@@ -53,7 +53,12 @@ class Flag(str, Enum):
     ASOF_SAMPLES = "ASOF_SAMPLES"
     INTERPOLATED_SAMPLES = "INTERPOLATED_SAMPLES"
     PARTIAL_MEAN = "PARTIAL_MEAN"
-    AT_STRIKE = "AT_STRIKE"
+    AT_STRIKE = "AT_STRIKE"                          # rounded settlement value == strike (informational)
+    RULE_UNKNOWN = "RULE_UNKNOWN"                    # no contract rule for the series / close time: fail closed
+    RULE_UNVERIFIED = "RULE_UNVERIFIED"              # the rule's comparator / precision is not documented: fail closed
+    ROUNDING_TIE_UNRESOLVED = "ROUNDING_TIE_UNRESOLVED"
+    ROUNDING_TIE_OUTCOME_INVARIANT = "ROUNDING_TIE_OUTCOME_INVARIANT"
+    RULE_OBSERVED_AFTER_CLOSE = "RULE_OBSERVED_AFTER_CLOSE"
     PROXY_SOURCE = "PROXY_SOURCE"
     MIXED_SOURCES = "MIXED_SOURCES"
     WINDOW_NOT_STARTED = "WINDOW_NOT_STARTED"
@@ -245,10 +250,16 @@ class SettlementState:
 class SettlementResult:
     """A reconstructed settlement (final when as_of >= close) with full provenance."""
     state: SettlementState
-    final_value: Optional[float]                   # None unless the policy accepts the window (fail closed)
-    reconstructed_outcome: Optional[str]           # "yes" / "no" / None (no final value or exactly at strike)
+    final_value: Optional[float]                   # UNROUNDED accepted mean; None unless the policy accepts the window
+    reconstructed_outcome: Optional[str]           # "yes" / "no" per the contract rule / None (fail closed)
     samples: Tuple[Sample, ...]
     provenance: Dict[str, Any] = field(default_factory=dict)
+    settlement: Dict[str, Any] = field(default_factory=dict)   # rule id / fingerprint, official-precision value, status
+
+    @property
+    def settlement_value(self):
+        """The reconstructed value at the contract's OFFICIAL precision (None when unknown / tie / no final)."""
+        return self.settlement.get("settlement_value")
 
     @property
     def quality(self):
@@ -256,7 +267,8 @@ class SettlementResult:
 
     def to_dict(self, include_samples=False):
         d = {"state": self.state.to_dict(), "final_value": self.final_value,
-             "reconstructed_outcome": self.reconstructed_outcome, "provenance": self.provenance}
+             "reconstructed_outcome": self.reconstructed_outcome, "provenance": self.provenance,
+             "settlement": {k: (list(v) if isinstance(v, tuple) else v) for k, v in self.settlement.items()}}
         if include_samples:
             d["samples"] = [dict(asdict(s), kind=s.kind.value) for s in self.samples]
         return d

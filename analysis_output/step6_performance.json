@@ -10,37 +10,37 @@
  "runs": [
   {
    "full_pipeline_s": {
-    "1": 5.562,
-    "2": 4.079
+    "1": 4.797,
+    "2": 3.972
    },
-   "generate_s": 0.01,
+   "generate_s": 0.014,
    "identical_across_workers": true,
    "markets": 400,
    "rows": 800,
    "single_fold_fit_s": {
-    "B_logistic": 0.027,
-    "C_ridge_logistic": 0.068,
-    "D_boosted_stumps": 0.013
+    "B_logistic": 0.029,
+    "C_ridge_logistic": 0.091,
+    "D_boosted_stumps": 0.016
    },
    "slots": 100,
-   "structural_prune_all_families_s": 0.005
+   "structural_prune_all_families_s": 0.004
   },
   {
    "full_pipeline_s": {
-    "1": 29.486,
-    "2": 19.121
+    "1": 31.28,
+    "2": 19.966
    },
-   "generate_s": 0.037,
+   "generate_s": 0.036,
    "identical_across_workers": true,
    "markets": 1600,
    "rows": 3200,
    "single_fold_fit_s": {
-    "B_logistic": 0.112,
-    "C_ridge_logistic": 0.266,
-    "D_boosted_stumps": 0.201
+    "B_logistic": 0.141,
+    "C_ridge_logistic": 0.383,
+    "D_boosted_stumps": 0.138
    },
    "slots": 400,
-   "structural_prune_all_families_s": 0.016
+   "structural_prune_all_families_s": 0.028
   }
  ],
  "synthetic": true

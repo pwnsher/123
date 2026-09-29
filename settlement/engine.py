@@ -14,7 +14,9 @@ import math
 
 from settlement import ENGINE_VERSION
 from settlement.policy import PROXY_SOURCES, available_ts
+from settlement.assets import series_of
 from settlement.quality import classify
+from settlement.rules import official_outcome, rule_for
 from settlement.types import (Flag, Membership, Phase, Quality, Sample, SampleKind, SettlementState,
                               OBSERVED_KINDS)
 
@@ -245,16 +247,25 @@ def summarize(book, samples, as_of_ms, schema_mismatch=False, invalid=False, lab
         elif partial_ok:
             final_value = acc_mean
             flags.add(Flag.PARTIAL_MEAN)
-        if final_value is not None and w.round_decimals is not None:
-            final_value = round(final_value, int(w.round_decimals))
+    # final_value stays the UNROUNDED accepted mean (diagnostic, never destroyed). The official settlement value and
+    # the outcome come from the market's versioned CONTRACT RULE (settlement.rules): official precision, then the
+    # rule's comparator; unknown rules / precision / outcome-changing rounding ties fail closed (outcome None).
+    rule = rule_for(m.series or series_of(m.ticker), close)
+    settle = {"rule_id": rule.rule_id if rule else None, "rule_fingerprint": rule.fingerprint() if rule else None,
+              "settlement_value": None, "outcome": None, "status": "NO_FINAL_VALUE", "tie_candidates": None}
     outcome = None
-    if final_value is not None and m.strike is not None:
-        if final_value > m.strike:
-            outcome = "yes"
-        elif final_value < m.strike:
-            outcome = "no"
-        else:
+    if final_value is not None:
+        settle = official_outcome(usable, m.strike, rule)
+        outcome = settle["outcome"]
+        if settle["at_strike"]:
             flags.add(Flag.AT_STRIKE)
+        for st_, f in (("RULE_UNKNOWN", Flag.RULE_UNKNOWN), ("RULE_UNVERIFIED", Flag.RULE_UNVERIFIED),
+                       ("ROUNDING_TIE_UNRESOLVED", Flag.ROUNDING_TIE_UNRESOLVED),
+                       ("ROUNDING_TIE_OUTCOME_INVARIANT", Flag.ROUNDING_TIE_OUTCOME_INVARIANT)):
+            if settle["status"] == st_:
+                flags.add(f)
+        if rule is not None and close is not None and close < rule.observed_ts_ms:
+            flags.add(Flag.RULE_OBSERVED_AFTER_CLOSE)
     if m.strike is None:
         flags.add(Flag.NO_STRIKE)
     if not w.verified:
@@ -286,7 +297,7 @@ def summarize(book, samples, as_of_ms, schema_mismatch=False, invalid=False, lab
         max_gap_s=best * w.sample_interval_ms / 1000.0 if elapsed else None, quality=quality,
         flags=tuple(sorted(f.value for f in flags)), window_policy_id=w.policy_id, reconstruction_policy_id=r.policy_id,
         engine_version=ENGINE_VERSION, sources=tuple(sorted(book.sources)))
-    return state, final_value, outcome, tuple(samples)
+    return state, final_value, outcome, tuple(samples), settle
 
 
 def arrival_order(observations, rpol):

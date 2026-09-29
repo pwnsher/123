@@ -5,8 +5,9 @@ Research models (pure Python, deterministic; no dependency beyond the standard l
        LegacyRecalibrated     logistic on the legacy logit only (the fair same-class baseline)
     B  LogisticModel          logistic regression on standardized research inputs (+ legacy logit), tiny L2 for
                               numerical stability (1e-4)
-    C  RidgeLogisticModel     L2-regularized logistic; lambda chosen from a PREDECLARED grid by a chronological inner
-                              split of the TRAINING data only (never test, never holdout)
+    C  RidgeLogisticModel     L2-regularized logistic; lambda chosen from a PREDECLARED grid by a MARKET-LEVEL,
+                              close-group, PURGED chronological inner split of the TRAINING data only
+                              (feature_eval.splits.inner_split; never rows, never test, never holdout)
     D  BoostedStumps          gradient-boosted depth-1 trees on train-quantile bins, starting from the legacy logit,
                               with learned default directions for missing values (native missingness handling)
 
@@ -182,26 +183,41 @@ class LogisticModel:
 class RidgeLogisticModel(LogisticModel):
     name = "C_ridge_logistic"
 
-    def __init__(self, strategy="indicator", grid=RIDGE_GRID, inner_fraction=0.25):
+    def __init__(self, strategy="indicator", grid=RIDGE_GRID, inner_fraction=0.25, inner_split_cfg=None):
         super().__init__(strategy)
         self.grid = tuple(grid)
         self.inner_fraction = inner_fraction
+        self.inner_split_cfg = inner_split_cfg
 
-    def fit(self, X, legacy, y, w, order=None, scaler_X=None, scaler_w=None):
-        """order: chronological sort key per row (the inner validation uses the LATEST share of TRAINING rows)."""
+    def fit(self, X, legacy, y, w, meta=None, scaler_X=None, scaler_w=None):
+        """meta: per-row dicts (market_ticker, asset, close_ts_ms, checkpoint_ts_ms) aligned with X. Lambda is chosen
+        on a market-level, close-group, purged inner split of THESE (training) rows; each candidate's preprocessing
+        is fit on the inner-training rows only. Without market metadata no tuning is possible: the most conservative
+        lambda (the largest) is used and the reason recorded."""
         from feature_eval.metrics import log_loss
-        idx = sorted(range(len(X)), key=lambda i: order[i]) if order is not None else list(range(len(X)))
-        cut = int(len(idx) * (1 - self.inner_fraction))
-        a, b = idx[:cut], idx[cut:]
-        scores = {}
+        from feature_eval.splits import SplitConfig, inner_split, market_table
+        scores, info = {}, {"status": "NO_MARKET_METADATA"}
+        tr_m = va_m = purged = []
+        if meta is not None:
+            cfg = self.inner_split_cfg or SplitConfig()
+            tr_m, va_m, purged, info = inner_split(market_table(meta), self.inner_fraction, cfg)
+        a = [i for i, r in enumerate(meta or []) if r["market_ticker"] in set(tr_m)]
+        b = [i for i, r in enumerate(meta or []) if r["market_ticker"] in set(va_m)]
         if a and b and len(set(y[i] for i in a)) == 2:
+            wa = market_weights([meta[i]["market_ticker"] for i in a])
+            wb = market_weights([meta[i]["market_ticker"] for i in b])
             for lam in self.grid:
                 m = LogisticModel(self.pre.strategy, lam).fit([X[i] for i in a], [legacy[i] for i in a],
-                                                              [y[i] for i in a], [w[i] for i in a])
-                scores[lam] = log_loss(m.predict([X[i] for i in b], [legacy[i] for i in b]), [y[i] for i in b],
-                                       [w[i] for i in b])
+                                                              [y[i] for i in a], wa)
+                scores[lam] = log_loss(m.predict([X[i] for i in b], [legacy[i] for i in b]), [y[i] for i in b], wb)
+            info["scaler_rows"] = len(a)
+        elif info.get("status") == "OK":
+            info["status"] = "ONE_CLASS_OR_EMPTY"
         self.l2 = min(scores, key=lambda lam: (scores[lam], -lam)) if scores else max(self.grid)
         self.inner_scores = scores
+        self.inner_info = dict(info, train_markets=list(tr_m), validation_markets=list(va_m), purged_markets=list(purged),
+                               used_train_markets=sorted({meta[i]["market_ticker"] for i in a}),
+                               used_validation_markets=sorted({meta[i]["market_ticker"] for i in b}))
         super().fit(X, legacy, y, w, scaler_X, scaler_w)
         self.n_params = 1 + 1 + self.pre.n_out
         return self

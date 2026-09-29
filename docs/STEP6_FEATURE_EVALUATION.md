@@ -21,7 +21,7 @@ separate file.
 repository. Every real output file says so and names the unmet requirements. See §15.
 
 Stage 22 (`test_stage22.py`) enforces all of this, and `scripts/mutation_test_step6.py` proves the tests catch the
-14 methodological errors S1–S14.
+14 methodological errors S1–S14, plus S15–S20 for the Step 6.1 corrections (§18).
 
 ---
 
@@ -38,7 +38,7 @@ py run_step6_research.py --report           # summary of the existing step6_*.js
 py run_step6_research.py --synthetic-selftest [--workers 2]    # code self-test on a SYNTHETIC matrix
 py validate_research_session.py market_data_sessions\<session> [--json out.json]
 py research_status.py                       # real sessions, hours, settled markets, unmet gates (no ETA)
-py scripts/mutation_test_step6.py           # S1–S14
+py scripts/mutation_test_step6.py           # S1–S20
 py scripts/bench_step6.py                   # SYNTHETIC throughput
 py -m feature_eval.fingerprint --verify     # separate Step-6 fingerprint
 ```
@@ -97,7 +97,8 @@ The finer families already in the repo are kept as they are. Step-3 groups map t
 * `SETTLEMENT_CONVENTION_DEPENDENT` (11);
 * `COINBASE_L2_SEQUENCE` (112): see §4.
 
-The universe fingerprint is `e4c856ba2b63df06…`. `verify_frozen()` refuses any record change without a
+The universe version is `feature_universe_v2` (Step 6.1: the settlement layer's source fingerprint changed). Its
+fingerprint is `920c0a8aae81535f…`; v1 (`e4c856ba2b63df06…`) is archived in `config/history/`. `verify_frozen()` refuses any record change without a
 `FEATURE_UNIVERSE_VERSION` change (S12), a hand edit, or a version mismatch.
 
 `max_lookback_ms()` is 1 500 000 ms: the longest retention of any frozen engine. It is used for the purge (§6).
@@ -156,9 +157,12 @@ The label convention is selected **only by reconstruction agreement with officia
 by model performance. `settlement.resolution.verify_all` is run over all window policies. The declared label policy
 (`cf_rti_60s_start_incl_asof_v1`) must reach:
 
-* ≥ 50 compared markets;
-* ≥ 98 % within tolerance;
-* ≥ 99 % outcome agreement.
+* ≥ 50 compared markets (with a known official precision);
+* ≥ 98 % EXACT expiration-value matches at the contract's official precision (Step 6.1: no universal tolerance);
+* ≥ 99 % outcome agreement;
+* and it must be the **only** passing convention. Tied or indistinguishable passing conventions →
+  `SETTLEMENT_UNVERIFIED / AMBIGUOUS_CONVENTION`. The declared policy failing while another passes →
+  `REQUIRES_VERSIONED_POLICY_MIGRATION`. Details in §18.
 
 Label sources:
 
@@ -360,14 +364,24 @@ predeclared size (1, 10, 50 contracts):
 `net_edge = calibrated_prob − VWAP/100 − fee_per_contract` (probability units per $1 contract; unit conversions
 tested). Any uncertainty buffer is reported separately.
 
-**Fees are versioned configuration** (`FeeModel`):
+**Fees are versioned configuration** (`FeeModel` of `FeeSchedule`s; Step 6.1). Each schedule records:
 
-* version, schedule source, effective date;
-* maker / taker rates, rounding, market exceptions;
-* its fingerprint is part of every experiment.
+* source / version and URL;
+* effective start and end;
+* the series it covers, or the general `*` scope with explicit exclusions;
+* taker and maker rates, rounding, and whether it is verified.
+
+A trade uses the covering schedule for its series at its timestamp. A series-specific schedule beats the general one.
+
+The fee status is `VERIFIED` only when that schedule is verified **and** its effective range covers the trade time.
+It is `FEE_UNVERIFIED` otherwise: an unverified schedule, an unknown start date, or an unknown trade time. It is
+`FEE_UNKNOWN` when no schedule covers the trade. The general formula is never verified globally, and the fingerprint
+of every schedule is part of every experiment.
 
 Default: Kalshi's general formula ceil_to_cent(rate × C × P × (1 − P)), taker 0.07, maker 0.0175, **unverified**.
-The economic status is therefore **`FEE_UNVERIFIED`** until the schedule is confirmed for the studied markets.
+The official schedule (`kalshi.com/docs/kalshi-fee-schedule.pdf`) was not reachable from the build environment, and
+public summaries disagree on whether crypto uses a different multiplier. The economic status therefore stays
+**`FEE_UNVERIFIED`**.
 
 **Maker EV is `NOT_EVALUATED`.** The fill probability of a resting order is unknown from the displayed book; a maker
 EV needs a fill model.
@@ -403,7 +417,7 @@ The **experiment fingerprint** covers:
 * the families;
 * the missing-data strategy;
 * the calibration method and gates;
-* the split config including `purge_ms`;
+* the split config including `purge_ms`, and the ridge inner-split specification (Step 6.1);
 * pruning, complexity and decision thresholds;
 * the fee-model fingerprint;
 * the bootstrap specification;
@@ -419,7 +433,8 @@ The **separate Step-6 fingerprint** (`config/step6_baseline.json`, `py -m featur
 * every predeclared default: split / purge, ablation, pruning, gates, calibration, fees, sizes, buckets, quality,
   Coinbase and label gates, hypotheses.
 
-It also records the existing perp-veto and production-file hashes. **No earlier fingerprint changed** (§16).
+It also records the existing perp-veto and production-file hashes. Step 6.1 deliberately changed the settlement,
+universe and Step-6 fingerprints; see §18 for OLD / NEW / WHY. No other fingerprint changed.
 
 ## 14. Synthetic self-test and benchmark (SYNTHETIC ONLY)
 
@@ -470,9 +485,8 @@ real evidence exists.
 | `.gitignore` | — | whitelists the Step-6 output files | outputs are delivered |
 | docs | — | Step-6 sections | documentation |
 
-No production file, strategy constant, perp-veto file, or Step 2–5 engine changed. The legacy (`8d94f241…`),
-extended (`784141876…`), settlement (`3eba791c…`), market-data (`969cec83…`), perp-data (`90543ddf…`),
-microstructure (`695d8e77…`) and perp-veto (`499c1e16…`) fingerprints all verify unchanged.
+Step 6 itself changed no production file, strategy constant, perp-veto file or Step 2–5 engine. Step 6.1 changed the
+Step-2 settlement engine deliberately, for correctness; see §18.
 
 ## 17. Limitations (documented, not hidden)
 
@@ -486,3 +500,95 @@ microstructure (`695d8e77…`) and perp-veto (`499c1e16…`) fingerprints all ve
 * Pure-Python models (logistic, ridge, stumps) are deliberately small. The complexity gate keeps them honest; richer
   models need more data, not more code.
 * Stability and regime slices need many markets. With little data they are reported as not evaluable.
+* (6.1) SOL's current comparator and precision are unverified, so SOL reconstructed outcomes fail closed. Official SOL
+  results stay usable.
+* (6.1) The BTC / ETH / XRP rule text comes from the project owner's review of the current market pages (2026-09-29).
+  kalshi.com could not be opened from the build environment. v1's effective start is unknown.
+* (6.1) Exact .5 rounding ties are unresolved by design (tie rule undocumented). Empirical verification against
+  official expiration values reports them separately.
+* (6.1) The frozen Step-3 synthetic world (`market_data/synthetic.py`, fingerprint-pinned, not edited) still issues
+  its SYNTHETIC "official" results with a strict `>` on unrounded values. It is code-test data only; synthetic labels
+  are never gold and never verify a convention.
+
+## 18. Step 6.1 — correctness hardening
+
+**Issue 1: contract settlement semantics** (`settlement/rules.py`; details in SETTLEMENT_ENGINE.md §9a).
+
+* Outcomes come from versioned per-series rules. BTC / ETH / XRP use `GREATER_THAN_OR_EQUAL` ("at least"), so
+  equality with the strike after official rounding is **YES**.
+* Official precision is 2 dp for BTC and ETH and 4 dp for XRP, with exact decimal rounding.
+* An unresolved .5 tie gives no outcome unless both candidates agree.
+* SOL: UNVERIFIED, so it fails closed. An unknown series or operator also fails closed.
+* The unrounded mean is kept, and labels carry the rule id and fingerprint.
+* The rule-set fingerprint `49113ba7c27674b0…` enters the settlement and dataset fingerprints.
+
+**Precision-aware verification** (`settlement/resolution.py`). `VALUE_TOLERANCE = 0.01` is gone. Rows report
+separately:
+
+* the exact match after official rounding;
+* whether the value is within half an official unit;
+* outcome agreement;
+* the raw unrounded difference.
+
+A BTC-sized tolerance can no longer validate a 4-dp XRP value (S20).
+
+**Issue 2: ambiguous conventions** (`feature_eval/labels.convention_gate`). A window convention is `VERIFIED` only
+when it is the unique passing policy and the verifier reports no tie. Other cases:
+
+* tied / indistinguishable → `SETTLEMENT_UNVERIFIED / AMBIGUOUS_CONVENTION`. The settlement demo world with an exact
+  1-s feed is exactly this case: ASOF, EXACT and BUCKET all pass. The old gate would have said VERIFIED.
+* preferred fails, another passes → `REQUIRES_VERSIONED_POLICY_MIGRATION`;
+* none passes → `NO_CONVENTION_PASSES`;
+* too few markets → `INSUFFICIENT_MARKETS`;
+* synthetic data → `SYNTHETIC_ONLY`.
+
+Official Kalshi results remain gold independently of this gate.
+
+**Issue 3: ridge λ selection** (`feature_eval/splits.inner_split`, `RidgeLogisticModel`):
+
+* the split is market-level, by close-time group (all four assets of a slot together), and chronological;
+* it is purged with the outer rule: lookback 1 500 000 ms + label horizon;
+* zero market overlap, chronology and disjoint information windows are asserted;
+* each candidate's scaler is fit on inner-training rows only;
+* only the rows of the outer fold's training block are used;
+* the selected λ is then fit on the full outer training block;
+* without market metadata the model does not tune; it uses the most conservative λ;
+* the inner-split specification is part of `AblationConfig` and the experiment fingerprint.
+
+**Issue 4: rejected sources in labels** (`feature_eval/dataset.settlement_inputs`). A source/asset pair with a REJECT
+quality verdict contributes nothing to any of these:
+
+* convention verification;
+* reconstructed values or outcomes;
+* official resolution labels (a rejected or untrusted Kalshi resolution path is dropped).
+
+A DEGRADED session keeps its surviving sources. The exclusion counts are in each session's metadata.
+
+**Mutations S15–S20** (all caught; `analysis_output/step6_mutation_results.json`):
+
+* S15: a tied convention becomes VERIFIED.
+* S16: row-based inner split.
+* S17: the inner split has no purge, and its internal guard is disabled, so the test itself must catch it.
+* S18: a rejected CF source leaks back into labels.
+* S19: equality under "at least" is not YES.
+* S20: a universal 0.01 tolerance is used for values.
+
+**Fingerprints (OLD → NEW, WHY)**
+
+| Fingerprint | OLD | NEW | WHY |
+|---|---|---|---|
+| settlement | `3eba791cfe8163cc…` | `ba4e50c39ab59359…` | contract rules module; rule-based outcomes; precision-aware verification; engine v2; format v2 pins the rules |
+| Step-6 feature universe | `e4c856ba2b63df06…` (v1) | `920c0a8aae81535f…` (v2) | settlement-layer records carry the new settlement source fingerprint |
+| Step-6 baseline | `7469fc0fc46eef18…` | `bc7f1b47cae79b88…` | feature_eval modules (label gate, ridge split, rejected-source filter, fees), universe v2, defaults |
+| dataset fingerprints | — | include label version `labels_v2` and the rule-set fingerprint | labels semantically changed (no real dataset exists yet) |
+
+The previous baseline files are archived in `config/history/`. The legacy / extended strategy, market-data,
+perp-data, microstructure and perp-veto fingerprints are unchanged.
+
+**Earlier-stage test files changed (OLD / NEW / WHY)**
+
+| File | OLD | NEW | WHY |
+|---|---|---|---|
+| `test_stage18.py` | equality → `AT_STRIKE`, no outcome; `expiration_value_abs_diff`, `within_tolerance` | equality → YES (`AT_STRIKE` informational); exact / half-unit / raw checks | the corrected contract semantics |
+| `test_stage21.py` | pins settlement `3eba791c…` | pins `ba4e50c3…` | the deliberate settlement re-baseline |
+| `scripts/settlement_validation_report.py` | "EV within tol" | "EV exact @ official precision" | the removed tolerance |

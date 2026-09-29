@@ -1,7 +1,7 @@
 {
  "app_version": "kalshi-local-step6",
  "config_note": "lenient complexity gates for the SYNTHETIC self-test only (real runs use the predeclared defaults)",
- "generated_at_ms": 1790582475599,
+ "generated_at_ms": 1790677642029,
  "kind": "synthetic_selftest",
  "never": "APPROVED_FOR_PRODUCTION",
  "note": "SYNTHETIC - code-correctness evidence only; never feature selection, tuning or a predictive claim",
@@ -13,7 +13,7 @@
     "allowed": false,
     "gated_out": 1
    },
-   "dataset_fingerprint": "ebf0e0456ad91011a76a0b1eaed939ccfa00d22e37def8e2b753394d3a375530",
+   "dataset_fingerprint": "46c68b47f9eb4ca333e70f82da6746f5a03a5d9d711ae8005269b53fee2e4fdb",
    "economics_input_rule": "Platt-calibrated when its gate passed in every fold, else uncalibrated (predeclared)",
    "environment": {
     "hash_seed_independent": true,
@@ -860,7 +860,7 @@
     "allowed": false,
     "gated_out": 1
    },
-   "dataset_fingerprint": "ebf0e0456ad91011a76a0b1eaed939ccfa00d22e37def8e2b753394d3a375530",
+   "dataset_fingerprint": "46c68b47f9eb4ca333e70f82da6746f5a03a5d9d711ae8005269b53fee2e4fdb",
    "environment": {
     "hash_seed_independent": true,
     "implementation": "CPython",
@@ -1142,7 +1142,7 @@
     "allowed": false,
     "gated_out": 1
    },
-   "dataset_fingerprint": "ebf0e0456ad91011a76a0b1eaed939ccfa00d22e37def8e2b753394d3a375530",
+   "dataset_fingerprint": "46c68b47f9eb4ca333e70f82da6746f5a03a5d9d711ae8005269b53fee2e4fdb",
    "environment": {
     "hash_seed_independent": true,
     "implementation": "CPython",
@@ -1310,6 +1310,9 @@
       "average_raw_edge": 0.09360205968382765,
       "excursion_note": "on the frozen checkpoint grid only (captured bids at later checkpoints), not tick level",
       "executable": 632,
+      "fee_status_counts": {
+       "FEE_UNVERIFIED": 632
+      },
       "hypothetical_trade_markets": 251,
       "hypothetical_trades_positive_net_edge": 458,
       "labels": "SIMULATED",
@@ -1333,6 +1336,9 @@
       "average_raw_edge": 0.0892808473610625,
       "excursion_note": "on the frozen checkpoint grid only (captured bids at later checkpoints), not tick level",
       "executable": 446,
+      "fee_status_counts": {
+       "FEE_UNVERIFIED": 446
+      },
       "hypothetical_trade_markets": 224,
       "hypothetical_trades_positive_net_edge": 330,
       "labels": "SIMULATED",
@@ -1356,6 +1362,9 @@
       "average_raw_edge": 0.0872808473610626,
       "excursion_note": "on the frozen checkpoint grid only (captured bids at later checkpoints), not tick level",
       "executable": 446,
+      "fee_status_counts": {
+       "FEE_UNVERIFIED": 446
+      },
       "hypothetical_trade_markets": 223,
       "hypothetical_trades_positive_net_edge": 329,
       "labels": "SIMULATED",
@@ -1376,16 +1385,29 @@
      }
     },
     "fee_model": {
-     "effective_date": "UNVERIFIED",
-     "maker_rate": 0.0175,
-     "market_exceptions": {},
-     "rounding": "ceil_to_cent_per_order",
-     "source": "Kalshi fee schedule: general trading fee = round up(rate x C x P x (1 - P)) per order (to be confirmed)",
-     "taker_rate": 0.07,
-     "verified": false,
-     "version": "kalshi_general_fee_formula_v1"
+     "schedules": [
+      {
+       "effective_from_ms": null,
+       "effective_to_ms": null,
+       "excluded_series": [],
+       "maker_rate": 0.0175,
+       "note": "15-minute crypto series may carry a special schedule / multiplier: not confirmed",
+       "rounding": "ceil_to_cent_per_order",
+       "schedule_id": "kalshi_general_fee_formula",
+       "series_scope": [
+        "*"
+       ],
+       "source": "Kalshi fee schedule: general trading fee = round up(rate x C x P x (1 - P)) per order (not read: kalshi.com unreachable from the build environment)",
+       "source_url": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+       "taker_rate": 0.07,
+       "verified": false,
+       "version": "v1"
+      }
+     ],
+     "version": "fee_model_v2"
     },
-    "fee_model_fingerprint": "857fe8e3e65a9edb4a5712fa8d86d5a63a5d20b0bdff391b9eaf7a0ee5c03781",
+    "fee_model_fingerprint": "0258e117c3993db77a56bfd2536149cea5034974545846c1379dea9e8b8f9029",
+    "fee_status_rule": "VERIFIED only when every executable row's schedule is verified and its effective range covers the trade timestamp; otherwise FEE_UNVERIFIED",
     "maker": {
      "reason": "resting-order fill probability is unknown from the displayed book; maker EV needs an explicit fill model (a later execution stage)",
      "status": "NOT_EVALUATED"
@@ -1398,7 +1420,7 @@
     "allowed": false,
     "gated_out": 1
    },
-   "dataset_fingerprint": "ebf0e0456ad91011a76a0b1eaed939ccfa00d22e37def8e2b753394d3a375530",
+   "dataset_fingerprint": "46c68b47f9eb4ca333e70f82da6746f5a03a5d9d711ae8005269b53fee2e4fdb",
    "environment": {
     "hash_seed_independent": true,
     "implementation": "CPython",
@@ -1435,6 +1457,9 @@
       "average_raw_edge": -0.007200055580513122,
       "excursion_note": "on the frozen checkpoint grid only (captured bids at later checkpoints), not tick level",
       "executable": 632,
+      "fee_status_counts": {
+       "FEE_UNVERIFIED": 632
+      },
       "hypothetical_trade_markets": 44,
       "hypothetical_trades_positive_net_edge": 72,
       "labels": "SIMULATED",
@@ -1458,6 +1483,9 @@
       "average_raw_edge": -0.006623124113199095,
       "excursion_note": "on the frozen checkpoint grid only (captured bids at later checkpoints), not tick level",
       "executable": 446,
+      "fee_status_counts": {
+       "FEE_UNVERIFIED": 446
+      },
       "hypothetical_trade_markets": 72,
       "hypothetical_trades_positive_net_edge": 98,
       "labels": "SIMULATED",
@@ -1481,6 +1509,9 @@
       "average_raw_edge": -0.008623124113199128,
       "excursion_note": "on the frozen checkpoint grid only (captured bids at later checkpoints), not tick level",
       "executable": 446,
+      "fee_status_counts": {
+       "FEE_UNVERIFIED": 446
+      },
       "hypothetical_trade_markets": 60,
       "hypothetical_trades_positive_net_edge": 83,
       "labels": "SIMULATED",
@@ -1501,16 +1532,29 @@
      }
     },
     "fee_model": {
-     "effective_date": "UNVERIFIED",
-     "maker_rate": 0.0175,
-     "market_exceptions": {},
-     "rounding": "ceil_to_cent_per_order",
-     "source": "Kalshi fee schedule: general trading fee = round up(rate x C x P x (1 - P)) per order (to be confirmed)",
-     "taker_rate": 0.07,
-     "verified": false,
-     "version": "kalshi_general_fee_formula_v1"
+     "schedules": [
+      {
+       "effective_from_ms": null,
+       "effective_to_ms": null,
+       "excluded_series": [],
+       "maker_rate": 0.0175,
+       "note": "15-minute crypto series may carry a special schedule / multiplier: not confirmed",
+       "rounding": "ceil_to_cent_per_order",
+       "schedule_id": "kalshi_general_fee_formula",
+       "series_scope": [
+        "*"
+       ],
+       "source": "Kalshi fee schedule: general trading fee = round up(rate x C x P x (1 - P)) per order (not read: kalshi.com unreachable from the build environment)",
+       "source_url": "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+       "taker_rate": 0.07,
+       "verified": false,
+       "version": "v1"
+      }
+     ],
+     "version": "fee_model_v2"
     },
-    "fee_model_fingerprint": "857fe8e3e65a9edb4a5712fa8d86d5a63a5d20b0bdff391b9eaf7a0ee5c03781",
+    "fee_model_fingerprint": "0258e117c3993db77a56bfd2536149cea5034974545846c1379dea9e8b8f9029",
+    "fee_status_rule": "VERIFIED only when every executable row's schedule is verified and its effective range covers the trade timestamp; otherwise FEE_UNVERIFIED",
     "maker": {
      "reason": "resting-order fill probability is unknown from the displayed book; maker EV needs an explicit fill model (a later execution stage)",
      "status": "NOT_EVALUATED"
@@ -1746,7 +1790,7 @@
     }
    },
    "best_development_configuration": {
-    "experiment_fingerprint": "f290758070ab46ecab3d74a0c089ea381fa4562104b5f159c128285542d49a61",
+    "experiment_fingerprint": "40f97f00a69a1ba8ca388db2c056bd10f99a712c4c2560234bb4434a64036574",
     "families": [
      "SETTLEMENT",
      "SPOT_PRICE_MOMENTUM",
@@ -3625,10 +3669,13 @@
      "near_constant_share": 0.995
     },
     "q_threshold": 0.1,
+    "ridge_inner_fraction": 0.25,
+    "ridge_inner_label_horizon_ms": 0,
+    "ridge_inner_lookback_ms": 1500000,
     "seed": 20260928,
     "stable_share": 0.6666666666666666
    },
-   "dataset_fingerprint": "ebf0e0456ad91011a76a0b1eaed939ccfa00d22e37def8e2b753394d3a375530",
+   "dataset_fingerprint": "46c68b47f9eb4ca333e70f82da6746f5a03a5d9d711ae8005269b53fee2e4fdb",
    "environment": {
     "hash_seed_independent": true,
     "implementation": "CPython",
@@ -4325,7 +4372,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "5b598963b74be1923f518f10cb4be844c36b35b6a4f0e9e8e650ee428fcbb80d",
+     "experiment_fingerprint": "4c29faf94d6d64af4aeb10d50573ec993c761a7c3f2a6be579055a0663c53049",
      "families": [
       "SETTLEMENT"
      ],
@@ -4611,30 +4658,30 @@
       },
       "bootstrap_reps": 300,
       "bootstrap_unit": "market",
-      "delta_brier": -5.968670488925464e-06,
+      "delta_brier": 3.71184235969165e-05,
       "delta_brier_ci": [
-       -0.0034917597194102728,
-       0.0032342548111122045
+       -0.003413516624022191,
+       0.0031619069435683852
       ],
-      "delta_log_loss": -0.0006140784475012912,
+      "delta_log_loss": -0.0005408949440974276,
       "delta_log_loss_ci": [
-       -0.011805246792741675,
-       0.0077766200817642305
+       -0.01171020950707661,
+       0.00798826861236116
       ],
-      "log_loss_improvement": 0.0006140784475012912,
+      "log_loss_improvement": 0.0005408949440974276,
       "model": {
-       "brier": 0.20330013509360953,
-       "calibration_intercept": 0.16051417687681543,
-       "calibration_slope": 1.1703789984845956,
-       "ece_10_bins": 0.08045687550941248,
-       "log_loss": 0.5955084303044519,
+       "brier": 0.20334322218769538,
+       "calibration_intercept": 0.15947364207865794,
+       "calibration_slope": 1.170817662311932,
+       "ece_10_bins": 0.0804002454281311,
+       "log_loss": 0.5955816138078557,
        "n_rows": 632,
-       "pr_auc": 0.7432824931681165,
-       "roc_auc": 0.754552780016116
+       "pr_auc": 0.743285699577831,
+       "roc_auc": 0.7543614020950846
       },
       "n_markets": 316,
       "n_rows": 632,
-      "p_value_sign_flip": 0.9200799200799201,
+      "p_value_sign_flip": 0.9270729270729271,
       "stability": {
        "UNSTABLE": true,
        "by": {
@@ -4644,22 +4691,22 @@
          "slices": {
           "BTC": {
            "evaluable": true,
-           "log_loss_improvement": -0.003161867772081303,
+           "log_loss_improvement": -0.0030012652217366064,
            "markets": 79
           },
           "ETH": {
            "evaluable": true,
-           "log_loss_improvement": 0.004372420422878769,
+           "log_loss_improvement": 0.004398306145084126,
            "markets": 79
           },
           "SOL": {
            "evaluable": true,
-           "log_loss_improvement": 0.0029847288549387113,
+           "log_loss_improvement": 0.003602116588342744,
            "markets": 79
           },
           "XRP": {
            "evaluable": true,
-           "log_loss_improvement": -0.0017389677157310039,
+           "log_loss_improvement": -0.002835577735300551,
            "markets": 79
           }
          },
@@ -4671,12 +4718,12 @@
          "slices": {
           "300": {
            "evaluable": true,
-           "log_loss_improvement": 0.0005757445834828463,
+           "log_loss_improvement": 0.0005040242480364624,
            "markets": 316
           },
           "60": {
            "evaluable": true,
-           "log_loss_improvement": 0.0006524123115197402,
+           "log_loss_improvement": 0.0005777656401583942,
            "markets": 316
           }
          },
@@ -4688,12 +4735,12 @@
          "slices": {
           "DOWN": {
            "evaluable": true,
-           "log_loss_improvement": 0.002194981550712122,
+           "log_loss_improvement": 0.0018889103081371832,
            "markets": 168
           },
           "UP": {
            "evaluable": true,
-           "log_loss_improvement": -0.001102479707470206,
+           "log_loss_improvement": -0.0009227917053054776,
            "markets": 155
           }
          },
@@ -4705,7 +4752,7 @@
          "slices": {
           "0": {
            "evaluable": true,
-           "log_loss_improvement": 0.010602591747014792,
+           "log_loss_improvement": 0.010298302443388198,
            "markets": 76
           },
           "1": {
@@ -4732,17 +4779,17 @@
          "slices": {
           "VOL_HIGH": {
            "evaluable": true,
-           "log_loss_improvement": 0.004690155346469972,
+           "log_loss_improvement": 0.00447396985409887,
            "markets": 107
           },
           "VOL_LOW": {
            "evaluable": true,
-           "log_loss_improvement": -0.004899260794647547,
+           "log_loss_improvement": -0.004912702234019478,
            "markets": 109
           },
           "VOL_MID": {
            "evaluable": true,
-           "log_loss_improvement": 0.0022622159395470545,
+           "log_loss_improvement": 0.002276925714543321,
            "markets": 100
           }
          },
@@ -4770,55 +4817,55 @@
       },
       "bootstrap_reps": 300,
       "bootstrap_unit": "market",
-      "delta_brier": 3.273628606611733e-05,
+      "delta_brier": 7.582338015196033e-05,
       "delta_brier_ci": [
-       -0.0005781694504219638,
-       0.0005305199634157209
+       -0.0004479449931482221,
+       0.0005001092204914772
       ],
-      "delta_log_loss": 0.0002400477597618963,
+      "delta_log_loss": 0.0003132312631657619,
       "delta_log_loss_ci": [
-       -0.0013721633674325137,
-       0.0014138033782447326
+       -0.0008572947037160751,
+       0.001443616266123522
       ],
-      "log_loss_improvement": -0.0002400477597618963,
+      "log_loss_improvement": -0.0003132312631657619,
       "model": {
-       "brier": 0.20330013509360953,
-       "calibration_intercept": 0.16051417687681543,
-       "calibration_slope": 1.1703789984845956,
-       "ece_10_bins": 0.08045687550941248,
-       "log_loss": 0.5955084303044519,
+       "brier": 0.20334322218769538,
+       "calibration_intercept": 0.15947364207865794,
+       "calibration_slope": 1.170817662311932,
+       "ece_10_bins": 0.0804002454281311,
+       "log_loss": 0.5955816138078557,
        "n_rows": 632,
-       "pr_auc": 0.7432824931681165,
-       "roc_auc": 0.754552780016116
+       "pr_auc": 0.743285699577831,
+       "roc_auc": 0.7543614020950846
       },
       "n_markets": 316,
       "n_rows": 632,
-      "p_value_sign_flip": 0.7132867132867133,
+      "p_value_sign_flip": 0.5654345654345654,
       "stability": {
        "UNSTABLE": true,
        "by": {
         "asset": {
          "evaluable_slices": 4,
-         "share_improved": 0.25,
+         "share_improved": 0.5,
          "slices": {
           "BTC": {
            "evaluable": true,
-           "log_loss_improvement": 0.0020370542272920866,
+           "log_loss_improvement": 0.0021976567776367823,
            "markets": 79
           },
           "ETH": {
            "evaluable": true,
-           "log_loss_improvement": -0.0024531722215893597,
+           "log_loss_improvement": -0.0024272864993840023,
            "markets": 79
           },
           "SOL": {
            "evaluable": true,
-           "log_loss_improvement": -0.00036777880677426277,
+           "log_loss_improvement": 0.0002496089266297685,
            "markets": 79
           },
           "XRP": {
            "evaluable": true,
-           "log_loss_improvement": -0.0001762942379760494,
+           "log_loss_improvement": -0.001272904257545597,
            "markets": 79
           }
          },
@@ -4830,12 +4877,12 @@
          "slices": {
           "300": {
            "evaluable": true,
-           "log_loss_improvement": -0.0002446908050931298,
+           "log_loss_improvement": -0.0003164111405395144,
            "markets": 316
           },
           "60": {
            "evaluable": true,
-           "log_loss_improvement": -0.00023540471443066267,
+           "log_loss_improvement": -0.0003100513857920092,
            "markets": 316
           }
          },
@@ -4843,16 +4890,16 @@
         },
         "direction": {
          "evaluable_slices": 2,
-         "share_improved": 0.5,
+         "share_improved": 0.0,
          "slices": {
           "DOWN": {
            "evaluable": true,
-           "log_loss_improvement": 8.753226240996965e-05,
+           "log_loss_improvement": -0.00021853898016497146,
            "markets": 168
           },
           "UP": {
            "evaluable": true,
-           "log_loss_improvement": -0.0005957369587537903,
+           "log_loss_improvement": -0.0004160489565890624,
            "markets": 155
           }
          },
@@ -4864,7 +4911,7 @@
          "slices": {
           "0": {
            "evaluable": true,
-           "log_loss_improvement": 0.0004294342831180664,
+           "log_loss_improvement": 0.0001251449794914672,
            "markets": 76
           },
           "1": {
@@ -4891,17 +4938,17 @@
          "slices": {
           "VOL_HIGH": {
            "evaluable": true,
-           "log_loss_improvement": -0.00048084118145112764,
+           "log_loss_improvement": -0.0006970266738222278,
            "markets": 107
           },
           "VOL_LOW": {
            "evaluable": true,
-           "log_loss_improvement": 0.0005501272762635719,
+           "log_loss_improvement": 0.0005366858368916416,
            "markets": 109
           },
           "VOL_MID": {
            "evaluable": true,
-           "log_loss_improvement": -0.0008436895878221791,
+           "log_loss_improvement": -0.0008289798128259131,
            "markets": 100
           }
          },
@@ -4918,7 +4965,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "9ff7d76d81374e95eac46748355384daa55a3b2fe2e1c1fdd832fa54da023be9",
+     "experiment_fingerprint": "7c90f4ef7d5a8ea2451337dd1b7e47a1c4f69ab7812d36c7e1943a5fd43fcc47",
      "families": [
       "SETTLEMENT"
      ],
@@ -4948,13 +4995,29 @@
        "pruning_fingerprints": {
         "SETTLEMENT": "b30a9bf5548937f0dcc15ee0eabe17d75c6a568e8573d72e8f39e92f53bda29c"
        },
-       "ridge_inner_scores": {
-        "0.1": 0.5695435328210163,
-        "1.0": 0.5695615595931613,
-        "10.0": 0.5695908576875286,
-        "100.0": 0.569595190636263
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700160200000,
+         1700162000000
+        ],
+        "close_groups": 239,
+        "inner_train_markets": 712,
+        "inner_validation_markets": 240,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1424,
+        "status": "OK",
+        "validation_fraction": 0.25
        },
-       "ridge_lambda": 0.1,
+       "ridge_inner_scores": {
+        "0.1": 0.5696055073971633,
+        "1.0": 0.5695809856788338,
+        "10.0": 0.5696043150973178,
+        "100.0": 0.5696081634040563
+       },
+       "ridge_lambda": 1.0,
        "selected_features": [
         "settle.syn.noise"
        ],
@@ -4992,11 +5055,27 @@
        "pruning_fingerprints": {
         "SETTLEMENT": "b30a9bf5548937f0dcc15ee0eabe17d75c6a568e8573d72e8f39e92f53bda29c"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700172800000,
+         1700174600000
+        ],
+        "close_groups": 257,
+        "inner_train_markets": 768,
+        "inner_validation_markets": 256,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1536,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5794045701504087,
-        "1.0": 0.5796993304931837,
-        "10.0": 0.579803227606341,
-        "100.0": 0.5798162511434632
+        "0.1": 0.5812975393745469,
+        "1.0": 0.5816161466962354,
+        "10.0": 0.5817293566827869,
+        "100.0": 0.5817435739864719
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -5036,11 +5115,27 @@
        "pruning_fingerprints": {
         "SETTLEMENT": "b30a9bf5548937f0dcc15ee0eabe17d75c6a568e8573d72e8f39e92f53bda29c"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700186300000,
+         1700188100000
+        ],
+        "close_groups": 277,
+        "inner_train_markets": 828,
+        "inner_validation_markets": 276,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1656,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5844678703249838,
-        "1.0": 0.5846075443131636,
-        "10.0": 0.5846643104324161,
-        "100.0": 0.5846716368873035
+        "0.1": 0.5855610776755603,
+        "1.0": 0.5856818920101139,
+        "10.0": 0.5857306016215482,
+        "100.0": 0.5857368791308313
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -5080,11 +5175,27 @@
        "pruning_fingerprints": {
         "SETTLEMENT": "b30a9bf5548937f0dcc15ee0eabe17d75c6a568e8573d72e8f39e92f53bda29c"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700199800000,
+         1700201600000
+        ],
+        "close_groups": 297,
+        "inner_train_markets": 888,
+        "inner_validation_markets": 296,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1776,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5911312755949651,
-        "1.0": 0.5905885106165961,
-        "10.0": 0.5904548658100467,
-        "100.0": 0.5904397437005813
+        "0.1": 0.591918022831114,
+        "1.0": 0.5913616717328638,
+        "10.0": 0.591221857294487,
+        "100.0": 0.5912059249892412
        },
        "ridge_lambda": 100.0,
        "selected_features": [
@@ -5214,7 +5325,7 @@
       "status": "OK"
      },
      "model": "C_ridge_logistic",
-     "q_value_bh": 0.7822177822177823,
+     "q_value_bh": 0.7224080267558529,
      "result_class": "NO_INCREMENTAL_VALUE",
      "synthetic_only": true
     },
@@ -5529,7 +5640,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "b9afe6a798e530b37f64675020c220abb9a6ce5f30ad2d94aa2cb151fd199f29",
+     "experiment_fingerprint": "adfcfcf2187cfc22b348e934f17a759beba34123a11f5ee73f26390de31f73c8",
      "families": [
       "SETTLEMENT"
      ],
@@ -5797,7 +5908,7 @@
       "status": "OK"
      },
      "model": "D_boosted_stumps",
-     "q_value_bh": 0.7552447552447552,
+     "q_value_bh": 0.7224080267558529,
      "result_class": "NO_INCREMENTAL_VALUE",
      "synthetic_only": true
     },
@@ -6116,7 +6227,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "7692e8afcd95d7141a242c0ba2e3f4c32ccd42b88cc0982e9c9b65bc4c4efcaa",
+     "experiment_fingerprint": "47799056a11e67e2bf10058fd1ef7aa0293527b1cdcdf718cbcdb67dfb996387",
      "families": [
       "SPOT_PRICE_MOMENTUM",
       "SPOT_VOLATILITY"
@@ -6728,7 +6839,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "e4573be5158390db60e6aef5a1e4c213bbc7f0a51f4a2a98b993fe616ca5290e",
+     "experiment_fingerprint": "2819686c4baa19a29c2d852e2ed32d752d7c5156184f484f7983122adf79ba28",
      "families": [
       "SPOT_PRICE_MOMENTUM",
       "SPOT_VOLATILITY"
@@ -6760,11 +6871,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700160200000,
+         1700162000000
+        ],
+        "close_groups": 239,
+        "inner_train_markets": 712,
+        "inner_validation_markets": 240,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1424,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.4774840091840465,
-        "1.0": 0.5396487725493234,
-        "10.0": 0.5657702197441318,
-        "100.0": 0.5692024323743733
+        "0.1": 0.478449356481247,
+        "1.0": 0.5398687159975065,
+        "10.0": 0.5658054415156256,
+        "100.0": 0.5692175931825691
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -6811,11 +6938,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700172800000,
+         1700174600000
+        ],
+        "close_groups": 257,
+        "inner_train_markets": 768,
+        "inner_validation_markets": 256,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1536,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.49568700798578386,
-        "1.0": 0.5518486697294241,
-        "10.0": 0.5762272527249009,
-        "100.0": 0.5794484279656509
+        "0.1": 0.49735335885538506,
+        "1.0": 0.5536671762411313,
+        "10.0": 0.5781401681660175,
+        "100.0": 0.5813743856867518
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -6862,11 +7005,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700186300000,
+         1700188100000
+        ],
+        "close_groups": 277,
+        "inner_train_markets": 828,
+        "inner_validation_markets": 276,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1656,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5045238055922879,
-        "1.0": 0.5582144116998581,
-        "10.0": 0.5812859460645732,
-        "100.0": 0.5843242724376052
+        "0.1": 0.5055644865326219,
+        "1.0": 0.5591962566263273,
+        "10.0": 0.5823375551999765,
+        "100.0": 0.5853879708568197
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -6913,11 +7072,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700199800000,
+         1700201600000
+        ],
+        "close_groups": 297,
+        "inner_train_markets": 888,
+        "inner_validation_markets": 296,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1776,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5297231296878429,
-        "1.0": 0.5693428795551027,
-        "10.0": 0.5877099370525577,
-        "100.0": 0.5901572096957326
+        "0.1": 0.530548716054543,
+        "1.0": 0.5701353033500804,
+        "10.0": 0.5884799726570971,
+        "100.0": 0.5909237119554266
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -7368,7 +7543,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "acd9594162038c91147193d65731c7ec9cb9edf71e1487b8ad16f123666d0204",
+     "experiment_fingerprint": "75125ece3341b7b837fd46e388be17b5568dabc9b3d4c6becc7d0f8cf06d2d25",
      "families": [
       "SPOT_PRICE_MOMENTUM",
       "SPOT_VOLATILITY"
@@ -7991,7 +8166,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "f2cbdf2c3a28ce5af917dd4d739df2e81ecb1a5ec999158030ddf16de0250b15",
+     "experiment_fingerprint": "7c1084ba739922f61a23ff87c2a5525ee891580585b8447e9c7c8d8993970093",
      "families": [
       "PERP_FLOW"
      ],
@@ -8592,7 +8767,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "cf5276b784d026b8e62c4885f2716aa965aa3eb5744b57bc304c6a555989d4de",
+     "experiment_fingerprint": "fc433c0bf867c5911eddd51f108aea2c6002acbd0a9e76c828a77a33860351d6",
      "families": [
       "PERP_FLOW"
      ],
@@ -8622,11 +8797,27 @@
        "pruning_fingerprints": {
         "PERP_FLOW": "c6f332966cc7087a576c6e0be1dbddecba3bb37494cd205f8fde610432fe387d"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700160200000,
+         1700162000000
+        ],
+        "close_groups": 239,
+        "inner_train_markets": 712,
+        "inner_validation_markets": 240,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1424,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5704339298033787,
-        "1.0": 0.5698005825798442,
-        "10.0": 0.5696195996994866,
-        "100.0": 0.5695981242268325
+        "0.1": 0.5703086345741077,
+        "1.0": 0.5697796710719929,
+        "10.0": 0.5696285654897173,
+        "100.0": 0.5696106429629685
        },
        "ridge_lambda": 100.0,
        "selected_features": [
@@ -8668,11 +8859,27 @@
        "pruning_fingerprints": {
         "PERP_FLOW": "c6f332966cc7087a576c6e0be1dbddecba3bb37494cd205f8fde610432fe387d"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700172800000,
+         1700174600000
+        ],
+        "close_groups": 257,
+        "inner_train_markets": 768,
+        "inner_validation_markets": 256,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1536,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.580410421658972,
-        "1.0": 0.5799600875982167,
-        "10.0": 0.5798342414804879,
-        "100.0": 0.5798194123936367
+        "0.1": 0.5824228468594352,
+        "1.0": 0.5819045368382493,
+        "10.0": 0.5817635337950268,
+        "100.0": 0.5817470561369205
        },
        "ridge_lambda": 100.0,
        "selected_features": [
@@ -8714,11 +8921,27 @@
        "pruning_fingerprints": {
         "PERP_FLOW": "c6f332966cc7087a576c6e0be1dbddecba3bb37494cd205f8fde610432fe387d"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700186300000,
+         1700188100000
+        ],
+        "close_groups": 277,
+        "inner_train_markets": 828,
+        "inner_validation_markets": 276,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1656,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5848088589177025,
-        "1.0": 0.5847011374166651,
-        "10.0": 0.5846756416333534,
-        "100.0": 0.5846727943732827
+        "0.1": 0.5858112410629726,
+        "1.0": 0.5857518888153807,
+        "10.0": 0.5857391222368774,
+        "100.0": 0.5857377500754415
        },
        "ridge_lambda": 100.0,
        "selected_features": [
@@ -8760,11 +8983,27 @@
        "pruning_fingerprints": {
         "PERP_FLOW": "c6f332966cc7087a576c6e0be1dbddecba3bb37494cd205f8fde610432fe387d"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700199800000,
+         1700201600000
+        ],
+        "close_groups": 297,
+        "inner_train_markets": 888,
+        "inner_validation_markets": 296,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1776,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5903519643922567,
-        "1.0": 0.5904148895315714,
-        "10.0": 0.5904352586803401,
-        "100.0": 0.5904377580382375
+        "0.1": 0.591100758161242,
+        "1.0": 0.5911763726647727,
+        "10.0": 0.5912007953393736,
+        "100.0": 0.5912037902269888
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -9216,7 +9455,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "30d4454bfa05ee6b7e69fab381b9ecf3eb1aa8d2bb0d0de611b86474a2dc0be4",
+     "experiment_fingerprint": "5f710a35e84da905a6bda6b3a78085d56802f32b9275a82cca2c57d832f14832",
      "families": [
       "PERP_FLOW"
      ],
@@ -9819,7 +10058,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "b7da91a7093fee53608bf61ff586cc85324ba1707f6c0f905a9840dbeb19a475",
+     "experiment_fingerprint": "3c1afa7b45c8d3f8e670d06341bcd88727dc4134b59f4415bd3e920d26a2a526",
      "families": [
       "ORDER_FLOW"
      ],
@@ -10416,7 +10655,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "5d1bbf8c21ec9416a2d45ee18ada5c75e7684cbffa7ea3954d5ec362eee4eb00",
+     "experiment_fingerprint": "258bdae9284aa5951b3e38af7737c5f1f57d06e8bc20e0faeb3f641e6725fadf",
      "families": [
       "ORDER_FLOW"
      ],
@@ -10446,11 +10685,27 @@
        "pruning_fingerprints": {
         "ORDER_FLOW": "274e3620302628f25ea4dfaff988cf0ae2ed21cdc4c9d0940d67c071ce0632c2"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700160200000,
+         1700162000000
+        ],
+        "close_groups": 239,
+        "inner_train_markets": 712,
+        "inner_validation_markets": 240,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1424,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5701210895983844,
-        "1.0": 0.5696362496381465,
-        "10.0": 0.5695988011015962,
-        "100.0": 0.5695959917358332
+        "0.1": 0.5701146062926808,
+        "1.0": 0.569643539927969,
+        "10.0": 0.5696110728561395,
+        "100.0": 0.5696088468989637
        },
        "ridge_lambda": 100.0,
        "selected_features": [
@@ -10492,11 +10747,27 @@
        "pruning_fingerprints": {
         "ORDER_FLOW": "274e3620302628f25ea4dfaff988cf0ae2ed21cdc4c9d0940d67c071ce0632c2"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700172800000,
+         1700174600000
+        ],
+        "close_groups": 257,
+        "inner_train_markets": 768,
+        "inner_validation_markets": 256,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1536,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5815691626317034,
-        "1.0": 0.580088025055743,
-        "10.0": 0.5798460767296355,
-        "100.0": 0.5798205822733608
+        "0.1": 0.5834753505455982,
+        "1.0": 0.5820095177710173,
+        "10.0": 0.5817728423221675,
+        "100.0": 0.5817479710171484
        },
        "ridge_lambda": 100.0,
        "selected_features": [
@@ -10538,11 +10809,27 @@
        "pruning_fingerprints": {
         "ORDER_FLOW": "274e3620302628f25ea4dfaff988cf0ae2ed21cdc4c9d0940d67c071ce0632c2"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700186300000,
+         1700188100000
+        ],
+        "close_groups": 277,
+        "inner_train_markets": 828,
+        "inner_validation_markets": 276,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1656,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5861935139980261,
-        "1.0": 0.584873358975912,
-        "10.0": 0.5846926394623764,
-        "100.0": 0.5846744896920401
+        "0.1": 0.5872664727809257,
+        "1.0": 0.5859405945403534,
+        "10.0": 0.5857579955191843,
+        "100.0": 0.5857396354928821
        },
        "ridge_lambda": 100.0,
        "selected_features": [
@@ -10584,11 +10871,27 @@
        "pruning_fingerprints": {
         "ORDER_FLOW": "274e3620302628f25ea4dfaff988cf0ae2ed21cdc4c9d0940d67c071ce0632c2"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700199800000,
+         1700201600000
+        ],
+        "close_groups": 297,
+        "inner_train_markets": 888,
+        "inner_validation_markets": 296,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1776,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5922766432327534,
-        "1.0": 0.5907336998793469,
-        "10.0": 0.590469418730092,
-        "100.0": 0.5904411986794258
+        "0.1": 0.593024800948142,
+        "1.0": 0.5914998508444048,
+        "10.0": 0.5912355764383369,
+        "100.0": 0.5912072948255599
        },
        "ridge_lambda": 100.0,
        "selected_features": [
@@ -11047,7 +11350,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "34a8dbbf19e4a974cad8fed9fa62e1d50ff19651ddd4a7c641c37eae12b06796",
+     "experiment_fingerprint": "f6620f8d0f325d8ae3c2f18565e1b81ef4a46d7ac4e1d2048422e43bddb325fe",
      "families": [
       "ORDER_FLOW"
      ],
@@ -11323,7 +11626,7 @@
       "status": "OK"
      },
      "model": "D_boosted_stumps",
-     "q_value_bh": 0.7552447552447552,
+     "q_value_bh": 0.7237762237762237,
      "result_class": "NO_INCREMENTAL_VALUE",
      "synthetic_only": true
     },
@@ -11640,7 +11943,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "30b0633f962144531c1bfe5a2976f689fa146e63e86db881b940b3b2a2af6bae",
+     "experiment_fingerprint": "f3adfb0c9a8eaf44db0513ae86eb1f74b5b32f1c716253d59d658cb884efa02e",
      "families": [
       "SETTLEMENT",
       "SPOT_PRICE_MOMENTUM",
@@ -12266,7 +12569,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "7b998403d0b8adee0197776b06ee7f7f4422c9dc6eb74bd969acfadbc32d3029",
+     "experiment_fingerprint": "032beb52e8de9c2bac09bbc53010e41eb116f2f33745c010c4afabad65042458",
      "families": [
       "SETTLEMENT",
       "SPOT_PRICE_MOMENTUM",
@@ -12300,11 +12603,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700160200000,
+         1700162000000
+        ],
+        "close_groups": 239,
+        "inner_train_markets": 712,
+        "inner_validation_markets": 240,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1424,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.47719094518040156,
-        "1.0": 0.5395999270912183,
-        "10.0": 0.5657651777211654,
-        "100.0": 0.5692019276923616
+        "0.1": 0.4781650973627354,
+        "1.0": 0.5398241631974824,
+        "10.0": 0.5658009063769799,
+        "100.0": 0.569217139900139
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -12354,11 +12673,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700172800000,
+         1700174600000
+        ],
+        "close_groups": 257,
+        "inner_train_markets": 768,
+        "inner_validation_markets": 256,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1536,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.49523997288201116,
-        "1.0": 0.5517272416112851,
-        "10.0": 0.5762126924966388,
-        "100.0": 0.5794469433574414
+        "0.1": 0.496903524561539,
+        "1.0": 0.5535381346536474,
+        "10.0": 0.5781243243921586,
+        "100.0": 0.581372765183533
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -12408,11 +12743,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700186300000,
+         1700188100000
+        ],
+        "close_groups": 277,
+        "inner_train_markets": 828,
+        "inner_validation_markets": 276,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1656,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5041961214402928,
-        "1.0": 0.5581417876921317,
-        "10.0": 0.5812776710084895,
-        "100.0": 0.5843234336383611
+        "0.1": 0.5052684209870714,
+        "1.0": 0.5591330193729611,
+        "10.0": 0.5823304515590642,
+        "100.0": 0.5853872521263324
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -12462,11 +12813,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700199800000,
+         1700201600000
+        ],
+        "close_groups": 297,
+        "inner_train_markets": 888,
+        "inner_validation_markets": 296,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1776,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5303550916969507,
-        "1.0": 0.5694876113723742,
-        "10.0": 0.5877266819027057,
-        "100.0": 0.5901589104623531
+        "0.1": 0.5312091260767163,
+        "1.0": 0.5702872703272724,
+        "10.0": 0.5884976208820668,
+        "100.0": 0.5909255055265301
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -12920,7 +13287,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "f290758070ab46ecab3d74a0c089ea381fa4562104b5f159c128285542d49a61",
+     "experiment_fingerprint": "40f97f00a69a1ba8ca388db2c056bd10f99a712c4c2560234bb4434a64036574",
      "families": [
       "SETTLEMENT",
       "SPOT_PRICE_MOMENTUM",
@@ -13550,7 +13917,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "1358cc5c6f7301c99cb72a516bc930e1b7eecf18ddd8d13a6fa8c26121869eb3",
+     "experiment_fingerprint": "43113639d6dae711f7fa74afbd634d3b086a374d14cd35e00b706cee08bfac87",
      "families": [
       "PERP_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -14184,7 +14551,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "d0c1ce4bdd79a8accdf5832bef15498583bee2f9c908fc16d24bfd935322263d",
+     "experiment_fingerprint": "6a095db5c54766514db8dcac8f8a4dc7b360cf3030732514fa833243d31bd904",
      "families": [
       "PERP_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -14218,11 +14585,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700160200000,
+         1700162000000
+        ],
+        "close_groups": 239,
+        "inner_train_markets": 712,
+        "inner_validation_markets": 240,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1424,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.47737972901145365,
-        "1.0": 0.5397894076815382,
-        "10.0": 0.5657932380588744,
-        "100.0": 0.569204854243474
+        "0.1": 0.47823550621058103,
+        "1.0": 0.5399759487592161,
+        "10.0": 0.565824501331993,
+        "100.0": 0.5692196126776337
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -14274,11 +14657,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700172800000,
+         1700174600000
+        ],
+        "close_groups": 257,
+        "inner_train_markets": 768,
+        "inner_validation_markets": 256,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1536,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.49575671686850264,
-        "1.0": 0.5519503842120373,
-        "10.0": 0.5762432052526095,
-        "100.0": 0.5794500994643688
+        "0.1": 0.4974783872842713,
+        "1.0": 0.5537834141958687,
+        "10.0": 0.5781579187087844,
+        "100.0": 0.5813762413383652
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -14330,11 +14729,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700186300000,
+         1700188100000
+        ],
+        "close_groups": 277,
+        "inner_train_markets": 828,
+        "inner_validation_markets": 276,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1656,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.504228971119742,
-        "1.0": 0.5582018396484617,
-        "10.0": 0.5812885133307204,
-        "100.0": 0.584324586047534
+        "0.1": 0.5051887866567754,
+        "1.0": 0.5591676121229996,
+        "10.0": 0.5823384547285454,
+        "100.0": 0.5853881176948524
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -14386,11 +14801,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700199800000,
+         1700201600000
+        ],
+        "close_groups": 297,
+        "inner_train_markets": 888,
+        "inner_validation_markets": 296,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1776,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5296162215002196,
-        "1.0": 0.5693008144378348,
-        "10.0": 0.5877068398352152,
-        "100.0": 0.5901569223113957
+        "0.1": 0.5304588385147212,
+        "1.0": 0.5700907980494194,
+        "10.0": 0.5884763505341868,
+        "100.0": 0.5909233685478468
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -14846,7 +15277,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "6492e77d93c47580eda7a89a3eb8edd3e7ee33e101ae3f00a7ac6bca2702f12f",
+     "experiment_fingerprint": "aa5bdb0ed83ee39066dd043a8c466c4e76ee0475a3750f3f188ac4e993d9a27d",
      "families": [
       "PERP_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -15484,7 +15915,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "9cea8336bd2612a8e2f31b29a7cc23e24802d951b9f2a2f6421a0d1ec09cf45d",
+     "experiment_fingerprint": "3558be9b8a71f8200d1d149f75361a8ebe1410343be5d1f14dd33efea234e10f",
      "families": [
       "ORDER_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -16118,7 +16549,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "edf790b7f53f17a47b0684306a50c507f397c863c96486812297476916be17b3",
+     "experiment_fingerprint": "63b01c706dc44cf1d491960fa2675692f490fa44540f72581f13ea43016f4e08",
      "families": [
       "ORDER_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -16152,11 +16583,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700160200000,
+         1700162000000
+        ],
+        "close_groups": 239,
+        "inner_train_markets": 712,
+        "inner_validation_markets": 240,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1424,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.4779360465975283,
-        "1.0": 0.5396997670383445,
-        "10.0": 0.5657735371791925,
-        "100.0": 0.5692027331840106
+        "0.1": 0.47884463233997737,
+        "1.0": 0.5399125998247924,
+        "10.0": 0.5658080934099105,
+        "100.0": 0.5692178279285257
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -16208,11 +16655,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700172800000,
+         1700174600000
+        ],
+        "close_groups": 257,
+        "inner_train_markets": 768,
+        "inner_validation_markets": 256,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1536,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.4972292019338214,
-        "1.0": 0.5521207347492489,
-        "10.0": 0.5762556877562066,
-        "100.0": 0.5794512760985494
+        "0.1": 0.4988917617486611,
+        "1.0": 0.5539348528155489,
+        "10.0": 0.5781679333752253,
+        "100.0": 0.58137716358591
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -16264,11 +16727,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700186300000,
+         1700188100000
+        ],
+        "close_groups": 277,
+        "inner_train_markets": 828,
+        "inner_validation_markets": 276,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1656,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5057126038116052,
-        "1.0": 0.5584171719185974,
-        "10.0": 0.5813062204848672,
-        "100.0": 0.5843262888311441
+        "0.1": 0.5067757135029674,
+        "1.0": 0.5594017659451737,
+        "10.0": 0.5823580734191387,
+        "100.0": 0.5853900109556207
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -16320,11 +16799,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700199800000,
+         1700201600000
+        ],
+        "close_groups": 297,
+        "inner_train_markets": 888,
+        "inner_validation_markets": 296,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1776,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5310093268327373,
-        "1.0": 0.5696228795655807,
-        "10.0": 0.5877411613932669,
-        "100.0": 0.5901603647534847
+        "0.1": 0.5318311350937595,
+        "1.0": 0.5704155937200464,
+        "10.0": 0.5885112676550065,
+        "100.0": 0.5909268746864934
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -16780,7 +17275,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "b0f2a0e40a03d0eddacec29236158a78686c4a00f1ef3f0713bce3876a535127",
+     "experiment_fingerprint": "b8fb3dbf2a7aaea7f36de6ab0d000d1a9f84fcfe0d4b70bb8017de214141d201",
      "families": [
       "ORDER_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -17426,7 +17921,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "02127fb68982baab828687d794dde5b1b93d53339ce912a9db887d0899d14ee5",
+     "experiment_fingerprint": "1b85ce256b1c74b498d00744baf822959ffc541f92722b9be67d5e23c4df4588",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW"
@@ -18045,7 +18540,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "204fc518746c37b261d9ebe0cec24c28c41c81fdc2c07dfaef284dcf1680ebaf",
+     "experiment_fingerprint": "4fda564c43a2c7eacad6ed9ee173b7273aab378856e6e5f62f8e361dd47bf9c9",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW"
@@ -18077,11 +18572,27 @@
         "ORDER_FLOW": "274e3620302628f25ea4dfaff988cf0ae2ed21cdc4c9d0940d67c071ce0632c2",
         "PERP_FLOW": "c6f332966cc7087a576c6e0be1dbddecba3bb37494cd205f8fde610432fe387d"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700160200000,
+         1700162000000
+        ],
+        "close_groups": 239,
+        "inner_train_markets": 712,
+        "inner_validation_markets": 240,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1424,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5708720512658448,
-        "1.0": 0.5698374339638071,
-        "10.0": 0.5696226607847835,
-        "100.0": 0.5695984223101254
+        "0.1": 0.5707141015365015,
+        "1.0": 0.5698102229474059,
+        "10.0": 0.5696309684230361,
+        "100.0": 0.5696108750541551
        },
        "ridge_lambda": 100.0,
        "selected_features": [
@@ -18128,11 +18639,27 @@
         "ORDER_FLOW": "274e3620302628f25ea4dfaff988cf0ae2ed21cdc4c9d0940d67c071ce0632c2",
         "PERP_FLOW": "c6f332966cc7087a576c6e0be1dbddecba3bb37494cd205f8fde610432fe387d"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700172800000,
+         1700174600000
+        ],
+        "close_groups": 257,
+        "inner_train_markets": 768,
+        "inner_validation_markets": 256,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1536,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5820996127232679,
-        "1.0": 0.5802275842716247,
-        "10.0": 0.5798625473644387,
-        "100.0": 0.5798222591110408
+        "0.1": 0.5840918867018059,
+        "1.0": 0.58216612883741,
+        "10.0": 0.5817911468571301,
+        "100.0": 0.581749832380121
        },
        "ridge_lambda": 100.0,
        "selected_features": [
@@ -18179,11 +18706,27 @@
         "ORDER_FLOW": "274e3620302628f25ea4dfaff988cf0ae2ed21cdc4c9d0940d67c071ce0632c2",
         "PERP_FLOW": "c6f332966cc7087a576c6e0be1dbddecba3bb37494cd205f8fde610432fe387d"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700186300000,
+         1700188100000
+        ],
+        "close_groups": 277,
+        "inner_train_markets": 828,
+        "inner_validation_markets": 276,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1656,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5862523949813571,
-        "1.0": 0.5848982967826984,
-        "10.0": 0.5846957580503648,
-        "100.0": 0.5846748090368538
+        "0.1": 0.5872699646885408,
+        "1.0": 0.5859514202161423,
+        "10.0": 0.5857594756051884,
+        "100.0": 0.585739788370937
        },
        "ridge_lambda": 100.0,
        "selected_features": [
@@ -18230,11 +18773,27 @@
         "ORDER_FLOW": "274e3620302628f25ea4dfaff988cf0ae2ed21cdc4c9d0940d67c071ce0632c2",
         "PERP_FLOW": "c6f332966cc7087a576c6e0be1dbddecba3bb37494cd205f8fde610432fe387d"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700199800000,
+         1700201600000
+        ],
+        "close_groups": 297,
+        "inner_train_markets": 888,
+        "inner_validation_markets": 296,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1776,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5921751437985595,
-        "1.0": 0.5907096358757851,
-        "10.0": 0.5904666229004765,
-        "100.0": 0.5904409144705568
+        "0.1": 0.5929103369227707,
+        "1.0": 0.5914713076329494,
+        "10.0": 0.5912322301907763,
+        "100.0": 0.5912069543339445
        },
        "ridge_lambda": 100.0,
        "selected_features": [
@@ -18371,7 +18930,7 @@
       "status": "OK"
      },
      "model": "C_ridge_logistic",
-     "q_value_bh": 0.7552447552447552,
+     "q_value_bh": 0.7224080267558529,
      "result_class": "NO_INCREMENTAL_VALUE",
      "synthetic_only": true
     },
@@ -18698,7 +19257,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "7f640b2ed8e41fd1d7aeaed11b504ba37fdf8d4bcfacd5ce5bb77e0fcae49303",
+     "experiment_fingerprint": "42bda0d397f108ab88cd021dcfbad6da7fd9a15afd6ab4f2a0f3f02c5130dd1e",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW"
@@ -19315,7 +19874,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "c45fdff864de61cab78faac5125f5fe35800824605913fc0ef835f0ef79d28ad",
+     "experiment_fingerprint": "60c4237ef2a67c7b9b494cbea0a90c09063703b4bea081685897ad6c1c63768b",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW",
@@ -19985,7 +20544,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "2b7cbd98d9c60eafbd4d6e1bd6302e2675e43c4fd4ced8405b1fa03c2c8f4fa5",
+     "experiment_fingerprint": "6b00eb74dec06ec11c3a0e5e6811d1d13be39c09cf77505da4f5ac2361d9e17d",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW",
@@ -20023,11 +20582,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700160200000,
+         1700162000000
+        ],
+        "close_groups": 239,
+        "inner_train_markets": 712,
+        "inner_validation_markets": 240,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1424,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.47746929413265327,
-        "1.0": 0.5397883971531074,
-        "10.0": 0.5657914748633277,
-        "100.0": 0.5692046499784023
+        "0.1": 0.47826884522016344,
+        "1.0": 0.5399715626728708,
+        "10.0": 0.5658225713945405,
+        "100.0": 0.5692193936643047
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -20087,11 +20662,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700172800000,
+         1700174600000
+        ],
+        "close_groups": 257,
+        "inner_train_markets": 768,
+        "inner_validation_markets": 256,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1536,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.49681693293537377,
-        "1.0": 0.5520980261497316,
-        "10.0": 0.5762570384513429,
-        "100.0": 0.5794514625597108
+        "0.1": 0.4985340575081791,
+        "1.0": 0.5539191150978845,
+        "10.0": 0.5781697989771786,
+        "100.0": 0.5813773983090107
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -20151,11 +20742,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700186300000,
+         1700188100000
+        ],
+        "close_groups": 277,
+        "inner_train_markets": 828,
+        "inner_validation_markets": 276,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1656,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5050203878847439,
-        "1.0": 0.5583264185411333,
-        "10.0": 0.5813004331142938,
-        "100.0": 0.5843257628159283
+        "0.1": 0.5060427255737207,
+        "1.0": 0.5593047295514948,
+        "10.0": 0.5823517950982832,
+        "100.0": 0.585389438292696
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -20215,11 +20822,27 @@
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9",
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700199800000,
+         1700201600000
+        ],
+        "close_groups": 297,
+        "inner_train_markets": 888,
+        "inner_validation_markets": 296,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1776,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5315730548746058,
-        "1.0": 0.5697252868815905,
-        "10.0": 0.5877547969157731,
-        "100.0": 0.5901617780010024
+        "0.1": 0.5324444606520045,
+        "1.0": 0.5705229869471565,
+        "10.0": 0.5885252842567682,
+        "100.0": 0.5909283247423172
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -20683,7 +21306,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "932ae23758b6077c62eb7fd50ae95d21efd5f18515a8ba334e98273c11ee6411",
+     "experiment_fingerprint": "1c730c2794ef20c443c9083b043f3a799376a47fe8e8ad27acaa3c8788d30833",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW",
@@ -21887,11 +22510,27 @@
        "pruning_fingerprints": {
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700160200000,
+         1700162000000
+        ],
+        "close_groups": 239,
+        "inner_train_markets": 712,
+        "inner_validation_markets": 240,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1424,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.4774140102966262,
-        "1.0": 0.5398692904953135,
-        "10.0": 0.5658062653551083,
-        "100.0": 0.5692062338750515
+        "0.1": 0.4787013957058937,
+        "1.0": 0.540157934733558,
+        "10.0": 0.5658495136888123,
+        "100.0": 0.569222212253266
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -21933,11 +22572,27 @@
        "pruning_fingerprints": {
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700172800000,
+         1700174600000
+        ],
+        "close_groups": 257,
+        "inner_train_markets": 768,
+        "inner_validation_markets": 256,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1536,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.4961312069314001,
-        "1.0": 0.5521645110581076,
-        "10.0": 0.5762738183243526,
-        "100.0": 0.5794532925665251
+        "0.1": 0.49776807547450563,
+        "1.0": 0.5539651635771301,
+        "10.0": 0.5781840300134302,
+        "100.0": 0.5813789667349972
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -21979,11 +22634,27 @@
        "pruning_fingerprints": {
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700186300000,
+         1700188100000
+        ],
+        "close_groups": 277,
+        "inner_train_markets": 828,
+        "inner_validation_markets": 276,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1656,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5048294294651487,
-        "1.0": 0.5585563380856317,
-        "10.0": 0.5813379032684867,
-        "100.0": 0.584329714557806
+        "0.1": 0.5058290842700532,
+        "1.0": 0.559514543623182,
+        "10.0": 0.58238630107501,
+        "100.0": 0.585393080953854
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -22025,11 +22696,27 @@
        "pruning_fingerprints": {
         "SPOT_PRICE_MOMENTUM": "ede66ee14975565d0328f159051bf085689077fed719af2225c33e1f68c634c9"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700199800000,
+         1700201600000
+        ],
+        "close_groups": 297,
+        "inner_train_markets": 888,
+        "inner_validation_markets": 296,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1776,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5302262579520111,
-        "1.0": 0.5696710968458623,
-        "10.0": 0.5877591037417921,
-        "100.0": 0.5901623588935424
+        "0.1": 0.5310374376722615,
+        "1.0": 0.5704430646498578,
+        "10.0": 0.5885254263910564,
+        "100.0": 0.5909284641354826
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -22510,11 +23197,27 @@
        "pruning_fingerprints": {
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700160200000,
+         1700162000000
+        ],
+        "close_groups": 239,
+        "inner_train_markets": 712,
+        "inner_validation_markets": 240,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1424,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5689497904259986,
-        "1.0": 0.5693192901379551,
-        "10.0": 0.5695587989779536,
-        "100.0": 0.5695918827863982
+        "0.1": 0.5686738157507715,
+        "1.0": 0.5692629392154157,
+        "10.0": 0.5695636739967955,
+        "100.0": 0.5696039860632536
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -22556,11 +23259,27 @@
        "pruning_fingerprints": {
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700172800000,
+         1700174600000
+        ],
+        "close_groups": 257,
+        "inner_train_markets": 768,
+        "inner_validation_markets": 256,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1536,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5787014319276845,
-        "1.0": 0.5794448322654387,
-        "10.0": 0.5797702955715104,
-        "100.0": 0.579812861429565
+        "0.1": 0.5806913279022461,
+        "1.0": 0.5813938649919255,
+        "10.0": 0.5817005188342546,
+        "100.0": 0.5817406048442
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -22602,11 +23321,27 @@
        "pruning_fingerprints": {
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700186300000,
+         1700188100000
+        ],
+        "close_groups": 277,
+        "inner_train_markets": 828,
+        "inner_validation_markets": 276,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1656,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5835179603524251,
-        "1.0": 0.5842612333226664,
-        "10.0": 0.5846194719641383,
-        "100.0": 0.584667021475462
+        "0.1": 0.5846670498025741,
+        "1.0": 0.5853523959331419,
+        "10.0": 0.5856878374018439,
+        "100.0": 0.5857324760278099
        },
        "ridge_lambda": 0.1,
        "selected_features": [
@@ -22648,11 +23383,27 @@
        "pruning_fingerprints": {
         "SPOT_VOLATILITY": "7ac1892f703c533537b06850ffeb8a6167271296dafdcf2d138d7676b542ea64"
        },
+       "ridge_inner": {
+        "boundary_close_ts_ms": [
+         1700199800000,
+         1700201600000
+        ],
+        "close_groups": 297,
+        "inner_train_markets": 888,
+        "inner_validation_markets": 296,
+        "label_horizon_ms": 0,
+        "max_causal_lookback_ms": 1500000,
+        "purge_ms": 1500000,
+        "purged": 4,
+        "scaler_rows": 1776,
+        "status": "OK",
+        "validation_fraction": 0.25
+       },
        "ridge_inner_scores": {
-        "0.1": 0.5894157407641845,
-        "1.0": 0.5900537139257904,
-        "10.0": 0.590387960143252,
-        "100.0": 0.5904328832604964
+        "0.1": 0.5902374986087711,
+        "1.0": 0.5908478506125369,
+        "10.0": 0.5911578953134353,
+        "100.0": 0.5911993701868306
        },
        "ridge_lambda": 0.1,
        "selected_features": [

@@ -64,6 +64,9 @@ class AblationConfig:
     min_slice_markets: int = 20
     stable_share: float = 2.0 / 3.0
     boosted_rounds: int = 40
+    ridge_inner_fraction: float = 0.25                 # latest share of close groups (market level) validates lambda
+    ridge_inner_lookback_ms: int = 1_500_000            # purge of the inner split = lookback + label horizon
+    ridge_inner_label_horizon_ms: int = 0
     seed: int = SEED
     prune: PruneConfig = field(default_factory=PruneConfig)
     complexity: ComplexityGates = field(default_factory=ComplexityGates)
@@ -139,7 +142,9 @@ def make_model(name, cfg, strategy=None):
     if name == "B_logistic":
         return LogisticModel(s)
     if name == "C_ridge_logistic":
-        return RidgeLogisticModel(s)
+        from feature_eval.splits import SplitConfig
+        return RidgeLogisticModel(s, inner_fraction=cfg.ridge_inner_fraction, inner_split_cfg=SplitConfig(
+            max_causal_lookback_ms=cfg.ridge_inner_lookback_ms, label_horizon_ms=cfg.ridge_inner_label_horizon_ms))
     if name == "D_boosted_stumps":
         return BoostedStumps(rounds=cfg.boosted_rounds)
     raise ValueError(name)
@@ -224,10 +229,11 @@ def fit_fold(train_rows, test_rows, families, fam_names, col_index, role_of, mod
     else:
         wcc, Xtr_, y_, l_ = w, Xtr, y, leg_tr
     if model_name == "C_ridge_logistic":
-        order = [(train_rows[i]["close_ts_ms"], train_rows[i]["market_ticker"]) for i in keep_tr]
-        m.fit(Xtr_, l_, y_, wcc, order=order, scaler_X=Xtr_, scaler_w=wcc)
+        meta = [train_rows[i] for i in keep_tr]                   # market metadata for the market-level inner split
+        m.fit(Xtr_, l_, y_, wcc, meta=meta, scaler_X=Xtr_, scaler_w=wcc)
         info["ridge_lambda"] = m.l2
         info["ridge_inner_scores"] = {str(k_): v for k_, v in m.inner_scores.items()}
+        info["ridge_inner"] = m.inner_info
     elif model_name == "B_logistic":
         m.fit(Xtr_, l_, y_, wcc, scaler_X=Xtr_, scaler_w=wcc)
     else:

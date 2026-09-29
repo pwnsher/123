@@ -140,11 +140,11 @@ def render_md(rep):
     if r.get("analysis"):
         for name, block in r["analysis"]["resolution"].items():
             L.append(f"### Resolution ({name})")
-            L.append("| window policy | markets | adequate | compared | agree | disagree | EV within tol |")
+            L.append("| window policy | markets | adequate | compared | agree | disagree | EV exact @ official precision |")
             L.append("|---|---|---|---|---|---|---|")
             for pid, s in block["policies"].items():
                 L.append(f"| {pid} | {s['markets']} | {s['with_adequate_data']} | {s['compared']} | {s['agree']} | "
-                         f"{s['disagree']} | {s['expiration_value']['within_tolerance']}/{s['expiration_value']['compared']} |")
+                         f"{s['disagree']} | {s['expiration_value']['exact_after_rounding']}/{s['expiration_value']['compared']} |")
             L += ["", f"Convention verdict: `{block['convention_verdict']}`", ""]
         L += [f"Overlap: `{r['analysis']['overlap']['summary']}`", ""]
     L += ["## Boundary findings (from the code)", ""] + [f"* **{f['id']}** — {f['finding']}" for f in rep["boundary_findings"]]
@@ -154,7 +154,7 @@ def render_md(rep):
               f"Planted defects: `{s['planted_defects']}`", ""]
         for pid, v in s["resolution"]["combined"]["policies"].items():
             L.append(f"* combined / {pid}: compared {v['compared']}, agree {v['agree']}, disagree {v['disagree']}, "
-                     f"EV within tol {v['expiration_value']['within_tolerance']}/{v['expiration_value']['compared']}")
+                     f"EV exact @ official precision {v['expiration_value']['exact_after_rounding']}/{v['expiration_value']['compared']}")
         lo = s["resolution"]["live_only"]["policies"]
         L.append(f"* live only / default: {lo[next(iter(lo))]['quality_counts']}")
         pts = s["overlap"]["points"]

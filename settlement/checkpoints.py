@@ -5,7 +5,9 @@ Causal time-to-close checkpoints: one record per (market, checkpoint) with FEATU
               checkpoint (filtered here, then filtered again inside reconstruct) and never receives
               an OfficialResolution. The allowed names are FEATURE_FIELDS; nothing else can appear.
     LABELS    computed by labels_for() from the final (label-mode) reconstruction and the official
-              Kalshi resolution. They exist for training/evaluation targets only.
+              Kalshi resolution. They exist for training/evaluation targets only. final_settlement_value is the
+              reconstruction at the contract's OFFICIAL precision (settlement.rules); final_unrounded_mean keeps
+              the raw mean; the rule id / fingerprint / status record which versioned rule produced the outcome.
 
 Leakage is tested by perturbation (test_stage18): changing anything that becomes available after a
 checkpoint, or the official result, must leave that checkpoint's features byte-identical; a
@@ -31,7 +33,8 @@ FEATURE_FIELDS = ("phase", "seconds_remaining", "current_index", "current_index_
                   "accumulated_sum", "accumulated_mean", "first_included_ts_ms", "last_included_ts_ms",
                   "max_gap_s", "quality", "flags", "sources")
 LABEL_FIELDS = ("final_settlement_value", "reconstructed_outcome", "final_quality", "final_coverage",
-                "official_result", "official_expiration_value", "reconstruction_matches_official")
+                "official_result", "official_expiration_value", "reconstruction_matches_official",
+                "final_unrounded_mean", "settlement_rule_id", "settlement_rule_fingerprint", "settlement_status")
 
 
 @dataclass(frozen=True)
@@ -73,12 +76,15 @@ def labels_for(market, observations, resolution=None, wpol=None, rpol=None, issu
     if official is not None and res.reconstructed_outcome is not None:
         match = res.reconstructed_outcome == official
     st = res.state
-    return {"final_settlement_value": res.final_value, "reconstructed_outcome": res.reconstructed_outcome,
+    s = res.settlement
+    return {"final_settlement_value": res.settlement_value, "reconstructed_outcome": res.reconstructed_outcome,
             "final_quality": st.quality.value,
             "final_coverage": (st.samples_filled / st.samples_expected) if st.samples_expected else None,
             "official_result": official,
             "official_expiration_value": resolution.expiration_value if resolution is not None else None,
-            "reconstruction_matches_official": match}
+            "reconstruction_matches_official": match, "final_unrounded_mean": res.final_value,
+            "settlement_rule_id": s.get("rule_id"), "settlement_rule_fingerprint": s.get("rule_fingerprint"),
+            "settlement_status": s.get("status")}
 
 
 def build_checkpoints(market, observations, resolution=None, wpol=None, rpol=None,

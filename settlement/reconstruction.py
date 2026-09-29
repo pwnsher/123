@@ -98,7 +98,7 @@ def reconstruct(market, observations, wpol=None, rpol=None, as_of_ms=None, issue
     samples = [book.sample(g) for g in elapsed_instants(book, as_of_ms)] if not invalid else []
     used_issues = [i for i in (issues or ()) if issue_visible(i, as_of_ms)]
     sm = relevant_schema_mismatch(used_issues, market, wpol, rpol, as_of_ms)
-    state, final, outcome, samples = summarize(book, samples, as_of_ms, schema_mismatch=sm, invalid=invalid,
-                                               label_mode=as_of_ms is None)
+    state, final, outcome, samples, settle = summarize(book, samples, as_of_ms, schema_mismatch=sm, invalid=invalid,
+                                                       label_mode=as_of_ms is None)
     return SettlementResult(state=state, final_value=final, reconstructed_outcome=outcome, samples=samples,
-                            provenance=provenance(book, state, wpol, rpol, as_of_ms, used_issues))
+                            provenance=provenance(book, state, wpol, rpol, as_of_ms, used_issues), settlement=settle)

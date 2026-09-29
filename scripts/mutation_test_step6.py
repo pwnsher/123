@@ -4,7 +4,7 @@ Mutation tests for the Step-6 evaluation framework's methodological rules (offli
 
     py scripts/mutation_test_step6.py [--out analysis_output/step6_mutation_results.json] [--only S1,S7]
 
-Each mutation breaks ONE rule (S1-S14 of the Step-6 brief) in a TEMPORARY copy of the repository and runs the relevant
+Each mutation breaks ONE rule (S1-S14 of the Step-6 brief, S15-S20 of Step 6.1) in a TEMPORARY copy of the repository and runs the relevant
 Stage-22 tests there; CAUGHT = those tests fail. Control: the unmutated copy must PASS the same tests. The working tree
 is never modified.
 """
@@ -78,6 +78,34 @@ MUTATIONS = [
      [("feature_eval/labels.py", 'GOLD_SOURCES = ("OFFICIAL_RESULT", "RECONSTRUCTED_VERIFIED")',
        'GOLD_SOURCES = ("OFFICIAL_RESULT", "RECONSTRUCTED_VERIFIED", "SETTLEMENT_UNVERIFIED")', 1)],
      ["labels"]),
+    ("S15", "ambiguous tied settlement conventions become VERIFIED (preferred policy in the passing set is enough)",
+     [("feature_eval/labels.py", "    if passing == [cfg.label_window_policy] and not tied:",
+       "    if cfg.label_window_policy in passing:", 1)],
+     ["convention"]),
+    ("S16", "ridge lambda inner split operates on ROWS (a market is split across inner train / validation)",
+     [("feature_eval/models.py",
+       '        a = [i for i, r in enumerate(meta or []) if r["market_ticker"] in set(tr_m)]\n'
+       '        b = [i for i, r in enumerate(meta or []) if r["market_ticker"] in set(va_m)]\n',
+       "        _cut = int(len(X) * (1 - self.inner_fraction))\n"
+       "        a, b = (list(range(_cut)), list(range(_cut, len(X)))) if meta is not None else ([], [])\n", 1)],
+     ["ridge"]),
+    ("S17", "ridge inner split omits the purge / embargo (and its internal overlap guard, so the TEST must catch it)",
+     [(SPL, "    tr, purged = _purge(tr, va, cfg)\n    trm, vam", "    purged = []\n    trm, vam", 1),
+      (SPL, "        if max(e[\"close_ts_ms\"] for e in tr) + cfg.label_horizon_ms > start:", "        if False:", 1)],
+     ["ridge"]),
+    ("S18", "a rejected CF source still contributes to settlement verification / reconstructed labels",
+     [("feature_eval/dataset.py", '            elif key in rejected_sources:\n                rep["index_values_rejected_source"] += 1',
+       '            elif False:\n                rep["index_values_rejected_source"] += 1', 1)],
+     ["rejected"]),
+    ("S19", "equality under an AT_LEAST crypto contract is not YES (strict comparison restored)",
+     [("settlement/rules.py", "        ok = v >= k\n", "        ok = v > k\n", 1)],
+     ["rules"]),
+    ("S20", "settlement-value precision uses a universal 0.01 tolerance (validates a wrong 4-dp XRP value)",
+     [("settlement/resolution.py", '        out["expiration_value_exact_after_rounding"] = exact(settlement_value) == ev\n',
+       '        out["expiration_value_exact_after_rounding"] = abs(exact(settlement_value) - ev) <= Fraction(1, 100)\n', 1),
+      ("settlement/resolution.py", '        out["expiration_value_within_half_unit"] = abs(exact(unrounded) - ev) <= half\n',
+       '        out["expiration_value_within_half_unit"] = abs(exact(unrounded) - ev) <= Fraction(1, 100)\n', 1)],
+     ["precision"]),
 ]
 
 

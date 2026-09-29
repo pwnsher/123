@@ -179,10 +179,12 @@ def test_boundary_observations():
     fine = [ob(t) for t in range(C - 61_000, C + 1, 200)]
     bk = reconstruct(M, fine, window_policy("cf_rti_60s_start_incl_bucket_v1"), TP)
     assert bk.samples[0].source_event_ts_ms == C - 60_000 + 800 and bk.quality == Quality.HEALTHY
-    # tie at the strike -> no outcome, flagged
+    # equality with the strike (Step 6.1): the BTC 15-minute contract resolves Yes when the official value is AT LEAST
+    # the target, so an exact tie is YES (flagged AT_STRIKE for information) - never an unresolved outcome
     flat = [ob(t, 100000.0) for t in range(C - 61_000, C + 1, 1000)]
     rt = reconstruct(M, flat, W, TP)
-    assert rt.final_value == 100000.0 and rt.reconstructed_outcome is None and Flag.AT_STRIKE.value in rt.state.flags
+    assert rt.final_value == 100000.0 and rt.settlement_value == 100000.0 and rt.reconstructed_outcome == "yes"
+    assert Flag.AT_STRIKE.value in rt.state.flags and rt.settlement["rule_id"] == "kxbtc15m_rules_v1"
 
 
 # ═══════════════════ 7-11 data defects ═══════════════════
@@ -471,16 +473,20 @@ def test_resolution_verification():
     ref = reconstruct(M, base, W, TP)
     final, outcome = ref.final_value, ref.reconstructed_outcome
     assert outcome == "no"                                         # the synthetic path ends below the strike
-    ok = verify_market(M, OfficialResolution(M.ticker, outcome, final, "t"), by_idx, W, TP)
-    assert ok["category"] == "AGREE" and ok["agreement"] is True and ok["expiration_value_abs_diff"] == 0.0
-    bad = verify_market(M, OfficialResolution(M.ticker, "yes", final + 5, "t"), by_idx, W, TP)
-    assert bad["category"] == "DISAGREE" and bad["agreement"] is False and abs(bad["expiration_value_abs_diff"] - 5) < 1e-9
+    sv = ref.settlement_value                                      # official precision (BTC: 2 dp), Step 6.1
+    assert sv == round(final, 2)
+    ok = verify_market(M, OfficialResolution(M.ticker, outcome, sv, "t"), by_idx, W, TP)
+    assert ok["category"] == "AGREE" and ok["agreement"] is True and ok["expiration_value_exact_after_rounding"] is True
+    assert ok["expiration_value_within_half_unit"] is True and abs(ok["expiration_value_raw_abs_diff"] - abs(final - sv)) < 1e-9
+    bad = verify_market(M, OfficialResolution(M.ticker, "yes", sv + 5, "t"), by_idx, W, TP)
+    assert bad["category"] == "DISAGREE" and bad["agreement"] is False and bad["expiration_value_exact_after_rounding"] is False
+    assert abs(bad["expiration_value_raw_abs_diff"] - abs(final - sv - 5)) < 1e-9
     assert verify_market(M, None, by_idx, W, TP)["category"] == "NO_OFFICIAL_RESULT"
     gap = index_observations([o for o in base if o.event_ts_ms != C - 30_000 and o.event_ts_ms != C - 31_000])
     miss = verify_market(M, RES, gap, W, TP)
     assert miss["category"] == "NO_RECONSTRUCTION" and miss["quality"] == "INSUFFICIENT_COVERAGE"
-    at = replace(M, strike=final)
-    assert verify_market(at, RES, by_idx, W, TP)["category"] == "AT_STRIKE"
+    at = verify_market(replace(M, strike=sv), RES, by_idx, W, TP)
+    assert at["at_strike"] is True and at["reconstructed_outcome"] == "yes"   # "at least": equality resolves YES
     rep = verify_all([M], {M.ticker: RES}, base, None, TP)
     assert rep["convention_verdict"]["status"] == "INSUFFICIENT_DATA" and set(rep["policies"]) == set(WINDOW_POLICIES)
     # with enough markets the verifier identifies the generating convention (end-inclusive is rejected)
@@ -602,7 +608,7 @@ def test_offline_replay_end_to_end():
     # live+history combined: history fills the live disconnect; the altered history value makes one CONFLICT
     assert s["markets"] == 6 and s["agree"] == 5 and s["disagree"] == 0, s
     assert s["categories"]["NO_RECONSTRUCTION"] == 1 and s["quality_counts"] == {"CONFLICT": 1, "HEALTHY": 5}
-    assert s["expiration_value"]["within_tolerance"] == 5
+    assert s["expiration_value"]["exact_after_rounding"] == 5          # official precision, no universal tolerance
     assert r["rows"] == 18 and r["overlap"]["mismatches"] == 1 and r["overlap"]["missing_in_live"] == 5
     assert r["published"] >= 5 and r["store"]["corrupt_records"] == 0
     # replay twice -> identical output (determinism from the store)

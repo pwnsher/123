@@ -62,6 +62,7 @@ def defaults():
     from feature_eval.metrics import CONFIDENCE_BUCKETS
     from feature_eval.quality import QualityConfig
     from feature_eval.splits import SplitConfig
+    from settlement.rules import RULE_SET_VERSION, rule_set_fingerprint
     return {"step6_schema_version": STEP6_SCHEMA_VERSION, "feature_universe_version": FEATURE_UNIVERSE_VERSION,
             "label_version": LABEL_VERSION, "result_classes": list(RESULT_CLASSES),
             "feature_classes": list(FEATURE_CLASSES), "checkpoint_grid_s": list(CHECKPOINT_GRID_S),
@@ -71,7 +72,8 @@ def defaults():
             "fee_model": FeeModel().to_dict(), "fee_model_fingerprint": FeeModel().fingerprint(),
             "research_sizes": list(RESEARCH_SIZES), "confidence_buckets": [list(b) for b in CONFIDENCE_BUCKETS],
             "quality": QualityConfig().to_dict(), "coinbase_sequence": SequenceEvidenceConfig().to_dict(),
-            "label_gate": LabelGateConfig().to_dict()}
+            "label_gate": LabelGateConfig().to_dict(),
+            "settlement_rule_set": {"version": RULE_SET_VERSION, "fingerprint": rule_set_fingerprint()}}
 
 
 def build(pkg_dir=PKG, repo=HERE):

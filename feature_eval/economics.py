@@ -9,50 +9,100 @@ bids); if the captured depth cannot fill the size the result is NOT_EXECUTABLE -
 The primary evaluation is IMMEDIATE (taker) execution against the captured book. Maker economics are NOT evaluated
 (resting-order fill probability is unknown from the displayed book): only the fee arithmetic is reported.
 
-FEES are versioned configuration, never a hidden constant. FeeModel records version, source, effective date,
-maker / taker rates, rounding and market exceptions; its fingerprint is part of every economic experiment. Unless the
-fee model is marked verified for the markets studied, the economic result is FEE_UNVERIFIED and cannot support any
-promotion. Default (UNVERIFIED): Kalshi's general trading-fee formula fee = ceil_to_cent(rate * C * P * (1 - P)) per
-order with taker rate 0.07 and maker rate 0.0175.
+FEES are versioned configuration, never a hidden constant (Step 6.1 hardening). A FeeModel holds FeeSchedules; each
+records its source / version, effective dates, the series it covers (or the general "*" scope with explicit
+exclusions), taker and maker rates and rounding. A trade uses the schedule whose effective range covers the trade
+timestamp and whose scope covers the market's series (a series-specific schedule beats the general one). Its fee
+status is VERIFIED only when that schedule is marked verified AND its effective range covers the trade time; anything
+else is FEE_UNVERIFIED (unknown series, unknown / uncovered date, unverified schedule). The general formula is NEVER
+verified globally. Default: Kalshi's general trading-fee formula fee = ceil_to_cent(rate * C * P * (1 - P)) per order,
+taker rate 0.07, maker 0.0175, UNVERIFIED - the official schedule (kalshi.com/docs/kalshi-fee-schedule.pdf) could
+not be read from the build environment and public summaries disagree on whether crypto uses a different multiplier.
+The model fingerprint (every schedule) is part of every economic experiment.
 
 Any extra uncertainty buffer is reported separately (uncertainty_buffer), never folded into the probability.
 """
 import hashlib
 import json
 import math
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
+from typing import Optional, Tuple
 
 RESEARCH_SIZES = (1, 10, 50)
 
 
 @dataclass(frozen=True)
-class FeeModel:
-    version: str = "kalshi_general_fee_formula_v1"
-    source: str = "Kalshi fee schedule: general trading fee = round up(rate x C x P x (1 - P)) per order (to be confirmed)"
-    effective_date: str = "UNVERIFIED"
+class FeeSchedule:
+    schedule_id: str
+    version: str
+    source: str
+    source_url: str
+    effective_from_ms: Optional[int]             # None = unknown start
+    effective_to_ms: Optional[int]               # None = open ended
+    series_scope: Tuple[str, ...] = ("*",)       # series prefixes, or "*" (general schedule)
+    excluded_series: Tuple[str, ...] = ()        # series with their own (special) schedules
     taker_rate: float = 0.07
     maker_rate: float = 0.0175
     rounding: str = "ceil_to_cent_per_order"
-    market_exceptions: dict = field(default_factory=dict)       # series prefix -> {taker_rate, maker_rate, note}
     verified: bool = False
+    note: str = ""
+
+    def covers_series(self, ticker):
+        t = str(ticker).upper()
+        if any(t.startswith(x) for x in self.excluded_series):
+            return False
+        return "*" in self.series_scope or any(t.startswith(x) for x in self.series_scope)
+
+    def covers_time(self, ts_ms):
+        if ts_ms is None or self.effective_from_ms is None:
+            return False                                          # an unknown date is never covered
+        return ts_ms >= self.effective_from_ms and (self.effective_to_ms is None or ts_ms < self.effective_to_ms)
+
+
+GENERAL_UNVERIFIED = FeeSchedule(
+    schedule_id="kalshi_general_fee_formula", version="v1",
+    source="Kalshi fee schedule: general trading fee = round up(rate x C x P x (1 - P)) per order (not read: kalshi.com "
+           "unreachable from the build environment)", source_url="https://kalshi.com/docs/kalshi-fee-schedule.pdf",
+    effective_from_ms=None, effective_to_ms=None, verified=False,
+    note="15-minute crypto series may carry a special schedule / multiplier: not confirmed")
+
+
+@dataclass(frozen=True)
+class FeeModel:
+    version: str = "fee_model_v2"
+    schedules: Tuple[FeeSchedule, ...] = (GENERAL_UNVERIFIED,)
 
     def to_dict(self):
-        return asdict(self)
+        return {"version": self.version, "schedules": [asdict(x) for x in self.schedules]}
 
     def fingerprint(self):
         return hashlib.sha256(json.dumps(self.to_dict(), sort_keys=True).encode()).hexdigest()
 
-    def rate(self, ticker, maker=False):
-        for pre, ex in sorted(self.market_exceptions.items()):
-            if str(ticker).startswith(pre):
-                return ex["maker_rate" if maker else "taker_rate"]
-        return self.maker_rate if maker else self.taker_rate
+    def resolve(self, ticker, ts_ms=None):
+        """-> (schedule | None, status). Series-specific schedules first; VERIFIED only for a verified schedule whose
+        effective range covers ts_ms."""
+        cands = [x for x in self.schedules if x.covers_series(ticker)]
+        cands.sort(key=lambda x: ("*" in x.series_scope, x.schedule_id))
+        timed = [x for x in cands if x.covers_time(ts_ms)]
+        if timed:
+            x = timed[0]
+            return x, ("VERIFIED" if x.verified else "FEE_UNVERIFIED")
+        undated = [x for x in cands if x.effective_from_ms is None]
+        if undated:
+            return undated[0], "FEE_UNVERIFIED"
+        return None, "FEE_UNKNOWN"
 
-    def fee_dollars(self, contracts, price_prob, ticker="", maker=False):
-        raw = self.rate(ticker, maker) * contracts * price_prob * (1 - price_prob)
-        if self.rounding == "ceil_to_cent_per_order":
+    def fee_dollars(self, contracts, price_prob, ticker="", maker=False, ts_ms=None):
+        x, _st = self.resolve(ticker, ts_ms)
+        if x is None:
+            return None
+        raw = (x.maker_rate if maker else x.taker_rate) * contracts * price_prob * (1 - price_prob)
+        if x.rounding == "ceil_to_cent_per_order":
             return math.ceil(round(raw * 100, 9)) / 100.0
         return raw
+
+    def status(self, ticker, ts_ms=None):
+        return self.resolve(ticker, ts_ms)[1]
 
 
 def vwap(ladder, size):
@@ -68,36 +118,39 @@ def vwap(ladder, size):
     return None, avail
 
 
-def side_economics(p_side, ladder, size, fee_model, ticker, uncertainty_buffer=0.0):
+def side_economics(p_side, ladder, size, fee_model, ticker, uncertainty_buffer=0.0, ts_ms=None):
     v, filled = vwap(ladder, size)
     if v is None:
         return {"status": "NOT_EXECUTABLE", "available_qty": filled, "size": size}
     price = v / 100.0
-    fee_pc = fee_model.fee_dollars(size, price, ticker) / size
+    fee = fee_model.fee_dollars(size, price, ticker, ts_ms=ts_ms)
+    if fee is None:
+        return {"status": "FEE_UNKNOWN", "size": size, "vwap_cents": v, "price": price}
+    fee_pc = fee / size
     raw = p_side - price
     return {"status": "EXECUTABLE", "size": size, "vwap_cents": v, "price": price, "raw_edge": raw,
-            "fee_per_contract": fee_pc, "net_executable_edge": raw - fee_pc,
+            "fee_per_contract": fee_pc, "fee_status": fee_model.status(ticker, ts_ms), "net_executable_edge": raw - fee_pc,
             "net_edge_after_buffer": raw - fee_pc - uncertainty_buffer, "uncertainty_buffer": uncertainty_buffer}
 
 
-def row_economics(p_yes, execution, fee_model, ticker, sizes=RESEARCH_SIZES):
+def row_economics(p_yes, execution, fee_model, ticker, sizes=RESEARCH_SIZES, ts_ms=None):
     if not execution:
         return {"status": "NO_BOOK"}
     fav = "YES" if p_yes >= 0.5 else "NO"
     out = {"favoured_side": fav, "book_source": execution.get("source"), "sides": {}}
     for side, p, lad in (("YES", p_yes, execution.get("yes_ask_ladder")), ("NO", 1 - p_yes, execution.get("no_ask_ladder"))):
-        out["sides"][side] = {str(s): side_economics(p, lad, s, fee_model, ticker) for s in sizes}
+        out["sides"][side] = {str(s): side_economics(p, lad, s, fee_model, ticker, ts_ms=ts_ms) for s in sizes}
     out["status"] = "OK"
     return out
 
 
 def evaluate(preds, fee_model=None, sizes=RESEARCH_SIZES, later_bids=None):
-    """preds: [{market, p_yes, y, execution, checkpoint_s, ticker}] (OUT-OF-SAMPLE only). Hypothetical fixed-size
+    """preds: [{market, p_yes, y, execution, checkpoint_s, ticker, ts_ms}] (OUT-OF-SAMPLE only). Hypothetical fixed-size
     trades on the favoured side where net executable edge > 0. later_bids: {(market, checkpoint_s): [(later cp_s,
     yes_bid_cents, no_bid_cents)]} for grid-level max adverse / favourable excursion."""
     fm = fee_model or FeeModel()
     res = {"fee_model": fm.to_dict(), "fee_model_fingerprint": fm.fingerprint(),
-           "status": "SIMULATED_RESEARCH_ONLY" if fm.verified else "FEE_UNVERIFIED",
+           "status": None,
            "note": "SIMULATED research economics from captured books - not realized profit; no order was placed",
            "maker": {"status": "NOT_EVALUATED", "reason": "resting-order fill probability is unknown from the displayed "
                      "book; maker EV needs an explicit fill model (a later execution stage)"},
@@ -105,7 +158,7 @@ def evaluate(preds, fee_model=None, sizes=RESEARCH_SIZES, later_bids=None):
     for s in sizes:
         rows = []
         for pr in preds:
-            eco = row_economics(pr["p_yes"], pr.get("execution"), fm, pr.get("ticker", ""), (s,))
+            eco = row_economics(pr["p_yes"], pr.get("execution"), fm, pr.get("ticker", ""), (s,), ts_ms=pr.get("ts_ms"))
             if eco["status"] != "OK":
                 continue
             side = eco["favoured_side"]
@@ -123,7 +176,8 @@ def evaluate(preds, fee_model=None, sizes=RESEARCH_SIZES, later_bids=None):
                 if marks:
                     mae = min(m - e["price"] for m in marks)
                     mfe = max(m - e["price"] for m in marks)
-            rows.append({"executable": True, "raw": e["raw_edge"], "net": e["net_executable_edge"], "pnl": pnl,
+            rows.append({"executable": True, "fee_status": e["fee_status"], "raw": e["raw_edge"],
+                         "net": e["net_executable_edge"], "pnl": pnl,
                          "market": pr["market"], "mae": mae, "mfe": mfe, "price": e["price"]})
         ex = [r for r in rows if r["executable"]]
         trades = [r for r in ex if r["pnl"] is not None]
@@ -144,5 +198,10 @@ def evaluate(preds, fee_model=None, sizes=RESEARCH_SIZES, later_bids=None):
             "max_adverse_excursion_grid": min((r["mae"] for r in trades if r["mae"] is not None), default=None),
             "max_favourable_excursion_grid": max((r["mfe"] for r in trades if r["mfe"] is not None), default=None),
             "excursion_note": "on the frozen checkpoint grid only (captured bids at later checkpoints), not tick level",
+            "fee_status_counts": {k: sum(1 for r in ex if r["fee_status"] == k) for k in sorted({r["fee_status"] for r in ex})},
             "labels": "SIMULATED"}
+    stats = {r_ for b in res["by_size"].values() for r_ in b["fee_status_counts"]}
+    res["status"] = "SIMULATED_RESEARCH_ONLY" if stats == {"VERIFIED"} else "FEE_UNVERIFIED"
+    res["fee_status_rule"] = ("VERIFIED only when every executable row's schedule is verified and its effective range "
+                              "covers the trade timestamp; otherwise FEE_UNVERIFIED")
     return res

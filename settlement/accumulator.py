@@ -76,10 +76,10 @@ class SettlementAccumulator:
         return summarize(self.book, samples, now_ms, schema_mismatch=sm, invalid=self.invalid), issues
 
     def state(self, now_ms):
-        (state, _f, _o, _s), _i = self._summary(now_ms)
+        (state, _f, _o, _s, _st), _i = self._summary(now_ms)
         return state
 
     def result(self, now_ms):
-        (state, final, outcome, samples), issues = self._summary(now_ms)
+        (state, final, outcome, samples, settle), issues = self._summary(now_ms)
         return SettlementResult(state, final, outcome, samples,
-                                provenance(self.book, state, self.wpol, self.rpol, now_ms, issues))
+                                provenance(self.book, state, self.wpol, self.rpol, now_ms, issues), settle)

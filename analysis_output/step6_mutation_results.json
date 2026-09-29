@@ -4,7 +4,7 @@
   "unmutated": {
    "caught": false,
    "returncode": 0,
-   "seconds": 29.9,
+   "seconds": 35.4,
    "failed_test": null,
    "passed_tests": [
     "4 frozen feature universe (2047): fields, roles, aliases, finer ",
@@ -18,7 +18,12 @@
     "18 market-clustered bootstrap + sign-flip p-values",
     "23 leakage guards: label / post-event names, disguised leaked va",
     "24 research ledger: hash chain, tamper detection, holdout single",
-    "27 outputs: synthetic refused in real files; INSUFFICIENT_DATA f"
+    "27 outputs: synthetic refused in real files; INSUFFICIENT_DATA f",
+    "29a Step 6.1 contract rules: AT_LEAST equality -> YES, official ",
+    "29b Step 6.1 precision-aware expiration-value verification (no u",
+    "29c Step 6.1 ambiguous / tied window conventions never VERIFIED;",
+    "29d Step 6.1 rejected settlement / resolution sources never reac",
+    "29e Step 6.1 ridge lambda: market-level, close-group, purged inn"
    ]
   }
  },
@@ -46,7 +51,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  16 train-only scaler / selection / ridge; future-only feature not selected; holdout leak refused: AssertionError: ('mom.syn.noise', 0.010283732104335874, 0.018432066446273543)",
     "passed_tests": []
    }
@@ -88,7 +93,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.2,
     "failed_test": "FAIL  18 market-clustered bootstrap + sign-flip p-values: AssertionError: ",
     "passed_tests": []
    }
@@ -102,7 +107,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 4.3,
+    "seconds": 4.2,
     "failed_test": "FAIL  9 research matrix from a session, real mode skips synthetic, immutable cache, raw change invalidates: AssertionError: a settlement outcome changed a feature value",
     "passed_tests": []
    }
@@ -130,7 +135,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 24.1,
+    "seconds": 27.3,
     "failed_test": "FAIL  27 outputs: synthetic refused in real files; INSUFFICIENT_DATA files name requirements: AssertionError: synthetic written to real outputs",
     "passed_tests": []
    }
@@ -158,7 +163,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  10 dataset fingerprint covers every session, raw checksum, universe, labels, grid, assets: AssertionError: ",
     "passed_tests": []
    }
@@ -216,6 +221,90 @@
     "returncode": 1,
     "seconds": 0.1,
     "failed_test": "FAIL  7 settlement-label gate: official / conflict / verified / unverified; unverified never gold: AssertionError: SETTLEMENT_UNVERIFIED",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S15",
+   "mutation": "ambiguous tied settlement conventions become VERIFIED (preferred policy in the passing set is enough)",
+   "tests": [
+    "convention"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  29c Step 6.1 ambiguous / tied window conventions never VERIFIED; migration required: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S16",
+   "mutation": "ridge lambda inner split operates on ROWS (a market is split across inner train / validation)",
+   "tests": [
+    "ridge"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.1,
+    "failed_test": "FAIL  29e Step 6.1 ridge lambda: market-level, close-group, purged inner split: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S17",
+   "mutation": "ridge inner split omits the purge / embargo (and its internal overlap guard, so the TEST must catch it)",
+   "tests": [
+    "ridge"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  29e Step 6.1 ridge lambda: market-level, close-group, purged inner split: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S18",
+   "mutation": "a rejected CF source still contributes to settlement verification / reconstructed labels",
+   "tests": [
+    "rejected"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  29d Step 6.1 rejected settlement / resolution sources never reach labels: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S19",
+   "mutation": "equality under an AT_LEAST crypto contract is not YES (strict comparison restored)",
+   "tests": [
+    "rules"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  29a Step 6.1 contract rules: AT_LEAST equality -> YES, official precision, ties, unknown rules fail closed, versions: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S20",
+   "mutation": "settlement-value precision uses a universal 0.01 tolerance (validates a wrong 4-dp XRP value)",
+   "tests": [
+    "precision"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  29b Step 6.1 precision-aware expiration-value verification (no universal 0.01 tolerance): AssertionError: ",
     "passed_tests": []
    }
   }

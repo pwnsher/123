@@ -10,6 +10,8 @@ imports neither of them (enforced by test_stage18.py).
 Modules
     types          typed observations, markets, official resolutions, samples, states, results
     policy         SettlementWindowPolicy (window/boundary convention) + ReconstructionPolicy
+    rules          versioned CONTRACT settlement rules per series (comparator, official precision, rounding / tie
+                   behaviour, provenance; Step 6.1) - unknown rules fail closed
     schemas        expected external schemas, validation and schema fingerprints
     assets         asset -> CF index id mapping, Kalshi ticker/close-time consistency checks
     sources        parsers: Kalshi CF websocket feed, CF websocket/REST, Kalshi markets, perp telemetry (proxy)
@@ -24,6 +26,6 @@ Modules
     fingerprint    settlement-research fingerprint (separate from the Step-1 strategy baseline)
 """
 
-ENGINE_VERSION = "settlement_engine_v1"
+ENGINE_VERSION = "settlement_engine_v2"            # v2 (Step 6.1): outcomes by versioned contract rules
 RECONSTRUCTION_VERSION = "reconstruction_v1"
 RECORD_SCHEMA_VERSION = 1
