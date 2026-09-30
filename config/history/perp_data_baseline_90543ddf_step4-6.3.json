@@ -33,15 +33,15 @@
  "format": "perp_data_fingerprint_v1/canonical_ast_v2_sha256",
  "modules": {
   "__init__.py": "6de14a64bb668b8fa9ceb4eabb9933dcfede4c78b3ad658ef6880fc3f60827e2",
-  "collector.py": "43bd77a2b5b396961f01d6daec4523643cf554ac4d1a0b6bfccc09af23360b86",
+  "collector.py": "d87fb40496d951e330c82494e56a71d8b2f3b635a016269689655be7c57d03a0",
   "dataset.py": "41266a47b9324b69b97b4d5210278bfa470f63908fb1c6e68a32ed3b17fef628",
   "features/__init__.py": "298543bc6e0c31a330e28376b43b62bec2e4d9b74d1470e1a38ff7ece8201f0a",
   "features/definitions.py": "dd010f211c1148b43b441f351ee8e8f9a8ae06f27c671f85fc4b9a25e0afad72",
   "features/engine.py": "a461d185aabe1c174a259db43bbb1288324305912a642e96bd1bb4e465a09be3",
   "fingerprint.py": "ec17b3fcddea804bbc1f4001dc167f7f66f029b6ab4853c5ae47e222ff828f10",
-  "manifest.py": "e803c0c4ae216aa6b521db535b801cfe8bd17dccd0db3b0e6a56ea6f113c6c51",
+  "manifest.py": "21b4c41fd671c2116c6beda23f828e9f53c2bb82c7bae4854c410544272e7e94",
   "normalization.py": "7a3970414875cc7ba956065c23e8a0c7ca6e23ace508bf3514aede55ad9db779",
-  "poller.py": "0105d6e588c1d6edc002232053c3ca91bb5e8b55aff3c2137a2634787f4cac20",
+  "poller.py": "f2b9b7dd8377195d21bd6d902126288b5c3acfd1a912a8772caa9e3f01a0b3bc",
   "replay.py": "30cb61c61ee532f96acff7d5e580337482e2ae853239778d2d242d86b6696ab9",
   "sources/__init__.py": "298543bc6e0c31a330e28376b43b62bec2e4d9b74d1470e1a38ff7ece8201f0a",
   "sources/base.py": "a0ec1d871931c7d7373bf20225c661d17efaaabcc149279a36840836e224ce06",
@@ -56,7 +56,7 @@
   "venues.py": "9c1dfe0db369de1ead2b9e6c6a4a895cd53b915ba9f034f3e766b1e789bedc7f"
  },
  "note": "Research/observation code only; independent of the strategy, settlement and market-data baselines. existing_perp_veto_* records the untouched Kalshi-perp veto chain (Step 4 never feeds it).",
- "perp_data_fingerprint": "8a4743efcc1dddfb797aed9b3db3ec13819e8cef58ad352c7990325e50cad8f3",
+ "perp_data_fingerprint": "90543ddff68e9dece7443fd9a7d876070f14a06d008a013e8980cb6aa292758c",
  "perp_feature_set_version": "perp_features_v1",
  "perp_schema_version": 1,
  "venues_sha256": "f3bca64f2ca7a95003f7f98d4934e2713197d266b599d9b230d43fc696b6b477"

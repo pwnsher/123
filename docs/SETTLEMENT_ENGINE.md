@@ -330,6 +330,21 @@ per series (never one global comparator):
   * raw text → collector → adapter → MarketEvent (stored, replayed) → settlement store → reconstruction;
   * raw REST JSON → importer / parser → reconstruction.
 
+## 9d. Live rule-text index identifiers (parser v2, Step 6.4)
+
+The first real capture's rule texts name the CF Benchmarks indices `BRTI`, `ETHUSDRTI`, `SOLUSDRTI` and `XRPUSDRTI`.
+The 6.2 parser knew only `BRTI` and the underscore ids, so ETH, SOL and XRP were `UNRECOGNIZED`.
+
+`crypto15m_rule_parser_v2`:
+
+* adds exactly these three aliases;
+* matches every alias only as a whole token;
+* uses no fuzzy matching and no LLM.
+
+All four captured markets now parse and resolve `RULE_VERIFIED_FOR_MARKET` from their own text. That includes the
+captured SOL contract (nearest 4 decimal places). The static SOL series rule stays unverified, so a SOL market
+without its own captured text still fails closed.
+
 ## 10. Resolution verification and overlap
 
 * `scripts/verify_settlement_resolution.py` produces one row per market × convention:
@@ -427,6 +442,7 @@ back-history. The collector never marks a convention verified.
 |---|---|---|
 | 2026-09-24 | initial settlement baseline | Step 2 |
 | 2026-09-25 | `assets.py`: `INDEX_ID_PROVENANCE` added; the docstring now marks the asset→index mapping as DOCUMENTED. Mapping values are unchanged, and window policies stay `verified=False`. OLD `b665778b47cc1d49…` → NEW `3eba791cfe8163cc…` | Step 3: the index ids are confirmed by Kalshi documentation (owner-supplied, corroborated by search). The only source change is the added provenance constant; no settlement behaviour changed. |
+| 2026-09-30 | **Step 6.4 (live rule identifiers).** `market_rules.py`: parser v2 adds the exact live index ids `ETHUSDRTI` / `SOLUSDRTI` / `XRPUSDRTI` (whole-token matching only). OLD `b205709349492b71…` → NEW `6fed6efd32441735…` (archived) | The first real capture's ETH / SOL / XRP rule texts were `UNRECOGNIZED` (index not named), so their per-market rules failed closed. |
 | 2026-09-29 | **Step 6.3 (exact CF decimals on all paths).** `schemas.py`: `loads_exact` / `JsonNumberText`, value origin, CF specs v2 (documented value = string; JSON numbers legacy / non-standard, exact token only); `cf_live.py` / `cf_history.py`: token-preserving decoding, a `VALUE_PRECISION_LOST` fail-closed gate for already-decoded binary floats, the `+legacy_numeric_value` schema suffix, `parse_cfb_historical_text`. OLD `4884524a795f0e2c…` → NEW `b205709349492b71…` (archived) | The direct CF websocket and REST / history paths decoded with plain `json.loads`, so a JSON number such as `99999.994999999999999` became `99999.995` with an empty `value_text`, which can cross an official-rounding boundary. |
 | 2026-09-29 | **Step 6.2 (provenance, versioned).** New `market_rules.py`: per-market rule snapshots (original `rules_primary` / `rules_secondary` + hash), a narrow deterministic parser, and rule resolution with historical provenance. A rule observed only AFTER a market closed is `RULE_HISTORICALLY_UNVERIFIED` (diagnostic only); conflicting or unrecognised market text fails closed; the static table never overrides market text. CF values keep their original decimal text (`SettlementObservation.value_text`) through to the official rounding; `parse_market` retains the snapshot. OLD `ba4e50c39ab59359…` → NEW `4884524a795f0e2c…` (archived) | The 6.1 table applied a rule observed on 2026-09-29 retroactively, and CF float decoding could move a value across a rounding boundary (`99999.994999999999999` → `99999.995`). |
 | 2026-09-29 | **Step 6.1 (semantic correction, versioned).** New `rules.py` (versioned contract rules); the engine takes outcomes from the rule (AT_LEAST equality → YES, official precision, unresolved ties fail closed, unknown rules fail closed); `resolution.py` is precision-aware (`VALUE_TOLERANCE = 0.01` removed); labels carry rule provenance; `ENGINE_VERSION` v1 → v2; fingerprint format v2 pins the rules. OLD `3eba791cfe8163cc…` → NEW `ba4e50c39ab59359…` (old baseline archived in `config/history/`) | The earlier engine treated equality as an unresolved `AT_STRIKE` and compared unrounded values against a universal 0.01 tolerance. Both conflict with the current Kalshi 15-minute crypto rules ("at least" the target; official values rounded to 2 dp for BTC / ETH and 4 dp for XRP). Research labels only; production is untouched. |

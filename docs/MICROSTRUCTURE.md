@@ -533,6 +533,29 @@ WHY: these parts changed.
 The strategy, settlement, market-data and perp-data fingerprints and the existing perp-veto fingerprint are
 unchanged.
 
+Step 6.4 (first real-feed corrections) changed microstructure code again, as a deliberate re-baseline of this layer:
+
+| | Step-5 microstructure fingerprint |
+|---|---|
+| OLD (Step 5.1 – 6.3) | `695d8e7741287c0bbac40ae9835148e4a0fbcd0e517669784aae647a8dcb0799` |
+| NEW (Step 6.4) | `6971961992c95099c180c59af4b4840b6b8cd1d61842ef30d60417024d51dd32` |
+
+WHY: these parts changed.
+
+* **`reconstruction.py`.** The single global `max_receive` is replaced by per-book and per-chain receive-order checks.
+  * The first real session had 70 cross-venue 1–5 ms scheduling inversions, 0 within a source and 0 within a book.
+    Each one raised and caused a reconnect (69 disconnects).
+  * A same-book or same-chain regression still fails closed (`BookOrderError`); a Binance REST snapshot is aligned
+    by update id.
+  * New terminal status `UNAVAILABLE`.
+* **`collector.py` / `poller.py` / `manifest.py`.** A required Binance REST snapshot answering 403 / 451 marks that
+  book `UNAVAILABLE`:
+  * a BOOK_RESET reason `UNAVAILABLE` and `manifest.unavailable`;
+  * no further requests, no buffered deltas, no fabricated snapshot;
+  * once every book of the source is unavailable, the websocket raises `SourceUnavailable` and is stopped, never
+    reconnected.
+* Venue sequence semantics, checksums and features are unchanged.
+
 ## 14. Limitations (documented, not hidden)
 
 * **Bybit:** delta contiguity is not documented, so a lost delta cannot be detected from the stream. It

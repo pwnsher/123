@@ -747,3 +747,166 @@ strategy, perp-data (`90543ddf…`), microstructure (`695d8e77…`) and perp-vet
 unchanged. The real-data status is still INSUFFICIENT_DATA (zero real sessions). No feature ranking, no final
 holdout, no predictive claims.
 
+## 21. Step 6.4 — first real-feed corrections
+
+These corrections come from the first REAL capture, session `20260930T004307Z-51664fe9`. It ran about 1.15 minutes
+and was correctly classified DEGRADED. It is used only as debugging evidence: never as research evidence and never
+for model selection.
+
+* **Unchanged:** no predictive feature added, no model tuned, no gate loosened (15-minute minimum, book-ready 90 % /
+  50 %, 5 % duplicates, Coinbase evidence of 5,000 envelopes), production untouched, Step 7 not started.
+* **Raw session:** not in the repository. It is replaced by a 97 KB sanitized excerpt,
+  `real_capture_fixtures/first_real_session_20260930T004307Z-51664fe9.json` (see its README).
+
+**Issue 1 — false book ordering failures (the reconnect storm).**
+
+* **Root cause.** `BookReconstructor` kept ONE `max_receive` for every venue and book. Each websocket thread
+  timestamps a message before taking the shared `MicroCollector` lock, so the processing order across threads is not
+  receive-time order.
+* **Evidence.** 44,128 micro events had 70 cross-thread receive regressions, all 1–5 ms. There were 0 within one
+  source and 0 within one book. They raised `book events must be applied in availability order` and caused 69
+  disconnects (each followed by BOOK_RESET, resnapshot and reconnect).
+* **Fix.** Receive order is now enforced only within ONE book and within one venue sequence chain (one connection).
+  A regression there still fails closed (`BookOrderError`).
+  * The one exception is a Binance REST snapshot, which the venue's documented procedure aligns by update id.
+  * Cross-venue order differences never invalidate, resnapshot, reconnect or open a gap.
+  * Venue sequence checks are unchanged (chain contiguity, prev-id chain, monotonic ids, Binance `pu`, Kraken
+    checksum).
+* **Offline.** Replay still applies the merged stream sorted by `(receive_ts_ms, ingest_seq)`. Receive timestamps are
+  never rewritten or replaced by event times.
+
+**Issue 2 — `ClockMonitor` misclassified thread reordering.**
+
+* **Evidence.** 56 micro and 43 perp `WALL_BACKWARDS` anomalies, every one with a NEGATIVE monotonic delta. An older
+  captured `(wall, mono)` pair was processed after a newer one.
+* **Fix (option B).** A sample whose monotonic time is older than the latest pair is counted (`reordered`) and
+  ignored. It does not replace the latest pair.
+* **What counts as an anomaly.** Real anomalies are judged only while monotonic time advances:
+  * `WALL_BACKWARDS`: wall steps back by more than 5 ms relative to it;
+  * `WALL_JUMP`: wall diverges by more than 1 s.
+
+**Issue 3 — Kalshi REST orderbook.**
+
+* **Evidence.** The current response is `{"orderbook_fp": {"yes_dollars": [[price, count_fp]], "no_dollars": [...]}}`.
+  The parser failed 136 of 136 responses.
+* **Fix.** The current schema is decoded with exact Decimal:
+  * YES bids are the native YES bids;
+  * YES asks = 1 − NO bid, in cents;
+  * fractional contract counts are kept;
+  * an empty side is an empty ladder.
+* **Legacy.** The older `orderbook` shape is kept only for historical captures (flagged `LEGACY_SCHEMA`). Anything
+  else fails closed.
+
+**Issue 4 — zero quotes.**
+
+* **Evidence.** 10 real market objects had `yes_bid_dollars "0.0000"` with `yes_bid_size_fp "0.00"`. Each failed the
+  whole MARKET_STATE.
+* **Fix.**
+  * A zero price with a zero or missing size is an UNAVAILABLE side: `None`, flag `NO_QUOTE`, never a $0 bid.
+  * The venue's `"1.0000"` ask mirroring such a missing bid is likewise unavailable.
+  * An ask is derived (`DERIVED_ASK`) only from a genuinely available opposite bid.
+  * A zero price with a non-zero size fails closed.
+  * Quotes convert to cents with exact Decimal arithmetic.
+
+**Issue 5 — live rule identifiers.**
+
+* **Evidence.** The live rule texts name `BRTI`, `ETHUSDRTI`, `SOLUSDRTI` and `XRPUSDRTI`. Only BTC parsed.
+* **Fix.** Parser `crypto15m_rule_parser_v2` adds exactly these three aliases and matches aliases only as whole
+  tokens (no fuzzy matching, no LLM).
+* **Result.** All four captured markets parse: AT_LEAST (`GREATER_THAN_OR_EQUAL`), 2 / 2 / 4 / 4 decimal places,
+  60-second average, `RULE_VERIFIED_FOR_MARKET`.
+  * This includes the captured SOL contract (`SOLUSDRTI`, nearest 4 decimal places).
+  * The static SOL series rule stays unverified: nothing is claimed for other SOL contracts.
+
+**Issue 6 — hard REST access failures.**
+
+* **Typed errors.** `market_data.transport.http.HttpError` (a `ConnectionError`) carries:
+  * the status;
+  * a safe endpoint (host + path, no query, no credentials);
+  * a classification:
+    * `RATE_LIMITED` (429), `SERVER_ERROR` (5xx) and `NETWORK`: retryable;
+    * `ACCESS_DENIED` (403, 451): terminal for that stream or book for the session;
+    * `CLIENT_ERROR` (other 4xx): fails closed.
+* **No bypass.** No proxy, VPN, alternate endpoint or evasion logic exists.
+* **Binance full book.** All four `/fapi/v1/depth` snapshots answered 451 (28 recorded attempts).
+  * Each book is now marked `UNAVAILABLE` after its first denial: a BOOK_RESET with reason `UNAVAILABLE` (replay
+    agrees), `manifest.unavailable`, and no further requests.
+  * Deltas are ignored, not buffered, and no snapshot is fabricated.
+  * Once every book of the source is unavailable, the websocket raises `SourceUnavailable`, and the runner stops it
+    without reconnecting.
+  * The quality verdict is `UNAVAILABLE`, excluded from research inputs like REJECT (features MISSING, never zero).
+  * Step-4 Binance websocket data is independent and is never promoted to a full book.
+* **Optional perp REST enrichment.** Binance `openInterest` / `fundingRate` / `fundingInfo` (451) and Bybit
+  `funding/history` (403) are each requested once, then recorded `UNAVAILABLE` per stream. They never count as a
+  transient failure or reconnect, and never disable the venue's websocket or its other streams.
+
+**Issue 7 — Kalshi trade duplicates.**
+
+* **Evidence.** Each asset stored 1,700 trade rows with only 1,319 / 625 / 1,119 / 1,166 unique ids.
+* **Fix.**
+  * The first poll of a market is one BACKFILLED page of 100.
+  * Later polls are incremental: `min_ts` equals the newest seen second minus a 1-second overlap, so trades sharing
+    the boundary timestamp are always re-fetched, never missed. Cursor pages up to 1,000 rows each are followed, and a
+    walk longer than 10 pages becomes a `TRADE_PAGES_TRUNCATED` gap.
+  * The adapter normalizes each `trade_id` once per market (earliest observation wins).
+  * Every raw page is stored.
+* **Missed trades.** The replay also shows consecutive old polls with NO overlap (BTC 9, SOL 5, XRP 4 times), i.e.
+  trades the old polling very likely never fetched.
+
+**Coinbase sequence.** The status stays `UNVERIFIED_REAL_FEED`. The session had 2,419 of the required 5,000
+envelopes (connection-level contiguity 99.83 %, per product 8.4 %, heartbeats in the sequence). The threshold is
+unchanged.
+
+**Replay of the real session with the Step 6.4 code** (`scripts/replay_real_feed_analysis.py`, read-only; output in
+`analysis_output/step6_4_first_real_session_replay.json`):
+
+| | Recorded in the session | Step 6.4 code on the same stored messages |
+|---|---|---|
+| book ordering errors / false disconnects | 70 / 69 | 0 / 0 (PROJECTION: 69 false reconnects avoided) |
+| clock anomalies (micro / perp) | 56 / 43 `WALL_BACKWARDS` | 0 / 0 (84 / 82 reordered samples ignored) |
+| Kalshi REST parse failures | 146 (136 orderbook, 10 zero bid) | 0 |
+| Kalshi normalized trades per asset (BTC / ETH / SOL / XRP) | 1,700 each | 1,319 / 625 / 1,119 / 1,166 (0 duplicates) |
+| per-market rules parsed | 1 / 4 | 4 / 4 `RULE_VERIFIED_FOR_MARKET` |
+| terminal HTTP streams | retried (165 denied requests, 40 aggregate backoffs) | requested once each, then `UNAVAILABLE` |
+
+The remaining genuine book invalidations were 1 Kalshi sequence gap and 1 crossed Kalshi book. The session stays
+DEGRADED because it was 1.2 minutes (< 15), and it has 0 / 4 official labels, which is expected for that length.
+
+**Mutations S31–S39** (all caught, each by its own test):
+
+* S31: a global cross-venue receive regression fails the book.
+* S32: a same-book regression is accepted.
+* S33: an out-of-order monotonic sample becomes `WALL_BACKWARDS`.
+* S34: `orderbook_fp` is rejected.
+* S35: a zero-size `0.0000` bid fails the observation.
+* S36: the live ETH / SOL / XRP identifiers are not recognized.
+* S37: a 451 snapshot source retries forever.
+* S38: one denied REST enrichment disables a healthy websocket.
+* S39: overlapping trade polls write duplicate ids.
+
+**Fingerprints (OLD → NEW, WHY)**
+
+| Fingerprint | OLD | NEW | WHY |
+|---|---|---|---|
+| settlement | `b205709349492b71…` | `6fed6efd32441735…` | `market_rules.py`: parser v2 (exact live index ids, whole-token matching) |
+| market-data | `ca98d418bf40075a…` | `faf21c0af4bd3a9e…` | `clock.py` (reordering), `transport/http.py` (typed errors), `feed.py` / `runner.py` (`SourceUnavailable`), `sources/kalshi.py` (`orderbook_fp`, zero quotes, trade dedup), `kalshi_poller.py` (incremental trades), `types.py` flags, `synthetic.py` (current orderbook schema). No feature changed |
+| perp-data | `90543ddff68e9dec…` | `8a4743efcc1dddfb…` | `poller.py` / `collector.py` / `manifest.py`: terminal REST streams recorded once, never retried, never disabling the websocket. No feature changed |
+| microstructure | `695d8e7741287c0b…` | `6971961992c95099…` | `reconstruction.py` (per-book / per-chain ordering, `UNAVAILABLE`), `collector.py` / `poller.py` / `manifest.py` (terminal snapshot handling). No feature changed |
+| feature universe | v4 `cc25a506c35a4adb…` | v5 `c9ea4d09ca02d3ce…` | the four embedded source fingerprints changed. Same 2047 features |
+| Step-6 baseline | `7fa394cfe38c37b8…` | `8260096c58b4ac5f…` | `quality.py` (UNAVAILABLE verdicts), `dataset.py` (UNAVAILABLE excluded like REJECT), universe v5 |
+| dataset fingerprints | — | change with universe v5 | they embed the universe fingerprint |
+
+The Step-6.3 baselines are archived in `config/history/`. The legacy (`8d94f241…`) / extended (`784141876…`)
+strategy and perp-veto (`499c1e16…`) fingerprints are unchanged.
+
+**Expected second capture (15–30 minutes).**
+
+* CF, Coinbase / Kraken spot and healthy perp websockets PASS.
+* Coinbase / Kraken / Bybit / OKX and Kalshi websocket books preferably > 95 % valid.
+* The Binance full book is PASS only if its snapshot endpoint is reachable; otherwise it is explicitly UNAVAILABLE,
+  with no retry storm.
+* Book reconnects near zero apart from genuine transport failures.
+* Kalshi: 0 `orderbook_fp` failures, 0 zero-bid failures, 0 duplicate trade ids.
+* ETH / SOL / XRP rules PARSED.
+* Coinbase keeps accumulating sequence evidence.
+

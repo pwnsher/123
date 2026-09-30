@@ -2,9 +2,16 @@
 BookReconstructor: the ONE place local books are rebuilt from MicroEvents - used identically by the live
 collector (to detect gaps and request a resnapshot) and by replay / the feature engine (deterministic).
 
-Events must arrive in availability order (receive_ts non-decreasing; ties by ingest_seq). apply(ev) returns a
-BookUpdate describing what happened; the book's history of VALID INTERVALS is kept so features can require a
-book that was continuously valid over a whole window.
+Ordering (Step 6.4). Receive-time order is required only where book integrity depends on it: within ONE reconstructed
+book, and within one venue sequence chain (one connection). Independent books / venues are NOT globally ordered: the
+live collector's venue threads timestamp a message before taking the shared collector lock, so a Coinbase event received
+at T+2 may be processed before a Kraken event received at T. That is scheduling, not a data defect, and never
+invalidates, resnapshots or reconnects anything. A regression within the SAME book or chain still fails closed
+(BookOrderError), except a Binance REST snapshot, whose alignment with the websocket deltas is by update id (the venue's
+documented procedure), not by receive time. Offline replay applies the merged stream sorted by (receive_ts, ingest_seq,
+family) - unchanged - and receive timestamps are never rewritten. apply(ev) returns a BookUpdate describing what
+happened; the book's history of VALID INTERVALS is kept so features can require a book that was continuously valid
+over a whole window.
 
 Book status (status(key, t))
     NO_BOOK            nothing received yet
@@ -14,6 +21,8 @@ Book status (status(key, t))
     STALE              valid, but no message from the book's source for > stale_after_ms
     INVALID            crossed / locked book, checksum mismatch, negative level, non-monotonic id, BOOK_RESET
     NEEDS_RESNAPSHOT   an unrecoverable sequence gap: the book is never continued, only replaced by a snapshot
+    UNAVAILABLE        (Step 6.4) terminal for the session: a required REST snapshot endpoint is access-denied (HTTP
+                       403 / 451); deltas are ignored (never buffered), no snapshot is fabricated, features are MISSING
 An INVALID / NEEDS_RESNAPSHOT book stays so until a snapshot from a trustworthy chain arrives; the snapshot is
 effective from ITS receive time - nothing before it is repaired (there is no retroactive repair).
 """
@@ -34,10 +43,16 @@ class BookStatus(str, Enum):
     STALE = "STALE"
     INVALID = "INVALID"
     NEEDS_RESNAPSHOT = "NEEDS_RESNAPSHOT"
+    UNAVAILABLE = "UNAVAILABLE"
 
 
 VALID_BASE = (BookStatus.READY,)
-BAD_BASE = (BookStatus.INVALID, BookStatus.NEEDS_RESNAPSHOT)
+BAD_BASE = (BookStatus.INVALID, BookStatus.NEEDS_RESNAPSHOT, BookStatus.UNAVAILABLE)
+UNAVAILABLE_REASON = "UNAVAILABLE"          # BOOK_RESET reason written when a required endpoint is terminally denied
+
+
+class BookOrderError(ValueError):
+    """A receive-time regression inside ONE book or ONE sequence chain (fail closed)."""
 
 
 @dataclass
@@ -96,7 +111,8 @@ class BookReconstructor:
         self.broken_chains = set()
         self.precision = {}             # (source, symbol) -> (price_precision, qty_precision)
         self.source_last = {}           # source -> last receive ts of any book event (liveness)
-        self.max_receive = None
+        self.book_last = {}             # (source, symbol) -> last receive ts applied to that book (Step 6.4)
+        self.chain_last = {}            # chain -> last receive ts applied on that sequence chain (Step 6.4)
 
     # ---------------- helpers ----------------
     def track(self, key):
@@ -108,7 +124,7 @@ class BookReconstructor:
 
     def _invalidate(self, tr, ev, base, reason, kind="invalid"):
         if tr.base == BookStatus.READY and tr.intervals and tr.intervals[-1][1] is None:
-            tr.intervals[-1][1] = ev.receive_ts_ms
+            tr.intervals[-1][1] = max(ev.receive_ts_ms, tr.intervals[-1][0])
         tr.base, tr.reason = base, reason
         tr.ready_from = None
         tr.aligning = False
@@ -185,15 +201,28 @@ class BookReconstructor:
             b.truncate(tr.depth_cap)
         return out
 
+    def _order(self, key, chain, ev, exempt=False):
+        """Per-book / per-chain receive-time order (Step 6.4). Independent books are never compared."""
+        r = ev.receive_ts_ms
+        last = self.book_last.get(key)
+        if last is not None and r < last and not exempt:
+            raise BookOrderError(f"book events must be applied in availability order: {key[0]}:{key[1]} "
+                                 f"received {r} after {last} (same book)")
+        clast = self.chain_last.get(chain) if chain is not None else None
+        if clast is not None and r < clast and not exempt:
+            raise BookOrderError(f"book events must be applied in availability order: chain {chain} "
+                                 f"received {r} after {clast} (same sequence chain)")
+        self.book_last[key] = r if last is None else max(last, r)
+        if chain is not None:
+            self.chain_last[chain] = r if clast is None else max(clast, r)
+
     # ---------------- main entry ----------------
     def apply(self, ev):
-        if self.max_receive is not None and ev.receive_ts_ms < self.max_receive:
-            raise ValueError("book events must be applied in availability order")
-        self.max_receive = ev.receive_ts_ms
         et, p = ev.event_type, ev.payload
         if et == MT.TRADE:
             return None
-        self.source_last[ev.source] = ev.receive_ts_ms
+        prev_src = self.source_last.get(ev.source)
+        self.source_last[ev.source] = ev.receive_ts_ms if prev_src is None else max(prev_src, ev.receive_ts_ms)
         if et == MT.INSTRUMENT:
             info = p.get("info") or {}
             if info.get("price_precision") is not None and info.get("qty_precision") is not None:
@@ -206,12 +235,21 @@ class BookReconstructor:
             ups = []
             for k in targets:
                 tr = self.track(k)
-                if tr.base not in BAD_BASE:
+                # a reset only ever invalidates (the fail-closed direction): it is never refused for ordering
+                self.book_last[k] = max(self.book_last.get(k, ev.receive_ts_ms), ev.receive_ts_ms)
+                if p["reason"] == UNAVAILABLE_REASON:
+                    if tr.base != BookStatus.UNAVAILABLE:
+                        ups.append(self._invalidate(tr, ev, BookStatus.UNAVAILABLE, f"RESET:{p['reason']}", "reset"))
+                elif tr.base not in BAD_BASE:
                     ups.append(self._invalidate(tr, ev, BookStatus.INVALID, f"RESET:{p['reason']}", "reset"))
             return ups[0] if len(ups) == 1 else (ups or None)
         key = (ev.source, p["book"])
         tr = self.track(key)
         chain = p.get("chain")
+        self._order(key, chain, ev, exempt=(tr.policy == "binance_diff" and et == MT.BOOK_SNAPSHOT))
+        if tr.base == BookStatus.UNAVAILABLE:
+            tr.counts["ignored"] += 1
+            return BookUpdate(key, ev.receive_ts_ms, ev.ingest_seq, "ignored", tr.base, reason=tr.reason)
         if chain is not None:
             self.chain_members.setdefault(chain, set()).add(key)
             if chain in self.broken_chains:

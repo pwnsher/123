@@ -170,8 +170,8 @@ class FakeKalshi:
             a = {v: k for k, v in SERIES.items()}[params["series_ticker"]]
             return {"markets": [self._market(a, self._close(now))], "cursor": ""}
         if url.endswith("/orderbook"):
-            return {"orderbook": {"yes_dollars": [["0.4500", 120], ["0.4400", 300]],
-                                  "no_dollars": [["0.5300", 90], ["0.5200", 200]]}}
+            return {"orderbook_fp": {"yes_dollars": [["0.4400", "300.00"], ["0.4500", "120.00"]],      # current schema
+                                     "no_dollars": [["0.5200", "200.00"], ["0.5300", "90.00"]]}}
         if url.endswith("/markets/trades"):
             self._tid += 1
             return {"trades": [{"trade_id": f"t{self._tid}", "ticker": params["ticker"], "yes_price_dollars": "0.4600",

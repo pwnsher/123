@@ -5,7 +5,7 @@ Mutation tests for the Step-6 evaluation framework's methodological rules (offli
     py scripts/mutation_test_step6.py [--out analysis_output/step6_mutation_results.json] [--only S1,S7]
 
 Each mutation breaks ONE rule (S1-S14 of the Step-6 brief, S15-S20 of Step 6.1, S21-S27 of Step 6.2, S28-S30 of
-Step 6.3) in a TEMPORARY copy of the repository and runs the relevant
+Step 6.3, S31-S39 of Step 6.4) in a TEMPORARY copy of the repository and runs the relevant
 Stage-22 tests there; CAUGHT = those tests fail. Control: the unmutated copy must PASS the same tests. The working tree
 is never modified.
 """
@@ -147,6 +147,39 @@ MUTATIONS = [
      [("feature_eval/economics.py", "        return Decimal(schedule.default_maker_multiplier), override_state, False, reasons",
        "        return Decimal(schedule.default_taker_multiplier), override_state, False, reasons", 1)],
      ["makerfee"]),
+    ("S31", "a global cross-venue receive-time regression fails the book (the live collector reconnects)",
+     [("microstructure/reconstruction.py", "        last = self.book_last.get(key)\n",
+       "        last = max(self.book_last.values(), default=None)\n", 1)],
+     ["bookorder"]),
+    ("S32", "a genuine same-book receive-order regression is accepted",
+     [("microstructure/reconstruction.py", "        if last is not None and r < last and not exempt:",
+       "        if False:", 1)],
+     ["bookorder"]),
+    ("S33", "an out-of-processing-order monotonic sample becomes a false WALL_BACKWARDS anomaly",
+     [("market_data/clock.py", "            if mono_ns < lm:", "            if False:", 1),
+      ("market_data/clock.py", "            if dw - dm < -self.backwards_tolerance_ms and dw < 0:", "            if dw < 0:", 1)],
+     ["clockorder"]),
+    ("S34", "the current Kalshi orderbook_fp schema is rejected",
+     [("market_data/sources/kalshi.py", "        if isinstance(body, dict) and \"orderbook_fp\" in body:", "        if False:", 1)],
+     ["kalshiob"]),
+    ("S35", "a zero-size 0.0000 Kalshi bid rejects the whole market observation",
+     [("market_data/sources/kalshi.py", "    if d == 0:\n        sz = obj.get(size_key) if size_key else None",
+       "    if d == 0 and False:\n        sz = obj.get(size_key) if size_key else None", 1)],
+     ["zeroquote"]),
+    ("S36", "the live ETHUSDRTI / SOLUSDRTI / XRPUSDRTI rule identifiers are not recognized",
+     [("settlement/market_rules.py", '("ethusd_rti", "ethusdrti", ', '("ethusd_rti", ', 1),
+      ("settlement/market_rules.py", '("solusd_rti", "solusdrti", ', '("solusd_rti", ', 1),
+      ("settlement/market_rules.py", '("xrpusd_rti", "xrpusdrti", ', '("xrpusd_rti", ', 1)],
+     ["liverules"]),
+    ("S37", "an HTTP 451 snapshot source retries forever instead of becoming terminally unavailable",
+     [("microstructure/poller.py", "                if is_terminal(err):", "                if False:", 1)],
+     ["restterminal"]),
+    ("S38", "one denied REST enrichment disables an otherwise healthy websocket source",
+     [("perp_data/collector.py", '            key = f"{adapter.source}:{stream}"', '            key = f"{adapter.source}:*"', 1)],
+     ["restoptional"]),
+    ("S39", "overlapping Kalshi trade polls write duplicate normalized trade ids",
+     [("market_data/sources/kalshi.py", "            if seen is not None and str(tid) in seen:", "            if False:", 1)],
+     ["tradededup"]),
 ]
 
 

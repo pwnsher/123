@@ -12,7 +12,13 @@ Per received message, in arrival order:
          written, so the runner reconnects and the venue sends fresh snapshots (the old book is never continued)
     4. book gaps / invalidations are also written as gap records (kind "gap") with the time they became known
 On disconnect a BOOK_RESET event (reason DISCONNECT) is written for every book of the source, so replay sees the
-same invalidation at the same receive time. Nothing is dropped silently: raw texts longer than MAX_RAW_CHARS are
+same invalidation at the same receive time.
+
+Step 6.4: book ordering is per book / per chain inside the reconstructor (cross-venue thread scheduling is never a
+book failure). A book whose REQUIRED REST snapshot is terminally access-denied (HTTP 403 / 451) is marked UNAVAILABLE
+(a BOOK_RESET with reason UNAVAILABLE, so replay agrees): it is dropped from the snapshot queue, its deltas are ignored,
+and once every book of the source is unavailable the next websocket message raises SourceUnavailable - the runner stops
+the source instead of reconnecting / resnapshotting forever. manifest.unavailable records each such book. Nothing is dropped silently: raw texts longer than MAX_RAW_CHARS are
 counted in manifest.drops (their events are still parsed from the full text), and venue-side losses surface as
 sequence gaps.
 """
@@ -21,12 +27,13 @@ import os
 import threading
 
 from market_data.clock import ClockMonitor
+from market_data.feed import SourceUnavailable
 from market_data.gaps import Gap, disconnect_gap
 from market_data.manifest import new_session_id, utc_iso
 from market_data.sources.base import Sequencer
 from market_data.types import RawMessage
 from microstructure.manifest import MicroManifest
-from microstructure.reconstruction import BookReconstructor, BookStatus
+from microstructure.reconstruction import UNAVAILABLE_REASON, BookReconstructor, BookStatus
 from microstructure.sources.base import MicroCtx
 from microstructure.storage import MicroStoreWriter, storage_estimate
 from microstructure.types import MicroEvent, MicroEventType as MT
@@ -72,6 +79,7 @@ class MicroCollector:
         self.last_ws_wall = {}
         self.open_since = {}
         self.snapshot_needed = {}                 # (source, asset) -> wall ms since when
+        self.unavailable_books = {}               # (source, asset) -> terminal HttpError detail (Step 6.4)
         self.latency = {}                         # source -> [receive - event ms] (bounded)
         self.started_mono = clock.mono_ns()
         self._last_manifest_mono = None
@@ -92,8 +100,15 @@ class MicroCollector:
             self.counts["raw"] += 1
         return n
 
+    def _source_unavailable(self, adapter):
+        assets = list(getattr(adapter, "assets", []) or [])
+        return bool(assets) and all((adapter.source, a) in self.unavailable_books for a in assets)
+
     def on_message(self, adapter, text, wall, mono):
         with self.lock:
+            if self._source_unavailable(adapter):
+                raise SourceUnavailable(f"{adapter.source}: every book's required snapshot endpoint is access-denied "
+                                        f"({sorted({d.get('status') for (s, _a), d in self.unavailable_books.items() if s == adapter.source})})")
             a = self.clock_monitor.check(wall, mono)
             if a is not None:
                 self.manifest.clock_anomalies.append(a.to_dict())
@@ -132,7 +147,28 @@ class MicroCollector:
                     self._gap(Gap(**dict(g.to_dict(), known_at_ms=wall, ingest_seq=self.seq())))
             if getattr(adapter, "rest_snapshots", False):
                 for asset in adapter.assets:
-                    self.snapshot_needed.setdefault((src, asset), wall)
+                    if (src, asset) not in self.unavailable_books:
+                        self.snapshot_needed.setdefault((src, asset), wall)
+
+    def mark_book_unavailable(self, adapter, asset, wall, err):
+        """The required REST snapshot of (source, asset) is terminally access-denied (Step 6.4). Recorded once."""
+        with self.lock:
+            src = adapter.source
+            if (src, asset) in self.unavailable_books:
+                return
+            detail = dict(err.to_dict() if hasattr(err, "to_dict") else {"error": str(err)[:200]}, since_wall_ms=wall)
+            self.unavailable_books[(src, asset)] = detail
+            self.manifest.unavailable[f"{src}:{asset}"] = detail
+            self.snapshot_needed.pop((src, asset), None)
+            self.writer.write("feed", dict(detail, source=f"{src}:{asset}", event="unavailable", wall_ms=wall,
+                                           ingest_seq=self.seq()))
+            sym = VENUES[src].symbols.get(asset, asset) if src in VENUES else asset
+            ev = MicroEvent(source=src, asset=asset, event_type=MT.BOOK_RESET, symbol=sym, event_ts_ms=None,
+                            receive_ts_ms=wall, ingest_seq=self.seq(), payload={"book": sym, "reason": UNAVAILABLE_REASON},
+                            receive_mono_ns=self.clock.mono_ns(), session_id=self.session_id, channel="collector")
+            self.writer.write("event", ev.to_dict())
+            self.counts["resets"] += 1
+            self.recon.apply(ev)
 
     def on_disconnect(self, adapter, wall, error):
         with self.lock:
@@ -149,6 +185,17 @@ class MicroCollector:
                     self._gap(Gap(src, asset, "ws", "DISCONNECT_OPEN", start, start, 0, None, False,
                                   "outage in progress; closed by the DISCONNECT gap with the same start",
                                   known_at_ms=wall, ingest_seq=self.seq()))
+
+    def on_stream_unavailable(self, adapter, stream, wall, err):
+        """An optional REST stream polled for this store (e.g. Kalshi markets) is terminally access-denied (Step 6.4):
+        recorded once; the source's websocket books are untouched."""
+        with self.lock:
+            key = f"{adapter.source}:{stream}"
+            if key in self.manifest.unavailable:
+                return
+            detail = dict(err.to_dict() if hasattr(err, "to_dict") else {"error": str(err)[:200]}, since_wall_ms=wall)
+            self.manifest.unavailable[key] = detail
+            self.writer.write("feed", dict(detail, source=key, event="unavailable", wall_ms=wall, ingest_seq=self.seq()))
 
     def on_poll_error(self, name, wall, error):
         with self.lock:
@@ -181,7 +228,8 @@ class MicroCollector:
         self.recon.apply(ev)
         if getattr(adapter, "rest_snapshots", False):
             for asset in adapter.assets:
-                self.snapshot_needed.setdefault((adapter.source, asset), wall)
+                if (adapter.source, asset) not in self.unavailable_books:
+                    self.snapshot_needed.setdefault((adapter.source, asset), wall)
 
     def _gap(self, g):
         self.counts["gaps"] += 1
@@ -226,7 +274,8 @@ class MicroCollector:
                                   wall, wall, 0, None, getattr(adapter, "rest_snapshots", False), u.reason[:200],
                                   known_at_ms=wall, ingest_seq=self.seq()))
                     if getattr(adapter, "rest_snapshots", False):
-                        self.snapshot_needed.setdefault((src, ev.asset), wall)
+                        if (src, ev.asset) not in self.unavailable_books:
+                            self.snapshot_needed.setdefault((src, ev.asset), wall)
                         self.manifest.resnapshot_requests[src] = self.manifest.resnapshot_requests.get(src, 0) + 1
                     else:
                         resnap = u.reason

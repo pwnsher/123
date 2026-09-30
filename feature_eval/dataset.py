@@ -240,9 +240,10 @@ def build_session_rows(session_dir, assets, columns, rec_by_name, quality, coinb
     ds = build_joint_dataset(s3, p4, m5 if m5 is not None else empty, assets, checkpoints_s,
                              include_perp=p4 is not None)
     # rejected sources / books -> excluded
-    rejected = {k for k, v in quality.get("sources", {}).items() if v["verdict"] == "REJECT"}
+    # Step 6.4: UNAVAILABLE (terminally access-denied) sources / books are excluded exactly like REJECT ones
+    rejected = {k for k, v in quality.get("sources", {}).items() if v["verdict"] in ("REJECT", "UNAVAILABLE")}
     for bk, bv in quality.get("checks", {}).get("books", {}).items():
-        if bv["verdict"] == "REJECT":
+        if bv["verdict"] in ("REJECT", "UNAVAILABLE"):
             venue, sym = bk.split(":", 1)
             from microstructure.venues import VENUES
             asset = next((a for a, s in VENUES[venue].symbols.items() if s == sym), None) if venue in VENUES else None

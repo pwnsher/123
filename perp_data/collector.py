@@ -22,6 +22,7 @@ import os
 import threading
 
 from market_data.clock import ClockMonitor
+from market_data.feed import SourceUnavailable
 from market_data.gaps import CadenceGapDetector, Gap, IdGapDetector, disconnect_gap
 from market_data.manifest import new_session_id, utc_iso
 from market_data.sources.base import Sequencer
@@ -86,6 +87,8 @@ class PerpCollector:
 
     def on_message(self, adapter, text, wall, mono):
         with self.lock:
+            if f"{adapter.source}:*" in self.manifest.unavailable:   # only a WHOLE-source terminal state stops the ws
+                raise SourceUnavailable(f"{adapter.source}: source terminally unavailable")
             a = self.clock_monitor.check(wall, mono)
             if a is not None:
                 self.manifest.clock_anomalies.append(a.to_dict())
@@ -133,6 +136,17 @@ class PerpCollector:
                     self._gap(Gap(src, asset, "ws", "DISCONNECT_OPEN", start, start, 0, None, True,
                                   "outage in progress; closed by the DISCONNECT gap with the same start",
                                   known_at_ms=wall, ingest_seq=self.seq()))
+
+    def on_stream_unavailable(self, adapter, stream, wall, err):
+        """A REST enrichment stream is terminally access-denied (Step 6.4): recorded ONCE; the venue's websocket and
+        its other streams are untouched; the stream's features stay MISSING."""
+        with self.lock:
+            key = f"{adapter.source}:{stream}"
+            if key in self.manifest.unavailable:
+                return
+            detail = err.to_dict() if hasattr(err, "to_dict") else {"error": str(err)[:200]}
+            self.manifest.unavailable[key] = dict(detail, since_wall_ms=wall)
+            self.writer.write("feed", dict(detail, source=key, event="unavailable", wall_ms=wall, ingest_seq=self.seq()))
 
     def on_poll_error(self, name, wall, error):
         with self.lock:

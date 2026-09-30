@@ -53,10 +53,10 @@ from feature_eval import universe as UV                                         
 EARLIER_FINGERPRINTS = {
     "legacy_strategy": "8d94f241e8fc8edadc76058e1f12f430b6e4f499f4c0a30fba1cb5cf07dad82a",
     "extended_strategy": "784141876a1b7f4c9f605036ef1358a6a3ea51ef32fced1f80f74045a6adef8c",
-    "settlement": "b205709349492b71c5d50a93232bdceeb0be514151b554132e46d466bff8ad5c",    # Step 6.3; OLD 4884524a... (6.2), ba4e50c3... (6.1), 3eba791c... (Steps 2-6)
-    "market_data": "ca98d418bf40075a36a86d277390a9a093cbf02e468bc44474bc538c597c0212",   # Step 6.3 exact CF decode + event retry; OLD 609905956c9e6120... (6.2), 969cec83e8b9912e... (Steps 3-6.1)
-    "perp_data": "90543ddff68e9dece7443fd9a7d876070f14a06d008a013e8980cb6aa292758c",
-    "microstructure": "695d8e7741287c0bbac40ae9835148e4a0fbcd0e517669784aae647a8dcb0799",
+    "settlement": "6fed6efd324417353fa53a8a981cbdcbeb9d121103bbe7925c284874f737c1bf",   # Step 6.4 (live rule-text index ids); OLD b205709349492b71 (6.3), 4884524a (6.2), ba4e50c3 (6.1), 3eba791c (Steps 2-6)
+    "market_data": "faf21c0af4bd3a9e828197081134faec3b7300bc870a982a143f2b2ce587911f",   # Step 6.4 (real-feed corrections); OLD ca98d418bf40075a (6.3), 609905956c9e6120 (6.2), 969cec83e8b9912e (Steps 3-6.1)
+    "perp_data": "8a4743efcc1dddfb797aed9b3db3ec13819e8cef58ad352c7990325e50cad8f3",   # Step 6.4 (terminal REST availability); OLD 90543ddff68e9dec (Steps 4-6.3)
+    "microstructure": "6971961992c95099c180c59af4b4840b6b8cd1d61842ef30d60417024d51dd32",   # Step 6.4 (per-book ordering, UNAVAILABLE books); OLD 695d8e7741287c0b (Steps 5.1-6.3)
 }
 EXISTING_PERP_VETO_FINGERPRINT = "499c1e16da5d9cc763babe7dea31db7104ebc3f1460a17241af83240c8de523b"
 PRODUCTION_UNTOUCHED = {
@@ -1727,6 +1727,555 @@ def test_maker_taker_multipliers():
     assert "schedule_source_sha256" not in t and fm.version == "fee_model_v4"
 
 
+# ═══════════════════ 29n-29u Step 6.4 first real-feed corrections ═══════════════════
+REAL_FX = os.path.join(HERE, "real_capture_fixtures", "first_real_session_20260930T004307Z-51664fe9.json")
+
+
+def real_fx():
+    if "realfx" not in _CACHE:
+        with open(REAL_FX, encoding="utf-8") as f:
+            _CACHE["realfx"] = json.load(f)
+    return _CACHE["realfx"]
+
+
+def _fx_mev(d):
+    from microstructure.types import MicroEvent, MicroEventType
+    return MicroEvent(source=d["source"], asset=d["asset"], event_type=MicroEventType(d["event_type"]), symbol=d["symbol"],
+                      event_ts_ms=d["event_ts_ms"], receive_ts_ms=d["receive_ts_ms"], ingest_seq=d["ingest_seq"],
+                      payload=d["payload"], receive_mono_ns=d["receive_mono_ns"], channel=d.get("channel") or "ws")
+
+
+def _md_ctx(rx=1_790_729_000_000):
+    from market_data.sources.base import Ctx, Sequencer
+    return Ctx("s", Sequencer(), rx)
+
+
+def test_real_fixture_provenance():
+    fx = real_fx()
+    assert fx["provenance"] == "derived from first real session 20260930T004307Z-51664fe9"
+    assert os.path.getsize(REAL_FX) < 200_000                                  # minimal excerpt, not the 28 MB session
+    txt = open(REAL_FX, encoding="utf-8").read()
+    for bad in ("C:\\", "Users", "ezhou", "KALSHI-ACCESS", "api_key", "signature", "conn_id", "connection_id", "Bearer"):
+        assert bad not in txt, bad
+    for k in ("cross_source_inversions", "clock_processing_order", "kalshi_orderbook_fp", "kalshi_zero_quote_market",
+              "kalshi_market_rules", "http_access_denied", "kalshi_trade_pages"):
+        assert k in fx, k
+    # the gates are NOT loosened to make the short real session pass (Coinbase evidence, session length, quality)
+    from feature_eval.coinbase_seq import SequenceEvidenceConfig
+    sc = SequenceEvidenceConfig()
+    assert (sc.min_envelopes, sc.consistent_share, sc.min_connections, sc.min_heartbeats) == (5000, 0.995, 2, 30)
+    qc = QU.QualityConfig()
+    assert (qc.min_session_minutes, qc.book_ready_degraded, qc.book_ready_reject, qc.duplicate_share_degraded) == (15.0, 0.9, 0.5, 0.05)
+    assert (qc.coverage_reject, qc.coverage_degraded, qc.regress_share_reject, qc.reconnects_per_hour_degraded) == (0.5, 0.9, 0.01, 6.0)
+    # the replay analysis of the real session (read-only) is recorded with the current code's results
+    rp = json.load(open(os.path.join(HERE, "analysis_output", "step6_4_first_real_session_replay.json")))
+    assert rp["read_only"] is True and rp["book_ordering"]["ordering_errors_with_current_code"] == 0
+    assert rp["book_ordering"]["recorded_disconnects_from_the_global_ordering_check"] == 69
+    assert not rp["kalshi_rest"]["failures_with_current_code"] and sum(rp["kalshi_rest"]["recorded_failures"].values()) == 146
+    assert all(not v["anomalies"] for v in rp["clock_monitor"].values())
+    assert {v["status"] for v in rp["market_rules"].values()} == {"RULE_VERIFIED_FOR_MARKET"} and len(rp["market_rules"]) == 4
+    assert [v["normalized"] for _k, v in sorted(rp["kalshi_trades"].items())] == [1319, 625, 1119, 1166]
+
+
+def test_book_ordering_per_book():
+    """Step 6.4 ISSUE 1: receive-time order is enforced per book / per chain, never globally across venues."""
+    import itertools
+    from microstructure.reconstruction import BookOrderError, BookReconstructor, BookStatus as BS
+    from microstructure.types import MicroEvent, MicroEventType as MT
+    from microstructure.venues import VENUES as MV
+    n = itertools.count(1)
+
+    def ev(src, sym, r, et, **p):
+        base = ({"update_id": None, "depth": None} if et == MT.BOOK_SNAPSHOT else
+                {"update_id": None, "prev_update_id": None, "first_update_id": None, "checksum": None})
+        payload = dict(base, book=sym, price_unit=MV[src].price_unit, qty_unit=MV[src].qty_unit)
+        payload.update(p)
+        return MicroEvent(source=src, asset="BTC", event_type=et, symbol=sym, event_ts_ms=None, receive_ts_ms=r,
+                          ingest_seq=next(n), payload=payload)
+
+    def snap(src, sym, r, **kw):
+        return ev(src, sym, r, MT.BOOK_SNAPSHOT, bids=[[100.0, 1.0]], asks=[[101.0, 1.0]], **kw)
+
+    def dl(src, sym, r, px=99.0, **kw):
+        return ev(src, sym, r, MT.BOOK_DELTA, changes=[["bid", px, 2.0, "abs"]], **kw)
+
+    # independent books: Coinbase received 1002 processed BEFORE Kraken received 1000 -> BOTH accepted
+    rc = BookReconstructor(warmup_ms=0)
+    rc.apply(snap("coinbase_l2", "BTC-USD", 990)); rc.apply(snap("kraken_book", "BTC/USD", 990))
+    u1 = rc.apply(dl("coinbase_l2", "BTC-USD", 1002))
+    u2 = rc.apply(dl("kraken_book", "BTC/USD", 1000))
+    assert (u1.kind, u2.kind) == ("delta", "delta") and not u1.resnapshot_needed and not u2.resnapshot_needed
+    assert rc.status(("coinbase_l2", "BTC-USD"), 1003) == BS.READY and rc.status(("kraken_book", "BTC/USD"), 1003) == BS.READY
+    # the SAME book: 1002 then 1000 -> fail closed
+    rc = BookReconstructor(warmup_ms=0)
+    rc.apply(snap("coinbase_l2", "BTC-USD", 990)); rc.apply(dl("coinbase_l2", "BTC-USD", 1002))
+    try:
+        rc.apply(dl("coinbase_l2", "BTC-USD", 1000, px=98.0)); raise AssertionError("same-book regression accepted")
+    except BookOrderError as e:
+        assert isinstance(e, ValueError) and "same book" in str(e)
+    # the same sequence CHAIN (one connection, two books): a regression fails closed too
+    rc = BookReconstructor(warmup_ms=0)
+    rc.apply(snap("kalshi_ws", "MKT-A", 990, chain="k:c1", update_id=1))
+    rc.apply(snap("kalshi_ws", "MKT-B", 990, chain="k:c1", update_id=2))
+    rc.apply(dl("kalshi_ws", "MKT-A", 1002, chain="k:c1", prev_update_id=2, update_id=3))
+    try:
+        rc.apply(dl("kalshi_ws", "MKT-B", 1000, chain="k:c1", prev_update_id=3, update_id=4))
+        raise AssertionError("same-chain regression accepted")
+    except BookOrderError as e:
+        assert "same sequence chain" in str(e)
+    # real venue sequence gaps are still caught
+    rc = BookReconstructor(warmup_ms=0)
+    rc.apply(snap("kalshi_ws", "MKT-A", 990, chain="k:c2", update_id=5))
+    g = rc.apply(dl("kalshi_ws", "MKT-A", 991, chain="k:c2", prev_update_id=6, update_id=8))      # seq 7 skipped
+    assert g.kind == "gap" and g.status == BS.NEEDS_RESNAPSHOT and g.resnapshot_needed
+    rc.apply(snap("okx_swap_book", "BTC-USDT-SWAP", 990, update_id=10))
+    g = rc.apply(dl("okx_swap_book", "BTC-USDT-SWAP", 991, prev_update_id=11, update_id=12))
+    assert g.kind == "gap" and rc.status(("okx_swap_book", "BTC-USDT-SWAP"), 992) == BS.NEEDS_RESNAPSHOT
+    rc.apply(snap("bybit_linear_book", "BTCUSDT", 990, update_id=20))
+    g = rc.apply(dl("bybit_linear_book", "BTCUSDT", 991, update_id=19))
+    assert g.status == BS.INVALID and "NON_MONOTONIC" in g.reason
+    rc.apply(ev("binance_usdm_book", "BTCUSDT", 990, MT.BOOK_DELTA, changes=[], first_update_id=99, update_id=101, prev_update_id=98))
+    rc.apply(ev("binance_usdm_book", "BTCUSDT", 991, MT.BOOK_SNAPSHOT, bids=[[100.0, 1.0]], asks=[[101.0, 1.0]], update_id=100))
+    assert rc.status(("binance_usdm_book", "BTCUSDT"), 5000) == BS.READY
+    g = rc.apply(ev("binance_usdm_book", "BTCUSDT", 992, MT.BOOK_DELTA, changes=[], first_update_id=105, update_id=106,
+                    prev_update_id=104))
+    assert g.kind == "gap" and "pu 104" in g.reason
+    # the REAL capture: consecutive deltas of different venues, the second received 1-5 ms earlier
+    fx = real_fx()["cross_source_inversions"]
+    assert fx["session_totals"]["same_source_regressions"] == 0 and fx["session_totals"]["same_book_regressions"] == 0
+    assert len(fx["pairs"]) >= 3 and len({(p["processed_first"]["source"], p["processed_second"]["source"]) for p in fx["pairs"]}) >= 3
+    for pr in fx["pairs"]:
+        a, b = _fx_mev(pr["processed_first"]), _fx_mev(pr["processed_second"])
+        assert a.source != b.source and -5 <= b.receive_ts_ms - a.receive_ts_ms < 0
+        rc = BookReconstructor()
+        ua, ub = rc.apply(a), rc.apply(b)                    # processed in the captured order: no exception
+        for u in (ua, ub):
+            assert u is None or (not u.resnapshot_needed and u.status not in (BS.INVALID, BS.NEEDS_RESNAPSHOT)), u
+    # through the live MicroCollector: no ResnapshotRequired, no book gap, no reset
+    from types import SimpleNamespace
+    from market_data.clock import FakeClock
+    from microstructure.collector import MicroCollector
+    col = MicroCollector(tmpdir(), ["BTC"], {}, FakeClock(1_790_728_990_000), fsync=False)
+    for pr in fx["pairs"]:
+        for d in (pr["processed_first"], pr["processed_second"]):
+            ad = SimpleNamespace(source=d["source"], rest_snapshots=False, assets=["BTC"])
+            _e, _f, g_, resnap = col._handle(ad, SimpleNamespace(events=[_fx_mev(d)], failures=[], control=[]),
+                                             d["receive_ts_ms"])
+            assert resnap is None and g_ == 0
+    assert col.counts["gaps"] == 0 and col.counts["resets"] == 0
+    col.close()
+    # offline research ordering is unchanged: replay applies the merged stream sorted by receive time
+    import inspect
+    from microstructure.replay import rebuild_books
+    assert "sorted(events, key=lambda e: (e.receive_ts_ms, e.ingest_seq))" in inspect.getsource(rebuild_books)
+
+
+def test_clock_monitor_reordering():
+    """Step 6.4 ISSUE 2: an older (wall, mono) pair processed after a newer one is scheduling, not a clock anomaly."""
+    from market_data.clock import ClockMonitor
+    M = 1_000_000
+    cm = ClockMonitor()
+    assert cm.check(1000, 100 * M) is None and cm.check(1003, 103 * M) is None
+    assert cm.check(1001, 101 * M) is None and cm.reordered == 1 and not cm.anomalies     # cross-thread older pair
+    assert cm._last == (1003, 103 * M)                                    # the latest chronological pair is kept
+    assert cm.check(1004, 103 * M + 500_000) is None                      # sub-ms capture skew is not an anomaly
+    a = cm.check(500, 114 * M)                                            # monotonic +10 ms, wall steps back 504 ms
+    assert a is not None and a.kind == "WALL_BACKWARDS" and a.mono_delta_ms > 0
+    cm2 = ClockMonitor(threshold_ms=1000)
+    cm2.check(1000, 100 * M)
+    j = cm2.check(7000, 110 * M)                                          # +6 s wall with +10 ms monotonic
+    assert j is not None and j.kind == "WALL_JUMP"
+    fx = real_fx()["clock_processing_order"]
+    assert fx["session_totals"]["with_monotonic_also_negative"] == 99
+    for pair in fx["pairs"]:
+        cm3 = ClockMonitor()
+        for _src, w, m in pair:
+            assert cm3.check(w, m) is None, pair
+        assert cm3.reordered == 1 and not cm3.anomalies
+    from market_data.collector import Collector
+    from microstructure.collector import MicroCollector
+    from perp_data.collector import PerpCollector
+    import inspect
+    for cls in (Collector, MicroCollector, PerpCollector):
+        assert "ClockMonitor()" in inspect.getsource(cls.__init__)
+
+
+def test_kalshi_orderbook_fp():
+    """Step 6.4 ISSUE 3: the CURRENT Kalshi REST orderbook schema (orderbook_fp) parses exactly, with zero failures."""
+    from market_data.sources.kalshi import KalshiAdapter
+    fx = real_fx()["kalshi_orderbook_fp"]
+    k = KalshiAdapter(["BTC"])
+    body = json.loads(fx["responses"][0]["text"])
+    assert set(body) == {"orderbook_fp"} and set(body["orderbook_fp"]) == {"yes_dollars", "no_dollars"}
+    r = k.parse_orderbook("BTC", fx["ticker"], body, _md_ctx(fx["responses"][0]["receive_ts_ms"]))
+    assert not r.failures and len(r.events) == 1
+    b = r.events[0].payload
+    ob = body["orderbook_fp"]
+    D = __import__("decimal").Decimal
+    best_yes = max(ob["yes_dollars"], key=lambda x: D(x[0]))
+    best_no = max(ob["no_dollars"], key=lambda x: D(x[0]))
+    assert b["bids"][0] == [float(D(best_yes[0]) * 100), float(D(best_yes[1]))]          # YES bid in cents
+    assert b["asks"][0] == [float((1 - D(best_no[0])) * 100), float(D(best_no[1]))]      # YES ask = 1 - NO bid
+    assert b["bids"] == sorted(b["bids"], key=lambda x: -x[0]) and b["asks"] == sorted(b["asks"], key=lambda x: x[0])
+    assert any(q == 2169.15 for _p, q in b["asks"])                                        # fractional count kept
+    assert len(b["bids"]) == len(ob["yes_dollars"]) and len(b["asks"]) == len(ob["no_dollars"])
+    assert "LEGACY_SCHEMA" not in r.events[0].flags and "DERIVED_ASK" in r.events[0].flags
+    e = json.loads(fx["responses"][1]["text"])                                            # empty YES side
+    r1 = k.parse_orderbook("BTC", fx["ticker"], e, _md_ctx())
+    assert not r1.failures and r1.events[0].payload["bids"] == [] and r1.events[0].payload["asks"]
+    leg = k.parse_orderbook("BTC", "T", {"orderbook": {"yes": [[45, 100]], "no": [[53, 7]]}}, _md_ctx())
+    assert not leg.failures and "LEGACY_SCHEMA" in leg.events[0].flags                     # historical captures only
+    for bad in ({"orderbook_fp": {"weird": []}}, {"orderbook_fp": []}, {"book": {}}, {"orderbook_fp": {"yes_dollars": [["0.5"]]}},
+                {"orderbook_fp": {"yes_dollars": [["0.0000", "1.00"]]}}, {"orderbook_fp": {"no_dollars": [["0.5", "-1"]]}},
+                {"orderbook_fp": {"yes_dollars": "x"}}):
+        rb = k.parse_orderbook("BTC", "T", bad, _md_ctx())
+        assert rb.failures and not rb.events, bad
+    # the synthetic Kalshi fake serves the current schema too
+    from market_data.replay import load_sessions
+    from market_data.types import EventType
+    books = [x for x in load_sessions([session()]).events if x.event_type == EventType.BOOK and x.source == "kalshi"]
+    assert books and all("LEGACY_SCHEMA" not in x.flags for x in books)
+
+
+def test_kalshi_zero_quote():
+    """Step 6.4 ISSUE 4: 0.0000 with size 0 is an UNAVAILABLE side - never a zero price, never a parse failure."""
+    from market_data.sources.kalshi import KalshiAdapter, quote_cents
+    fx = real_fx()["kalshi_zero_quote_market"]
+    k = KalshiAdapter(["BTC"])
+    now = fx["receive_ts_ms"]
+
+    def state(m):
+        res, _m = k.parse_markets("BTC", {"markets": [m]}, _md_ctx(now), now_ms=now)
+        return res
+
+    res = state(fx["market"])
+    assert fx["market"]["yes_bid_dollars"] == "0.0000" and fx["market"]["yes_bid_size_fp"] == "0.00"
+    assert not res.failures and len(res.events) == 1
+    p, fl = res.events[0].payload, res.events[0].flags
+    assert p["yes_bid"] is None and p["no_ask"] is None and "NO_QUOTE" in fl       # 1.0000 mirror of the missing bid
+    assert abs(p["yes_ask"] - 0.1) < 1e-9 and abs(p["no_bid"] - 99.9) < 1e-9
+    base = {k_: v for k_, v in fx["market"].items() if not any(x in k_ for x in ("_bid", "_ask"))}
+    ok = state(dict(base, yes_bid_dollars="0.4000", yes_bid_size_fp="10.00", yes_ask_dollars="0.4200",
+                    no_bid_dollars="0.5800", no_ask_dollars="0.6000")).events[0]
+    assert (ok.payload["yes_bid"], ok.payload["yes_ask"], ok.payload["no_bid"], ok.payload["no_ask"]) == (40.0, 42.0, 58.0, 60.0)
+    assert "NO_QUOTE" not in ok.flags and "DERIVED_ASK" not in ok.flags
+    miss = state(dict(base, yes_bid_dollars="0.4000", no_bid_dollars="0.5800")).events[0]         # asks missing
+    assert miss.payload["yes_ask"] == 42.0 and miss.payload["no_ask"] == 60.0 and "DERIVED_ASK" in miss.flags
+    none = state(dict(base)).events[0]                                                              # nothing quoted
+    assert all(none.payload[x] is None for x in ("yes_bid", "yes_ask", "no_bid", "no_ask"))
+    one = state(dict(base, yes_bid_dollars="0.0000", yes_bid_size_fp="0.00", yes_ask_dollars="0.0010",
+                     no_bid_dollars="0.9990")).events[0]                                            # one-sided
+    assert one.payload["yes_bid"] is None and one.payload["no_ask"] is None      # never derived from an unavailable bid
+    assert abs(one.payload["yes_ask"] - 0.1) < 1e-9 and abs(one.payload["no_bid"] - 99.9) < 1e-9
+    bad = state(dict(base, yes_bid_dollars="0.0000", yes_bid_size_fp="5.00"))                       # contradictory
+    assert bad.failures and not bad.events
+    assert quote_cents({"a": "0.0000", "s": "0.00"}, "a", "s", "x") == (None, "NO_QUOTE")
+    assert quote_cents({"a": "0.0000"}, "a", "s", "x") == (None, "NO_QUOTE")
+    assert quote_cents({}, "a", "s", "x") == (None, "ABSENT")
+    assert quote_cents({"a": "0.5000"}, "a", "s", "x") == (50.0, "PRESENT")
+
+
+def test_live_rule_identifiers():
+    """Step 6.4 ISSUE 5: the live BTC / ETH / SOL / XRP rule texts (BRTI, ETHUSDRTI, SOLUSDRTI, XRPUSDRTI) all parse."""
+    from dataclasses import replace
+    from settlement.kalshi_markets import parse_market
+    from settlement.market_rules import (GOLD_RULE_STATUSES, PARSER_VERSION, RULE_VERIFIED_FOR_MARKET, parse_rule_text,
+                                         resolve_market_rule)
+    mk = real_fx()["kalshi_market_rules"]["markets"]
+    want = {"BTC": ("BRTI", 2), "ETH": ("ETHUSDRTI", 2), "SOL": ("SOLUSDRTI", 4), "XRP": ("XRPUSDRTI", 4)}
+    assert sorted(x["market"]["ticker"][2:5] for x in mk) == sorted(want)
+    assert PARSER_VERSION == "crypto15m_rule_parser_v2"
+    sol = None
+    for x in mk:
+        o, asset = x["market"], x["market"]["ticker"][2:5]
+        ident, dp = want[asset]
+        assert f"CF Benchmarks' {ident} " in o["rules_primary"]
+        r = parse_rule_text(o["rules_primary"], o["rules_secondary"], asset)
+        assert r["status"] == "PARSED" and r["comparison_operator"] == "GREATER_THAN_OR_EQUAL", (asset, r)
+        assert r["settlement_decimal_places"] == dp and r["index_confirmed"] and r["averaging_60s_confirmed"]
+        m, _res, _iss = parse_market(o, source="kalshi_market_api", capture_ts_ms=x["receive_ts_ms"])
+        _rule, info = resolve_market_rule(m)
+        assert info["status"] == RULE_VERIFIED_FOR_MARKET and info["basis"] == "MARKET_RULE_TEXT" and info["gold_eligible"]
+        if asset == "SOL":
+            sol = m
+        # exact aliases only: no fuzzy / partial match
+        p2 = o["rules_primary"].replace(f" {ident} ", f" {ident}X ")
+        assert parse_rule_text(p2, o["rules_secondary"], asset)["status"] == "UNRECOGNIZED"
+        other = {"BTC": "ETH", "ETH": "SOL", "SOL": "XRP", "XRP": "BTC"}[asset]
+        assert parse_rule_text(o["rules_primary"], o["rules_secondary"], other)["status"] == "UNRECOGNIZED"
+    # SOL: THIS captured contract is verified by its own text; nothing is claimed for other SOL markets
+    _r, info = resolve_market_rule(replace(sol, rule_snapshot=None))
+    assert info["status"] not in GOLD_RULE_STATUSES
+
+
+def test_terminal_rest_availability():
+    """Step 6.4 ISSUE 6: typed HTTP errors; 403 / 451 are terminal; the Binance full book becomes UNAVAILABLE with no
+    retry storm and no reconnect loop; transient errors are still retried."""
+    from market_data.clock import FakeClock
+    from market_data.feed import FeedState, SourceUnavailable
+    from market_data.runner import WsFeedRunner
+    from market_data.transport.http import HttpError, HttpGetter, classify, safe_endpoint
+    from microstructure.collector import MicroCollector
+    from microstructure.poller import SnapshotPoller
+    from microstructure.reconstruction import BookStatus as BS
+    from microstructure.replay import load_micro_sessions, rebuild_books
+    from microstructure.sources.binance_depth import BinanceDepthAdapter
+    import requests
+    for st, want in ((429, ("RATE_LIMITED", True, False)), (500, ("SERVER_ERROR", True, False)), (503, ("SERVER_ERROR", True, False)),
+                     (None, ("NETWORK", True, False)), (403, ("ACCESS_DENIED", False, True)), (451, ("ACCESS_DENIED", False, True)),
+                     (404, ("CLIENT_ERROR", False, False)), (400, ("CLIENT_ERROR", False, False))):
+        assert classify(st) == want, st
+    fx = real_fx()["http_access_denied"]
+    assert {x["endpoint"] for x in fx["binance_451"]} >= {"fapi.binance.com/fapi/v1/depth", "fapi.binance.com/fapi/v1/openInterest",
+                                                         "fapi.binance.com/fapi/v1/fundingRate", "fapi.binance.com/fapi/v1/fundingInfo"}
+    assert [x["endpoint"] for x in fx["bybit_403"]] == ["api.bybit.com/v5/market/funding/history"]
+    for x in fx["binance_451"] + fx["bybit_403"]:
+        e = HttpError(x["status"], f"https://{x['endpoint']}?symbol=BTCUSDT&limit=3")
+        assert e.terminal and not e.retryable and e.kind == "ACCESS_DENIED" and e.endpoint == x["endpoint"]
+        assert isinstance(e, ConnectionError) and "symbol" not in str(e)
+    assert safe_endpoint("https://user:pw@h.example:8443/p/q?x=1") == "h.example:8443/p/q"
+
+    class _Resp:
+        def __init__(self, code, body=None):
+            self.status_code, self.reason, self._b = code, "x", body
+
+        def json(self):
+            return self._b
+
+    class _Sess:
+        def __init__(self, out):
+            self.out, self.headers = out, {}
+
+        def get(self, url, params=None, timeout=None):
+            if isinstance(self.out, Exception):
+                raise self.out
+            return self.out
+    for out, kind in ((_Resp(451), "ACCESS_DENIED"), (_Resp(403), "ACCESS_DENIED"), (_Resp(429), "RATE_LIMITED"),
+                      (_Resp(502), "SERVER_ERROR"), (requests.Timeout("t"), "NETWORK"), (_Resp(404), "CLIENT_ERROR")):
+        try:
+            HttpGetter(session=_Sess(out)).get_json("https://fapi.binance.com/fapi/v1/depth", {"symbol": "BTCUSDT"})
+            raise AssertionError(kind)
+        except HttpError as e:
+            assert e.kind == kind
+    assert HttpGetter(session=_Sess(_Resp(200, {"ok": 1}))).get_json("https://x.example/a") == {"ok": 1}
+
+    # ---- Binance full book: every required snapshot answers HTTP 451 ----
+    class Denied:
+        def __init__(self, status=451, only=None):
+            self.calls, self.status, self.only = [], status, only
+
+        def get_json(self, url, params=None):
+            self.calls.append((params or {}).get("symbol"))
+            if self.only is None or (params or {}).get("symbol") in self.only:
+                raise HttpError(self.status, url)
+            raise HttpError(503, url)
+    ad = BinanceDepthAdapter(["BTC", "ETH"])
+    clock = FakeClock(1_790_728_990_000)
+    root = tmpdir()
+    col = MicroCollector(root, ["BTC", "ETH"], {"binance_usdm_book": ad}, clock, fsync=False)
+    col.on_connect(ad, clock.wall_ms())
+    g = Denied()
+    sp = SnapshotPoller(ad, g, col, clock, min_interval_s=0)
+    assert sp.poll() == (0, 0, 0)                                          # terminal only: nothing to back off from
+    assert len(g.calls) == 2 and not col.snapshot_needed
+    assert set(col.unavailable_books) == {("binance_usdm_book", "BTC"), ("binance_usdm_book", "ETH")}
+    for _ in range(30):
+        clock.advance(1000)
+        sp.poll()
+    assert len(g.calls) == 2                                               # no retry storm
+    assert col.manifest.unavailable["binance_usdm_book:BTC"]["status"] == 451
+    assert col.recon.status(("binance_usdm_book", "BTCUSDT"), clock.wall_ms()) == BS.UNAVAILABLE
+    delta = json.dumps({"stream": "btcusdt@depth@100ms", "data": {"e": "depthUpdate", "E": clock.wall_ms(), "T": clock.wall_ms(),
+                        "s": "BTCUSDT", "U": 1, "u": 2, "pu": 0, "b": [["100.0", "1.0"]], "a": []}})
+    try:
+        col.on_message(ad, delta, clock.wall_ms(), clock.mono_ns()); raise AssertionError("delta accepted")
+    except SourceUnavailable:
+        pass
+
+    class FakeWS:
+        def __init__(self):
+            self.n = 0
+
+        def send_text(self, t):
+            pass
+
+        def settimeout(self, s):
+            pass
+
+        def recv_text(self):
+            self.n += 1
+            return delta if self.n < 50 else None
+
+        def close(self):
+            pass
+    conns = []
+    wr = WsFeedRunner(ad, col, clock, connect_fn=lambda url, headers=None: conns.append(1) or FakeWS(), max_attempts=5)
+    wr.run()
+    assert len(conns) == 1 and wr.attempts == 0 and wr.health.state == FeedState.DISCONNECTED   # stopped, never reconnected
+    assert any("disabled" in n for n in col.manifest.notes)
+    col.close()
+    books = rebuild_books(load_micro_sessions([os.path.dirname(col.dir)]).events)
+    assert books.tracks[("binance_usdm_book", "BTCUSDT")].base == BS.UNAVAILABLE             # replay agrees
+    # partial: BTC denied (terminal), ETH transiently failing -> ETH retried with backoff, the websocket stays up
+    col2 = MicroCollector(tmpdir(), ["BTC", "ETH"], {"binance_usdm_book": ad}, clock, fsync=False)
+    col2.on_connect(ad, clock.wall_ms())
+    g2 = Denied(only={"BTCUSDT"})
+    sp2 = SnapshotPoller(ad, g2, col2, clock, min_interval_s=0)
+    try:
+        sp2.poll(); raise AssertionError("transient failure swallowed")
+    except ConnectionError as e:
+        assert "snapshot requests failed" in str(e)
+    clock.advance(1000)
+    try:
+        sp2.poll()
+    except ConnectionError:
+        pass
+    assert g2.calls.count("BTCUSDT") == 1 and g2.calls.count("ETHUSDT") == 2
+    assert col2.on_message(ad, delta, clock.wall_ms(), clock.mono_ns()) is not None             # ETH book still served
+    col2.close()
+
+
+def test_optional_rest_enrichment():
+    """Step 6.4 ISSUE 6: a denied optional REST enrichment stream is UNAVAILABLE; the venue's websocket stays active."""
+    from market_data.clock import FakeClock
+    from market_data.transport.http import HttpError
+    from perp_data.collector import PerpCollector
+    from perp_data.poller import PerpPoller
+    from perp_data.sources.binance import BinanceUsdmAdapter
+    from perp_data.sources.bybit import BybitLinearAdapter
+    clock = FakeClock(1_790_728_990_000)
+
+    class G:
+        def __init__(self, status):
+            self.status, self.calls = status, []
+
+        def get_json(self, url, params=None):
+            self.calls.append(url)
+            raise HttpError(self.status, url)
+    for ad, status, ws_msg in (
+            (BybitLinearAdapter(["BTC", "ETH"]), 403,
+             json.dumps({"topic": "publicTrade.BTCUSDT", "type": "snapshot", "ts": 1, "data": [
+                 {"T": 1_790_728_990_001, "s": "BTCUSDT", "S": "Buy", "v": "0.1", "p": "100", "i": "a", "BT": False}]})),
+            (BinanceUsdmAdapter(["BTC", "ETH"]), 451,
+             json.dumps({"stream": "btcusdt@aggTrade", "data": {"e": "aggTrade", "E": 1_790_728_990_002, "s": "BTCUSDT",
+                                                                "a": 7, "p": "100.0", "q": "0.5", "f": 1, "l": 1,
+                                                                "T": 1_790_728_990_001, "m": False}}))):
+        pc = PerpCollector(tmpdir(), ["BTC", "ETH"], {ad.source: ad}, clock, fsync=False)
+        g = G(status)
+        pp = PerpPoller(ad, g, pc, clock)
+        assert pp.poll() == (0, 0, 0)                              # terminal only: no "all streams failed" backoff
+        n0 = len(g.calls)
+        assert n0 == len(ad.rest_urls()) and set(pp.unavailable) == set(ad.rest_urls())
+        for _ in range(12):
+            clock.advance(61_000)
+            pp.poll()
+        assert len(g.calls) == n0                                  # never re-requested this session
+        assert set(pc.manifest.unavailable) == {f"{ad.source}:{s}" for s in ad.rest_urls()}
+        assert f"{ad.source}:*" not in pc.manifest.unavailable
+        assert not any(k.startswith(ad.source) for k in pc.manifest.disconnects)   # no reconnect accounting
+        ev, fail, _g = pc.on_message(ad, ws_msg, clock.wall_ms(), clock.mono_ns())
+        assert ev >= 1 and fail == 0, (ad.source, ev, fail)       # the websocket source stays active
+        pc.close()
+    # transient failures still back off (all attempted streams failed) and are retried
+    y = BybitLinearAdapter(["BTC"])
+    pc = PerpCollector(tmpdir(), ["BTC"], {"bybit_linear": y}, clock, fsync=False)
+    pp = PerpPoller(y, G(503), pc, clock)
+    try:
+        pp.poll(); raise AssertionError("transient failure swallowed")
+    except ConnectionError:
+        pass
+    assert not pp.unavailable and pc.manifest.disconnects
+    pc.close()
+
+
+def test_kalshi_trade_dedup():
+    """Step 6.4 ISSUE 7: incremental Kalshi trade polling; each trade_id is normalized once; raw pages retained."""
+    from market_data.clock import FakeClock
+    from market_data.collector import Collector
+    from market_data.kalshi_poller import KalshiPoller
+    from market_data.replay import load_sessions
+    from market_data.sources.kalshi import KalshiAdapter
+    from market_data.types import EventType, IngestMode
+    rules = {x["market"]["ticker"][2:5]: x for x in real_fx()["kalshi_market_rules"]["markets"]}
+
+    def run(asset, pages, clock0, polls=None, **kw):
+        mkt = rules[asset]["market"]
+
+        class Fake:
+            def __init__(self):
+                self.trade_req, self.i = [], 0
+
+            def get_json(self, url, params=None):
+                if url.endswith("/markets"):
+                    return {"markets": [mkt], "cursor": ""}
+                if url.endswith("/orderbook"):
+                    return {"orderbook_fp": {"yes_dollars": [], "no_dollars": []}}
+                if "/events/" in url:
+                    return {"event": {"event_ticker": mkt["event_ticker"]}}
+                if url.endswith("/markets/trades"):
+                    self.trade_req.append(dict(params))
+                    out = pages[min(self.i, len(pages) - 1)]
+                    self.i += 1
+                    return out
+                raise ConnectionError("404")
+        clock = FakeClock(clock0)
+        col = Collector(tmpdir(), [asset], {}, clock, fsync=False, live_features=False)
+        fk = Fake()
+        p = KalshiPoller(KalshiAdapter([asset]), fk, col, clock, trades_every=1, **kw)
+        for _ in range(polls or len(pages)):
+            p.poll()
+            clock.advance(1000)
+        col.close()
+        s = load_sessions([col.dir], include_raw=True)
+        tr = [e for e in s.events if e.event_type == EventType.TRADE]
+        return tr, [r for r in s.raw if r.stream == "trades"], fk, col, p, s
+
+    mk = rules["BTC"]["market"]
+    t0 = 1_790_729_000_000
+
+    def trade(i, ts_s=None):
+        ts = ts_s if ts_s is not None else t0 // 1000 - 200 + i
+        return {"trade_id": f"id{i:03d}", "ticker": mk["ticker"], "created_time": f"{__import__('datetime').datetime.fromtimestamp(ts, __import__('datetime').timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')}.000000Z",
+                "yes_price_dollars": "0.5000", "count_fp": "1.00", "taker_side": "yes", "no_price_dollars": "0.5000"}
+    A = {"trades": [trade(i) for i in range(100, 0, -1)], "cursor": ""}
+    B = {"trades": [trade(i) for i in range(150, 79, -1)], "cursor": ""}
+    tr, raw, fk, col, _p, _s = run("BTC", [A, B], t0)
+    ids = [e.payload["trade_id"] for e in tr]
+    assert len(ids) == 150 and sorted(ids) == [f"id{i:03d}" for i in range(1, 151)]           # 1-150 exactly once each
+    assert len(raw) == 2 and col.counts["duplicates"] == 0                                     # both raw responses kept
+    assert fk.trade_req[0] == {"ticker": mk["ticker"], "limit": 100}                           # first poll: BACKFILLED
+    assert fk.trade_req[1]["limit"] == 1000 and fk.trade_req[1]["min_ts"] == (t0 // 1000 - 200 + 100) - 1
+    assert all(e.mode == IngestMode.BACKFILLED for e in tr if int(e.payload["trade_id"][2:]) <= 100)
+    assert all(e.mode == IngestMode.LIVE for e in tr if int(e.payload["trade_id"][2:]) > 100)
+    # trades sharing the boundary timestamp are never missed
+    T = t0 // 1000 - 50
+    P1 = {"trades": [trade(i, T) for i in (3, 2, 1)], "cursor": ""}
+    P2 = {"trades": [trade(i, T) for i in (5, 4, 3, 2, 1)], "cursor": ""}
+    tr, _raw, fk, _c, _p, _s = run("BTC", [P1, P2], t0)
+    assert sorted(e.payload["trade_id"] for e in tr) == [f"id{i:03d}" for i in range(1, 6)] and fk.trade_req[1]["min_ts"] == T - 1
+    # cursor pagination exhausts the interval; a walk longer than trade_max_pages is recorded as a gap
+    first = {"trades": [trade(i) for i in (2, 1)], "cursor": ""}
+    pg1 = {"trades": [trade(i) for i in range(12, 7, -1)], "cursor": "c1"}
+    pg2 = {"trades": [trade(i) for i in range(7, 2, -1)], "cursor": ""}
+    tr, raw, fk, col, _p, _s = run("BTC", [first, pg1, pg2], t0, polls=2, trade_page_limit=5)
+    assert sorted(e.payload["trade_id"] for e in tr) == [f"id{i:03d}" for i in range(1, 13)] and len(raw) == 3
+    assert fk.trade_req[2].get("cursor") == "c1" and fk.trade_req[2]["min_ts"] == fk.trade_req[1]["min_ts"]
+    endless = {"trades": [trade(i) for i in range(12, 7, -1)], "cursor": "more"}
+    _tr, _raw, _fk, _col, _p, s = run("BTC", [first, endless], t0, polls=2, trade_page_limit=5, trade_max_pages=3)
+    assert any(g.kind == "TRADE_PAGES_TRUNCATED" for g in s.gaps)
+    # the REAL capture: two consecutive overlapping 100-trade polls
+    fx = real_fx()["kalshi_trade_pages"]
+    pages = [json.loads(x["text"]) for x in fx["pages"]]
+    asset = fx["ticker"][2:5]
+    tr, raw, fk, col, p, _s = run(asset, pages, fx["pages"][0]["receive_ts_ms"])
+    ids = [e.payload["trade_id"] for e in tr]
+    assert len(ids) == len(set(ids)) == fx["union_ids"] == 150 and fx["overlap_ids"] == 50
+    assert len(raw) == 2 and col.counts["duplicates"] == 0 and p.adapter.trade_overlap_skipped == 50
+    # a market no longer polled drops its dedup state
+    p.adapter.forget_trades(fx["ticker"])
+    assert fx["ticker"] not in p.adapter.trade_seen
+
+
 # ═══════════════════ 27-29 fingerprint, docs, previous ═══════════════════
 def test_step6_fingerprint():
     ok, problems = S6FP.verify()
@@ -1778,6 +2327,12 @@ def test_docs_and_outputs():
         assert s_ in doc, s_
     assert "9c. exact cf decimals" in sdoc.lower() and "b2057093" in sdoc
     assert {m["id"] for m in mut["mutations"]} >= {f"S{i}" for i in range(1, 31)}
+    for s_ in ("step 6.4", "orderbook_fp", "no_quote", "ethusdrti", "solusdrti", "xrpusdrti", "unavailable",
+               "sourceunavailable", "bookordererror", "min_ts", "s31", "s39", "6fed6efd32441735", "faf21c0af4bd3a9e",
+               "20260930t004307z-51664fe9", "replay_real_feed_analysis"):
+        assert s_ in doc, s_
+    assert "9d. live rule-text index identifiers" in sdoc.lower() and "6fed6efd" in sdoc
+    assert {m["id"] for m in mut["mutations"]} >= {f"S{i}" for i in range(1, 40)}
 
 
 def test_previous_stages():
@@ -1832,6 +2387,15 @@ TESTS = [
     ("cfpaths", "29k Step 6.3 CF exact decimal on every ingestion path (direct WS, Kalshi wrapper, offline import, REST); lossy floats fail closed", test_cf_exact_all_paths),
     ("eventretry", "29l Step 6.3 Kalshi event metadata marked fetched only after a parsed + retained response; retries back off", test_kalshi_event_retry),
     ("makerfee", "29m Step 6.3 separate taker (1) / maker (0) default multipliers; no inferred maker override; fee provenance names", test_maker_taker_multipliers),
+    ("realfx", "29n Step 6.4 real-capture fixtures: provenance, minimal, sanitized", test_real_fixture_provenance),
+    ("bookorder", "29o Step 6.4 book ordering per book / chain (cross-venue scheduling accepted; same-book regression and sequence gaps fail closed)", test_book_ordering_per_book),
+    ("clockorder", "29p Step 6.4 ClockMonitor: out-of-order (wall, mono) pairs are scheduling, not WALL_BACKWARDS", test_clock_monitor_reordering),
+    ("kalshiob", "29q Step 6.4 Kalshi orderbook_fp current schema parses exactly (real capture, zero failures)", test_kalshi_orderbook_fp),
+    ("zeroquote", "29r Step 6.4 Kalshi 0.0000 / size-0 quote is an unavailable side, never a parse failure", test_kalshi_zero_quote),
+    ("liverules", "29s Step 6.4 live BRTI / ETHUSDRTI / SOLUSDRTI / XRPUSDRTI rule texts parse; exact aliases only", test_live_rule_identifiers),
+    ("restterminal", "29t Step 6.4 typed HTTP errors; 403 / 451 terminal; Binance book UNAVAILABLE, no retry storm", test_terminal_rest_availability),
+    ("restoptional", "29u Step 6.4 denied optional REST enrichment never disables a healthy websocket", test_optional_rest_enrichment),
+    ("tradededup", "29v Step 6.4 incremental Kalshi trade polling: each trade_id once, raw pages retained", test_kalshi_trade_dedup),
     ("fingerprint", "29 separate Step-6 fingerprint; detects module changes; refuses silent rewrites", test_step6_fingerprint),
     ("docs", "30 docs + benchmark / mutation outputs", test_docs_and_outputs),
     ("previous", "31 all previous stage suites", test_previous_stages),

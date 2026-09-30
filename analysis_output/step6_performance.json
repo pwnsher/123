@@ -3,44 +3,44 @@
   "cpu_count": 4,
   "implementation": "CPython",
   "machine": "x86_64",
-  "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39",
+  "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
   "python": "3.12.3"
  },
  "note": "SYNTHETIC research matrices - code throughput only; never evidence about any feature or model",
  "runs": [
   {
    "full_pipeline_s": {
-    "1": 5.866,
-    "2": 4.609
+    "1": 5.159,
+    "2": 4.012
    },
-   "generate_s": 0.018,
+   "generate_s": 0.012,
    "identical_across_workers": true,
    "markets": 400,
    "rows": 800,
    "single_fold_fit_s": {
-    "B_logistic": 0.025,
+    "B_logistic": 0.027,
     "C_ridge_logistic": 0.066,
-    "D_boosted_stumps": 0.01
+    "D_boosted_stumps": 0.009
    },
    "slots": 100,
-   "structural_prune_all_families_s": 0.006
+   "structural_prune_all_families_s": 0.003
   },
   {
    "full_pipeline_s": {
-    "1": 33.402,
-    "2": 21.82
+    "1": 29.488,
+    "2": 19.599
    },
-   "generate_s": 0.032,
+   "generate_s": 0.036,
    "identical_across_workers": true,
    "markets": 1600,
    "rows": 3200,
    "single_fold_fit_s": {
-    "B_logistic": 0.115,
-    "C_ridge_logistic": 0.446,
-    "D_boosted_stumps": 0.176
+    "B_logistic": 0.117,
+    "C_ridge_logistic": 0.31,
+    "D_boosted_stumps": 0.154
    },
    "slots": 400,
-   "structural_prune_all_families_s": 0.016
+   "structural_prune_all_families_s": 0.017
   }
  ],
  "synthetic": true

@@ -315,6 +315,22 @@ settlement and Step-3 market-data baselines are unchanged by Step 4.
 |---|---|---|
 | 2026-09-25 | initial baseline (`perp_features_v1`, 980 features, 4 perp venues + USDT) | Step 4 created the package |
 
+### Step 6.4 re-baseline (terminal REST availability)
+
+* **Evidence.** In the first real session, Binance Futures REST answered HTTP 451 (`openInterest`, `fundingRate`,
+  `fundingInfo`) and Bybit `funding/history` answered 403. The streams were re-requested every cycle (137 denied
+  perp requests, 33 aggregate "all streams failed" backoffs; 165 / 40 session-wide including the Binance book
+  snapshots).
+* **Fix.** `PerpPoller` now records a terminal (403 / 451) stream once through
+  `PerpCollector.on_stream_unavailable` (`manifest.unavailable`) and never requests it again. Such a stream is not
+  counted as a transient failure or a reconnect.
+* **Websocket unaffected.** The venue's websocket keeps running: only an explicit whole-source entry (`<source>:*`)
+  could stop it. The stream's features stay MISSING, never zero.
+* **No bypass.** No proxy or alternate endpoint is used.
+* **Fingerprint.** OLD `90543ddff68e9dece7443fd9a7d876070f14a06d008a013e8980cb6aa292758c` → NEW
+  `8a4743efcc1dddfb797aed9b3db3ec13819e8cef58ad352c7990325e50cad8f3` (`poller.py`, `collector.py`, `manifest.py`).
+  No feature changed.
+
 ## 13. Limitations
 
 * **No real capture was possible here.** The network policy blocks every exchange host. Parsers follow the

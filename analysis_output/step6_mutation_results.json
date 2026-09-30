@@ -4,7 +4,7 @@
   "unmutated": {
    "caught": false,
    "returncode": 0,
-   "seconds": 41.2,
+   "seconds": 36.9,
    "failed_test": null,
    "passed_tests": [
     "4 frozen feature universe (2047): fields, roles, aliases, finer ",
@@ -31,7 +31,15 @@
     "29j Step 6.2 CF exact decimal text survives to the settlement ro",
     "29k Step 6.3 CF exact decimal on every ingestion path (direct WS",
     "29l Step 6.3 Kalshi event metadata marked fetched only after a p",
-    "29m Step 6.3 separate taker (1) / maker (0) default multipliers;"
+    "29m Step 6.3 separate taker (1) / maker (0) default multipliers;",
+    "29o Step 6.4 book ordering per book / chain (cross-venue schedul",
+    "29p Step 6.4 ClockMonitor: out-of-order (wall, mono) pairs are s",
+    "29q Step 6.4 Kalshi orderbook_fp current schema parses exactly (",
+    "29r Step 6.4 Kalshi 0.0000 / size-0 quote is an unavailable side",
+    "29s Step 6.4 live BRTI / ETHUSDRTI / SOLUSDRTI / XRPUSDRTI rule ",
+    "29t Step 6.4 typed HTTP errors; 403 / 451 terminal; Binance book",
+    "29u Step 6.4 denied optional REST enrichment never disables a he",
+    "29v Step 6.4 incremental Kalshi trade polling: each trade_id onc"
    ]
   }
  },
@@ -45,7 +53,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.3,
     "failed_test": "FAIL  11 purged chronological TRAIN / DEV / HOLDOUT, close-time groups, walk-forward, no holdout in folds: AssertionError: ",
     "passed_tests": []
    }
@@ -87,7 +95,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  11 purged chronological TRAIN / DEV / HOLDOUT, close-time groups, walk-forward, no holdout in folds: AssertionError: ",
     "passed_tests": []
    }
@@ -115,7 +123,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 4.5,
+    "seconds": 4.0,
     "failed_test": "FAIL  9 research matrix from a session, real mode skips synthetic, immutable cache, raw change invalidates: AssertionError: a settlement outcome changed a feature value",
     "passed_tests": []
    }
@@ -143,7 +151,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 28.1,
+    "seconds": 23.8,
     "failed_test": "FAIL  27 outputs: synthetic refused in real files; INSUFFICIENT_DATA files name requirements: AssertionError: synthetic written to real outputs",
     "passed_tests": []
    }
@@ -199,7 +207,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.4,
+    "seconds": 0.3,
     "failed_test": "FAIL  4 frozen feature universe (2047): fields, roles, aliases, finer families, tags; changed-without-version refused: AssertionError: []",
     "passed_tests": []
    }
@@ -297,7 +305,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.2,
     "failed_test": "FAIL  29a Step 6.1 contract rules: AT_LEAST equality -> YES, official precision, ties, unknown rules fail closed, versions: AssertionError: ",
     "passed_tests": []
    }
@@ -381,7 +389,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  29i Step 6.2 July-2026 schedule: exact centicent fee + cost, overrides, historical schedules: AssertionError: ",
     "passed_tests": []
    }
@@ -451,8 +459,134 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  29m Step 6.3 separate taker (1) / maker (0) default multipliers; no inferred maker override; fee provenance names: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S31",
+   "mutation": "a global cross-venue receive-time regression fails the book (the live collector reconnects)",
+   "tests": [
+    "bookorder"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  29o Step 6.4 book ordering per book / chain (cross-venue scheduling accepted; same-book regression and sequence gaps fail closed): BookOrderError: book events must be applied in availability order: kraken_book:BTC/USD received 1000 after 1002 (same book)",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S32",
+   "mutation": "a genuine same-book receive-order regression is accepted",
+   "tests": [
+    "bookorder"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  29o Step 6.4 book ordering per book / chain (cross-venue scheduling accepted; same-book regression and sequence gaps fail closed): AssertionError: same-book regression accepted",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S33",
+   "mutation": "an out-of-processing-order monotonic sample becomes a false WALL_BACKWARDS anomaly",
+   "tests": [
+    "clockorder"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  29p Step 6.4 ClockMonitor: out-of-order (wall, mono) pairs are scheduling, not WALL_BACKWARDS: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S34",
+   "mutation": "the current Kalshi orderbook_fp schema is rejected",
+   "tests": [
+    "kalshiob"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  29q Step 6.4 Kalshi orderbook_fp current schema parses exactly (real capture, zero failures): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S35",
+   "mutation": "a zero-size 0.0000 Kalshi bid rejects the whole market observation",
+   "tests": [
+    "zeroquote"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  29r Step 6.4 Kalshi 0.0000 / size-0 quote is an unavailable side, never a parse failure: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S36",
+   "mutation": "the live ETHUSDRTI / SOLUSDRTI / XRPUSDRTI rule identifiers are not recognized",
+   "tests": [
+    "liverules"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  29s Step 6.4 live BRTI / ETHUSDRTI / SOLUSDRTI / XRPUSDRTI rule texts parse; exact aliases only: AssertionError: ('ETH', {'parser_version': 'crypto15m_rule_parser_v2', 'status': 'UNRECOGNIZED', 'comparison_operator': 'GREATER_THAN_OR_EQUAL', 'settlement_decimal_places': 2, 'index_confirmed': F",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S37",
+   "mutation": "an HTTP 451 snapshot source retries forever instead of becoming terminally unavailable",
+   "tests": [
+    "restterminal"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.4,
+    "failed_test": "FAIL  29t Step 6.4 typed HTTP errors; 403 / 451 terminal; Binance book UNAVAILABLE, no retry storm: ConnectionError: all 2 binance_usdm_book snapshot requests failed",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S38",
+   "mutation": "one denied REST enrichment disables an otherwise healthy websocket source",
+   "tests": [
+    "restoptional"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  29u Step 6.4 denied optional REST enrichment never disables a healthy websocket: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "S39",
+   "mutation": "overlapping Kalshi trade polls write duplicate normalized trade ids",
+   "tests": [
+    "tradededup"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  29v Step 6.4 incremental Kalshi trade polling: each trade_id once, raw pages retained: AssertionError: ",
     "passed_tests": []
    }
   }

@@ -35,7 +35,7 @@ from dataclasses import replace
 from settlement.rules import GT, GTE, SettlementRule, exact, rule_for
 
 SNAPSHOT_VERSION = 1
-PARSER_VERSION = "crypto15m_rule_parser_v1"
+PARSER_VERSION = "crypto15m_rule_parser_v2"          # v2 (Step 6.4): exact live index ids, whole-token match
 TRUSTED_SNAPSHOT_SOURCES = ("kalshi_market_api",)
 FEE_FIELDS = ("fee_type", "fee_multiplier", "fee_type_override", "fee_multiplier_override")
 
@@ -50,11 +50,18 @@ RULE_UNKNOWN = "RULE_UNKNOWN"
 GOLD_RULE_STATUSES = (RULE_VERIFIED_FOR_MARKET, RULE_CURRENT_OBSERVED)
 DIAGNOSTIC_OUTCOME_STATUSES = GOLD_RULE_STATUSES + (RULE_HISTORICALLY_UNVERIFIED,)
 
+# Exact known aliases only (no fuzzy matching). Step 6.4: the live Kalshi rule text names the CF Benchmarks indices
+# BRTI / ETHUSDRTI / SOLUSDRTI / XRPUSDRTI (observed in the first real capture); the underscore ids are the ones Kalshi's
+# cfbenchmarks_value channel documents. An alias matches only as a whole token (never inside a longer word).
 INDEX_NAMES = {"BTC": ("brti", "bitcoin real-time index", "bitcoin real time index"),
-               "ETH": ("ethusd_rti", "ether real-time index", "ether real time index", "ethereum real-time index",
-                       "ethereum real time index"),
-               "SOL": ("solusd_rti", "solana real-time index", "solana real time index"),
-               "XRP": ("xrpusd_rti", "xrp real-time index", "xrp real time index")}
+               "ETH": ("ethusd_rti", "ethusdrti", "ether real-time index", "ether real time index",
+                       "ethereum real-time index", "ethereum real time index"),
+               "SOL": ("solusd_rti", "solusdrti", "solana real-time index", "solana real time index"),
+               "XRP": ("xrpusd_rti", "xrpusdrti", "xrp real-time index", "xrp real time index")}
+
+
+def _names_index(low, names):
+    return any(re.search(r"(?<![a-z0-9_])" + re.escape(n) + r"(?![a-z0-9_])", low) for n in names)
 _WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8}
 
 
@@ -129,8 +136,8 @@ def parse_rule_text(primary, secondary, asset):
     else:
         out["settlement_decimal_places"] = dps.pop()
     names = INDEX_NAMES.get(asset, ())
-    out["index_confirmed"] = any(n in low for n in names)
-    others = [a for a, ns in INDEX_NAMES.items() if a != asset and any(n in low for n in ns)]
+    out["index_confirmed"] = _names_index(low, names)
+    others = [a for a, ns in INDEX_NAMES.items() if a != asset and _names_index(low, ns)]
     if not out["index_confirmed"]:
         out["reasons"].append(f"the {asset} CF Benchmarks index is not named")
     if others:

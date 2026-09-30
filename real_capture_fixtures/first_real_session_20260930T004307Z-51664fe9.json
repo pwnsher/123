@@ -1,0 +1,820 @@
+{
+ "clock_processing_order": {
+  "pairs": [
+   [
+    [
+     "okx_swap_book",
+     1790728990480,
+     53255575712400
+    ],
+    [
+     "kraken_book",
+     1790728990479,
+     53255575077400
+    ]
+   ],
+   [
+    [
+     "bybit_linear_book",
+     1790728990800,
+     53255895281200
+    ],
+    [
+     "binance_usdm_book",
+     1790728990798,
+     53255894119700
+    ]
+   ],
+   [
+    [
+     "coinbase_l2",
+     1790728990957,
+     53256052216800
+    ],
+    [
+     "kalshi_ws",
+     1790728990956,
+     53256052030400
+    ]
+   ],
+   [
+    [
+     "kraken_book",
+     1790728992377,
+     53257472865900
+    ],
+    [
+     "kalshi_ws",
+     1790728992376,
+     53257471917100
+    ]
+   ],
+   [
+    [
+     "bybit_linear_book",
+     1790728993225,
+     53258320920700
+    ],
+    [
+     "coinbase_l2",
+     1790728993222,
+     53258317712000
+    ]
+   ],
+   [
+    [
+     "bybit_linear_book",
+     1790728995724,
+     53260819221300
+    ],
+    [
+     "binance_usdm_book",
+     1790728995722,
+     53260817970000
+    ]
+   ]
+  ],
+  "session_totals": {
+   "micro_wall_backwards_reported": 56,
+   "perp_wall_backwards_reported": 43,
+   "with_monotonic_also_negative": 99
+  },
+  "what": "(source, receive wall ms, receive monotonic ns) of consecutive raw messages in processing order where BOTH clocks appear to go backwards (an older captured pair processed after a newer one)"
+ },
+ "cross_source_inversions": {
+  "pairs": [
+   {
+    "processed_first": {
+     "asset": "XRP",
+     "channel": "ws",
+     "event_ts_ms": 1790728989470,
+     "event_type": "BOOK_DELTA",
+     "family": "micro",
+     "ingest_seq": 2535,
+     "payload": {
+      "book": "XRPUSDT",
+      "changes": [
+       [
+        "bid",
+        1.4904,
+        18791.1,
+        "abs"
+       ],
+       [
+        "bid",
+        1.4896,
+        38930.4,
+        "abs"
+       ]
+      ],
+      "checksum": null,
+      "first_update_id": null,
+      "prev_update_id": null,
+      "price_unit": "USDT",
+      "qty_unit": "coin",
+      "update_id": 56982565
+     },
+     "receive_mono_ns": 53255895281200,
+     "receive_ts_ms": 1790728990800,
+     "source": "bybit_linear_book",
+     "symbol": "XRPUSDT"
+    },
+    "processed_second": {
+     "asset": "BTC",
+     "channel": "ws",
+     "event_ts_ms": 1790728989457,
+     "event_type": "BOOK_DELTA",
+     "family": "micro",
+     "ingest_seq": 2537,
+     "payload": {
+      "book": "BTCUSDT",
+      "changes": [
+       [
+        "bid",
+        1000.0,
+        139.39,
+        "abs"
+       ],
+       [
+        "bid",
+        32972.6,
+        0.99,
+        "abs"
+       ]
+      ],
+      "checksum": null,
+      "first_update_id": 11694131159303,
+      "prev_update_id": 11694131159155,
+      "price_unit": "USDT",
+      "qty_unit": "coin",
+      "update_id": 11694131165771
+     },
+     "receive_mono_ns": 53255894119700,
+     "receive_ts_ms": 1790728990798,
+     "source": "binance_usdm_book",
+     "symbol": "BTCUSDT"
+    },
+    "receive_delta_ms": -2
+   },
+   {
+    "processed_first": {
+     "asset": "SOL",
+     "channel": "ws",
+     "event_ts_ms": 1790728991107,
+     "event_type": "BOOK_DELTA",
+     "family": "micro",
+     "ingest_seq": 4728,
+     "payload": {
+      "book": "SOL/USD",
+      "changes": [
+       [
+        "ask",
+        118.9,
+        512.29202773,
+        "abs"
+       ]
+      ],
+      "checksum": 3220977892,
+      "exact_changes": [
+       [
+        "ask",
+        "118.90",
+        "512.29202773"
+       ]
+      ],
+      "first_update_id": null,
+      "prev_update_id": null,
+      "price_unit": "USD",
+      "qty_unit": "coin",
+      "update_id": null
+     },
+     "receive_mono_ns": 53257472865900,
+     "receive_ts_ms": 1790728992377,
+     "source": "kraken_book",
+     "symbol": "SOL/USD"
+    },
+    "processed_second": {
+     "asset": "ETH",
+     "channel": "ws",
+     "event_ts_ms": 1790728991142,
+     "event_type": "BOOK_DELTA",
+     "family": "micro",
+     "ingest_seq": 4730,
+     "payload": {
+      "book": "KXETH15M-26SEP292045-45",
+      "chain": "kalshi_ws:c3:sid1",
+      "changes": [
+       [
+        "ask",
+        2.4,
+        -20.0,
+        "rel"
+       ]
+      ],
+      "checksum": null,
+      "first_update_id": 110,
+      "native": {
+       "price_cents": 97.6,
+       "side": "no"
+      },
+      "prev_update_id": 109,
+      "price_unit": "YES_CENTS",
+      "qty_unit": "contracts",
+      "update_id": 110
+     },
+     "receive_mono_ns": 53257471917100,
+     "receive_ts_ms": 1790728992376,
+     "source": "kalshi_ws",
+     "symbol": "KXETH15M-26SEP292045-45"
+    },
+    "receive_delta_ms": -1
+   },
+   {
+    "processed_first": {
+     "asset": "XRP",
+     "channel": "ws",
+     "event_ts_ms": 1790728991879,
+     "event_type": "BOOK_DELTA",
+     "family": "micro",
+     "ingest_seq": 6066,
+     "payload": {
+      "book": "XRPUSDT",
+      "changes": [
+       [
+        "ask",
+        1.4908,
+        20534.8,
+        "abs"
+       ],
+       [
+        "ask",
+        1.4915,
+        27807.3,
+        "abs"
+       ]
+      ],
+      "checksum": null,
+      "first_update_id": null,
+      "prev_update_id": null,
+      "price_unit": "USDT",
+      "qty_unit": "coin",
+      "update_id": 56982588
+     },
+     "receive_mono_ns": 53258320920700,
+     "receive_ts_ms": 1790728993225,
+     "source": "bybit_linear_book",
+     "symbol": "XRPUSDT"
+    },
+    "processed_second": {
+     "asset": "BTC",
+     "channel": "ws",
+     "event_ts_ms": 1790728991998,
+     "event_type": "BOOK_DELTA",
+     "family": "micro",
+     "ingest_seq": 6068,
+     "payload": {
+      "book": "BTC-USD",
+      "chain": "coinbase_l2:c1",
+      "changes": [
+       [
+        "bid",
+        83437.34,
+        0.22921582,
+        "abs"
+       ],
+       [
+        "bid",
+        83411.64,
+        0.07051642,
+        "abs"
+       ]
+      ],
+      "checksum": null,
+      "first_update_id": 231,
+      "prev_update_id": 230,
+      "price_unit": "USD",
+      "qty_unit": "coin",
+      "update_id": 231
+     },
+     "receive_mono_ns": 53258317712000,
+     "receive_ts_ms": 1790728993222,
+     "source": "coinbase_l2",
+     "symbol": "BTC-USD"
+    },
+    "receive_delta_ms": -3
+   },
+   {
+    "processed_first": {
+     "asset": "XRP",
+     "channel": "ws",
+     "event_ts_ms": 1790728993855,
+     "event_type": "BOOK_DELTA",
+     "family": "micro",
+     "ingest_seq": 15014,
+     "payload": {
+      "book": "XRP-USD",
+      "chain": "coinbase_l2:c2",
+      "changes": [
+       [
+        "bid",
+        1.4907,
+        12545.008798,
+        "abs"
+       ],
+       [
+        "bid",
+        1.4906,
+        9246.059537,
+        "abs"
+       ]
+      ],
+      "checksum": null,
+      "first_update_id": 10,
+      "prev_update_id": 9,
+      "price_unit": "USD",
+      "qty_unit": "coin",
+      "update_id": 10
+     },
+     "receive_mono_ns": 53260937255200,
+     "receive_ts_ms": 1790728995842,
+     "source": "coinbase_l2",
+     "symbol": "XRP-USD"
+    },
+    "processed_second": {
+     "asset": "BTC",
+     "channel": "ws",
+     "event_ts_ms": 1790728994520,
+     "event_type": "BOOK_DELTA",
+     "family": "micro",
+     "ingest_seq": 15018,
+     "payload": {
+      "book": "BTCUSDT",
+      "changes": [
+       [
+        "bid",
+        83458.4,
+        0.0,
+        "abs"
+       ],
+       [
+        "bid",
+        83454.4,
+        2.323,
+        "abs"
+       ]
+      ],
+      "checksum": null,
+      "first_update_id": null,
+      "prev_update_id": null,
+      "price_unit": "USDT",
+      "qty_unit": "coin",
+      "update_id": 59140391
+     },
+     "receive_mono_ns": 53260936103900,
+     "receive_ts_ms": 1790728995840,
+     "source": "bybit_linear_book",
+     "symbol": "BTCUSDT"
+    },
+    "receive_delta_ms": -2
+   }
+  ],
+  "session_totals": {
+   "disconnects_from_ordering_error": 69,
+   "global_receive_regressions": 70,
+   "micro_events": 44128,
+   "same_book_regressions": 0,
+   "same_source_regressions": 0
+  },
+  "what": "consecutive book deltas of DIFFERENT venues processed by the shared collector with the second one RECEIVED 1-5 ms earlier (thread scheduling)"
+ },
+ "fixture_version": 1,
+ "http_access_denied": {
+  "binance_451": [
+   {
+    "endpoint": "fapi.binance.com/fapi/v1/depth",
+    "source": "binance_usdm_book",
+    "status": 451
+   },
+   {
+    "endpoint": "fapi.binance.com/fapi/v1/fundingInfo",
+    "source": "binance_usdm",
+    "status": 451
+   },
+   {
+    "endpoint": "fapi.binance.com/fapi/v1/fundingRate",
+    "source": "binance_usdm",
+    "status": 451
+   },
+   {
+    "endpoint": "fapi.binance.com/fapi/v1/openInterest",
+    "source": "binance_usdm",
+    "status": 451
+   }
+  ],
+  "bybit_403": [
+   {
+    "endpoint": "api.bybit.com/v5/market/funding/history",
+    "source": "bybit_linear",
+    "status": 403
+   }
+  ],
+  "session_totals": {
+   "binance_book_snapshot_poll_errors": 28,
+   "binance_oi_poll_errors": 120,
+   "micro_snap_all_failed": 7,
+   "perp_rest_all_failed": 31
+  },
+  "what": "public REST endpoints answered with hard access failures (never bypassed)"
+ },
+ "kalshi_market_rules": {
+  "markets": [
+   {
+    "market": {
+     "can_close_early": true,
+     "close_time": "2026-09-30T00:45:00Z",
+     "created_time": "2026-09-28T20:01:15.781297Z",
+     "custom_strike": {
+      "round_digits": "2"
+     },
+     "event_ticker": "KXBTC15M-26SEP292045",
+     "exchange_index": 2,
+     "expected_expiration_time": "2026-09-30T00:50:00Z",
+     "expiration_time": "2026-10-07T00:45:00Z",
+     "expiration_value": "",
+     "floor_strike": 83545.85,
+     "last_price_dollars": "0.0180",
+     "latest_expiration_time": "2026-10-07T00:45:00Z",
+     "liquidity_dollars": "0.0000",
+     "market_type": "binary",
+     "no_ask_dollars": "0.9830",
+     "no_bid_dollars": "0.9820",
+     "no_sub_title": "Target price: TBD",
+     "notional_value_dollars": "1.0000",
+     "occurrence_datetime": "2026-09-30T00:50:00Z",
+     "open_interest_fp": "485058.21",
+     "open_time": "2026-09-30T00:30:00Z",
+     "previous_price_dollars": "0.0000",
+     "previous_yes_ask_dollars": "0.0000",
+     "previous_yes_bid_dollars": "0.0000",
+     "price_level_structure": "tapered_deci_cent",
+     "price_ranges": [
+      {
+       "end": "0.1000",
+       "start": "0.0000",
+       "step": "0.0010"
+      },
+      {
+       "end": "0.9000",
+       "start": "0.1000",
+       "step": "0.0100"
+      },
+      {
+       "end": "1.0000",
+       "start": "0.9000",
+       "step": "0.0010"
+      }
+     ],
+     "result": "",
+     "rules_primary": "If the simple average of the sixty seconds of CF Benchmarks' BRTI before 8:45 PM EDT on Sep 29, 2026 is at least the simple average of the sixty seconds of CF Benchmarks' BRTI before 8:30 PM EDT on September 29, 2026, then the market resolves to Yes.",
+     "rules_secondary": "Not all cryptocurrency price data is the same. While checking a source like Google or Coinbase may help guide your decision, the price used to determine this market is based on CF Benchmarks' corresponding Real Time Index (RTI). At the last minute before expiration, 60 RTI prices are collected. The official and final value is the average of these prices, rounded to the nearest 2 decimal places.",
+     "settlement_timer_seconds": 1,
+     "status": "active",
+     "strike_type": "greater_or_equal",
+     "ticker": "KXBTC15M-26SEP292045-45",
+     "title": "BTC price up in next 15 mins?",
+     "updated_time": "2026-09-30T00:30:00.670011Z",
+     "volume_24h_fp": "1879724.88",
+     "volume_fp": "2339690.92",
+     "yes_ask_dollars": "0.0180",
+     "yes_ask_size_fp": "94.93",
+     "yes_bid_dollars": "0.0170",
+     "yes_bid_size_fp": "2252.73",
+     "yes_sub_title": "Target Price: $83,545.85"
+    },
+    "receive_ts_ms": 1790728988979
+   },
+   {
+    "market": {
+     "can_close_early": true,
+     "close_time": "2026-09-30T00:45:00Z",
+     "created_time": "2026-09-28T20:01:47.84917Z",
+     "custom_strike": {
+      "round_digits": "2"
+     },
+     "event_ticker": "KXETH15M-26SEP292045",
+     "exchange_index": 2,
+     "expected_expiration_time": "2026-09-30T00:50:00Z",
+     "expiration_time": "2026-10-07T00:45:00Z",
+     "expiration_value": "",
+     "floor_strike": 2673.09,
+     "last_price_dollars": "0.0250",
+     "latest_expiration_time": "2026-10-07T00:45:00Z",
+     "liquidity_dollars": "0.0000",
+     "market_type": "binary",
+     "no_ask_dollars": "0.9730",
+     "no_bid_dollars": "0.9720",
+     "no_sub_title": "Target price: TBD",
+     "notional_value_dollars": "1.0000",
+     "occurrence_datetime": "2026-09-30T00:50:00Z",
+     "open_interest_fp": "26631.23",
+     "open_time": "2026-09-30T00:30:00Z",
+     "previous_price_dollars": "0.0000",
+     "previous_yes_ask_dollars": "0.0000",
+     "previous_yes_bid_dollars": "0.0000",
+     "price_level_structure": "tapered_deci_cent",
+     "price_ranges": [
+      {
+       "end": "0.1000",
+       "start": "0.0000",
+       "step": "0.0010"
+      },
+      {
+       "end": "0.9000",
+       "start": "0.1000",
+       "step": "0.0100"
+      },
+      {
+       "end": "1.0000",
+       "start": "0.9000",
+       "step": "0.0010"
+      }
+     ],
+     "result": "",
+     "rules_primary": "If the simple average of the sixty seconds of CF Benchmarks' ETHUSDRTI before 8:45 PM EDT on Sep 29, 2026 is at least the simple average of the sixty seconds of CF Benchmarks' ETHUSDRTI before 8:30 PM EDT on September 29, 2026, then the market resolves to Yes.",
+     "rules_secondary": "Not all cryptocurrency price data is the same. While checking a source like Google or Coinbase may help guide your decision, the price used to determine this market is based on CF Benchmarks' corresponding Real Time Index (RTI). At the last minute before expiration, 60 RTI prices are collected. The official and final value is the average of these prices, rounded to the nearest 2 decimal places.",
+     "settlement_timer_seconds": 1,
+     "status": "active",
+     "strike_type": "greater_or_equal",
+     "ticker": "KXETH15M-26SEP292045-45",
+     "title": "ETH price up in next 15 mins?",
+     "updated_time": "2026-09-30T00:30:01.186641Z",
+     "volume_24h_fp": "66472.83",
+     "volume_fp": "85531.40",
+     "yes_ask_dollars": "0.0280",
+     "yes_ask_size_fp": "20.00",
+     "yes_bid_dollars": "0.0270",
+     "yes_bid_size_fp": "51.00",
+     "yes_sub_title": "Target Price: $2,673.09"
+    },
+    "receive_ts_ms": 1790728989361
+   },
+   {
+    "market": {
+     "can_close_early": true,
+     "close_time": "2026-09-30T00:45:00Z",
+     "created_time": "2026-09-28T20:02:19.045547Z",
+     "custom_strike": {
+      "round_digits": "4"
+     },
+     "event_ticker": "KXSOL15M-26SEP292045",
+     "exchange_index": 2,
+     "expected_expiration_time": "2026-09-30T00:50:00Z",
+     "expiration_time": "2026-10-07T00:45:00Z",
+     "expiration_value": "",
+     "floor_strike": 118.8838,
+     "last_price_dollars": "0.4300",
+     "latest_expiration_time": "2026-10-07T00:45:00Z",
+     "liquidity_dollars": "0.0000",
+     "market_type": "binary",
+     "no_ask_dollars": "0.5700",
+     "no_bid_dollars": "0.5300",
+     "no_sub_title": "Target price: TBD",
+     "notional_value_dollars": "1.0000",
+     "occurrence_datetime": "2026-09-30T00:50:00Z",
+     "open_interest_fp": "11198.01",
+     "open_time": "2026-09-30T00:30:00Z",
+     "previous_price_dollars": "0.0000",
+     "previous_yes_ask_dollars": "0.0000",
+     "previous_yes_bid_dollars": "0.0000",
+     "price_level_structure": "tapered_deci_cent",
+     "price_ranges": [
+      {
+       "end": "0.1000",
+       "start": "0.0000",
+       "step": "0.0010"
+      },
+      {
+       "end": "0.9000",
+       "start": "0.1000",
+       "step": "0.0100"
+      },
+      {
+       "end": "1.0000",
+       "start": "0.9000",
+       "step": "0.0010"
+      }
+     ],
+     "result": "",
+     "rules_primary": "If the simple average of the sixty seconds of CF Benchmarks' SOLUSDRTI before 8:45 PM EDT on Sep 29, 2026 is at least the simple average of the sixty seconds of CF Benchmarks' SOLUSDRTI before 8:30 PM EDT on September 29, 2026, then the market resolves to Yes.",
+     "rules_secondary": "Not all cryptocurrency price data is the same. While checking a source like Google or Coinbase may help guide your decision, the price used to determine this market is based on CF Benchmarks' corresponding Real Time Index (RTI). At the last minute before expiration, 60 RTI prices are collected. The official and final value is the average of these prices, rounded to the nearest 4 decimal places.",
+     "settlement_timer_seconds": 1,
+     "status": "active",
+     "strike_type": "greater_or_equal",
+     "ticker": "KXSOL15M-26SEP292045-45",
+     "title": "SOL price up in next 15 mins?",
+     "updated_time": "2026-09-30T00:30:01.755507Z",
+     "volume_24h_fp": "32281.24",
+     "volume_fp": "48083.28",
+     "yes_ask_dollars": "0.4700",
+     "yes_ask_size_fp": "356.00",
+     "yes_bid_dollars": "0.4300",
+     "yes_bid_size_fp": "341.00",
+     "yes_sub_title": "Target Price: $118.8838"
+    },
+    "receive_ts_ms": 1790728989718
+   },
+   {
+    "market": {
+     "can_close_early": true,
+     "close_time": "2026-09-30T00:45:00Z",
+     "created_time": "2026-09-28T20:02:44.47069Z",
+     "custom_strike": {
+      "round_digits": "4"
+     },
+     "event_ticker": "KXXRP15M-26SEP292045",
+     "exchange_index": 2,
+     "expected_expiration_time": "2026-09-30T00:50:00Z",
+     "expiration_time": "2026-10-07T00:45:00Z",
+     "expiration_value": "",
+     "floor_strike": 1.4907,
+     "last_price_dollars": "0.7500",
+     "latest_expiration_time": "2026-10-07T00:45:00Z",
+     "liquidity_dollars": "0.0000",
+     "market_type": "binary",
+     "no_ask_dollars": "0.2700",
+     "no_bid_dollars": "0.2500",
+     "no_sub_title": "Target price: TBD",
+     "notional_value_dollars": "1.0000",
+     "occurrence_datetime": "2026-09-30T00:50:00Z",
+     "open_interest_fp": "6799.45",
+     "open_time": "2026-09-30T00:30:00Z",
+     "previous_price_dollars": "0.0000",
+     "previous_yes_ask_dollars": "0.0000",
+     "previous_yes_bid_dollars": "0.0000",
+     "price_level_structure": "tapered_deci_cent",
+     "price_ranges": [
+      {
+       "end": "0.1000",
+       "start": "0.0000",
+       "step": "0.0010"
+      },
+      {
+       "end": "0.9000",
+       "start": "0.1000",
+       "step": "0.0100"
+      },
+      {
+       "end": "1.0000",
+       "start": "0.9000",
+       "step": "0.0010"
+      }
+     ],
+     "result": "",
+     "rules_primary": "If the simple average of the sixty seconds of CF Benchmarks' XRPUSDRTI before 8:45 PM EDT on Sep 29, 2026 is at least the simple average of the sixty seconds of CF Benchmarks' XRPUSDRTI before 8:30 PM EDT on September 29, 2026, then the market resolves to Yes.",
+     "rules_secondary": "Not all cryptocurrency price data is the same. While checking a source like Google or Coinbase may help guide your decision, the price used to determine this market is based on CF Benchmarks' corresponding Real Time Index (RTI). At the last minute before expiration, 60 RTI prices are collected. The official and final value is the average of these prices, rounded to the nearest 4 decimal places.",
+     "settlement_timer_seconds": 1,
+     "status": "active",
+     "strike_type": "greater_or_equal",
+     "ticker": "KXXRP15M-26SEP292045-45",
+     "title": "XRP price up in next 15 mins?",
+     "updated_time": "2026-09-30T00:30:02.303217Z",
+     "volume_24h_fp": "30213.35",
+     "volume_fp": "43262.87",
+     "yes_ask_dollars": "0.7500",
+     "yes_ask_size_fp": "3.00",
+     "yes_bid_dollars": "0.7300",
+     "yes_bid_size_fp": "130.18",
+     "yes_sub_title": "Target Price: $1.4907"
+    },
+    "receive_ts_ms": 1790728990066
+   }
+  ],
+  "what": "the first captured market object of each series (BTC / ETH / SOL / XRP), verbatim, incl. rules_primary / rules_secondary"
+ },
+ "kalshi_orderbook_fp": {
+  "responses": [
+   {
+    "receive_ts_ms": 1790728989188,
+    "text": "{\"orderbook_fp\": {\"no_dollars\": [[\"0.9740\", \"1047.00\"], [\"0.9750\", \"603.00\"], [\"0.9760\", \"2169.15\"], [\"0.9770\", \"42.00\"], [\"0.9780\", \"800.00\"], [\"0.9790\", \"4873.00\"], [\"0.9800\", \"3540.00\"], [\"0.9810\", \"1060.00\"], [\"0.9820\", \"481.00\"], [\"0.9830\", \"14.02\"]], \"yes_dollars\": [[\"0.0060\", \"9194.33\"], [\"0.0070\", \"3517.00\"], [\"0.0080\", \"1051.00\"], [\"0.0090\", \"115.00\"], [\"0.0100\", \"7668.92\"], [\"0.0110\", \"509.00\"], [\"0.0120\", \"1735.00\"], [\"0.0130\", \"3142.04\"], [\"0.0140\", \"3323.30\"], [\"0.0150\", \"1130.92\"]]}}"
+   },
+   {
+    "receive_ts_ms": 1790729032311,
+    "text": "{\"orderbook_fp\": {\"no_dollars\": [[\"0.9900\", \"14886.45\"], [\"0.9910\", \"1279.00\"], [\"0.9920\", \"1169.67\"], [\"0.9930\", \"353.46\"], [\"0.9940\", \"9859.00\"], [\"0.9950\", \"6154.67\"], [\"0.9960\", \"4851.00\"], [\"0.9970\", \"9112.53\"], [\"0.9980\", \"15185.70\"], [\"0.9990\", \"75056.85\"]], \"yes_dollars\": []}}"
+   }
+  ],
+  "ticker": "KXBTC15M-26SEP292045-45",
+  "what": "GET /markets/{ticker}/orderbook responses exactly as captured (current schema); 136 of these failed as \"orderbook response without 'orderbook'\" in the session"
+ },
+ "kalshi_trade_pages": {
+  "overlap_ids": 50,
+  "pages": [
+   {
+    "receive_ts_ms": 1790729006497,
+    "text": "{\"cursor\": \"EhIKEAcjUNQ9saWGtRLNxvqHBb0aDAimtvHVBhCI6YPCAw\", \"trades\": [{\"count_fp\": \"17.00\", \"created_time\": \"2026-09-30T00:43:25.094895Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-bcc1-bc8a-0fca-c05cf1034772\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"7.50\", \"created_time\": \"2026-09-30T00:43:25.094895Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-bcc1-b645-1b7c-68bbc932ad49\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"12.33\", \"created_time\": \"2026-09-30T00:43:24.923855Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-bcfb-32e9-112f6f513830\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"0.01\", \"created_time\": \"2026-09-30T00:43:24.602488Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-9d2c-3ab6-e067a4d757c9\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"14.29\", \"created_time\": \"2026-09-30T00:43:24.602488Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-99a4-0171-6246757da138\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"36.00\", \"created_time\": \"2026-09-30T00:43:24.413458Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-9ab3-beb8-df03b38e0a88\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"30.00\", \"created_time\": \"2026-09-30T00:43:24.407552Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-b027-6999-85b745d058e8\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"6.00\", \"created_time\": \"2026-09-30T00:43:24.407552Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-b973-60dc-6f76259caed3\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:24.341292Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-879e-4a30-0c2b66686fd3\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"6.00\", \"created_time\": \"2026-09-30T00:43:24.341292Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2500\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-82f0-5637-6c2ff103f03d\", \"yes_price_dollars\": \"0.7500\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:24.341292Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-8253-495d-8aa0d06915fc\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"22.00\", \"created_time\": \"2026-09-30T00:43:24.337698Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-b647-bfcd-31f13066b950\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"10.00\", \"created_time\": \"2026-09-30T00:43:24.333318Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2500\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-8994-002d-f58f7a926d1d\", \"yes_price_dollars\": \"0.7500\"}, {\"count_fp\": \"16.00\", \"created_time\": \"2026-09-30T00:43:24.324856Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-bf2a-d4bc-36d9049ac1cd\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:24.324856Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2700\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-beee-f0fa-0f975298ea57\", \"yes_price_dollars\": \"0.7300\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:24.324856Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-bad7-e675-244ca22b20d0\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"4.00\", \"created_time\": \"2026-09-30T00:43:24.324856Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2700\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-b7f0-fbf6-4029c91f2392\", \"yes_price_dollars\": \"0.7300\"}, {\"count_fp\": \"11.00\", \"created_time\": \"2026-09-30T00:43:24.324856Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-b7c3-c27b-ad3ae3c2e12e\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:24.324856Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2700\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-b15d-cb1b-6ff3e9e7322e\", \"yes_price_dollars\": \"0.7300\"}, {\"count_fp\": \"6.00\", \"created_time\": \"2026-09-30T00:43:24.316884Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-bf5f-def5-1055a458f39a\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"17.00\", \"created_time\": \"2026-09-30T00:43:24.316884Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-bb2e-d51e-ea4f9eba30c0\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"19.00\", \"created_time\": \"2026-09-30T00:43:24.311988Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2700\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-bff9-e77c-3ae399a5082a\", \"yes_price_dollars\": \"0.7300\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:24.311988Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-b72f-c1ca-c3483141a7da\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:24.308876Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-952a-0e1e-770a6f75f582\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"17.00\", \"created_time\": \"2026-09-30T00:43:24.308876Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-93a4-0a41-dd5be932c342\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"23.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-ad5d-d28c-d581decddd5f\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"20.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-a7fc-e309-e92323043795\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-a750-c39c-7f94d330566b\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"30.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2500\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-a6d8-ee1b-99a1af167de5\", \"yes_price_dollars\": \"0.7500\"}, {\"count_fp\": \"15.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-a6a6-c72f-6f6c860a59a3\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"8.08\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-a4d9-d3fe-072cd36009e5\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"18.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-a35d-fe5a-d74737197fe0\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"30.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-a338-fcb3-f329dd6f82ae\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"20.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2000\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-aef3-f02c-09b12a71d3a0\", \"yes_price_dollars\": \"0.8000\"}, {\"count_fp\": \"7.50\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-a7a5-e43d-48cb1318359c\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"0.01\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-a646-feff-aebdeb8f2db0\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"200.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d3-6ef9-aa80-d183-5b3b78aac33c\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"20.00\", \"created_time\": \"2026-09-30T00:43:24.299613Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1900\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-9227-3290-106751502afe\", \"yes_price_dollars\": \"0.8100\"}, {\"count_fp\": \"4.00\", \"created_time\": \"2026-09-30T00:43:24.299613Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2000\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-9197-3bef-7e7046d86058\", \"yes_price_dollars\": \"0.8000\"}, {\"count_fp\": \"4.93\", \"created_time\": \"2026-09-30T00:43:24.164763Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-bdc4-cae1-c5f256cd0d21\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:24.164763Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-b5e1-ce4f-e40b1a7e6415\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"1.07\", \"created_time\": \"2026-09-30T00:43:24.164763Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-be36-ee08-a60f57b83c65\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"4.00\", \"created_time\": \"2026-09-30T00:43:24.164763Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-bcb1-eb8b-59e7da6dd1fc\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"167.00\", \"created_time\": \"2026-09-30T00:43:24.164763Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1900\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-bb10-f4a3-c2b14882b470\", \"yes_price_dollars\": \"0.8100\"}, {\"count_fp\": \"14.00\", \"created_time\": \"2026-09-30T00:43:24.164763Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d3-7351-bed1-f934-8812dc2b46a3\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:24.08516Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-a3da-02cf-45977f43d07d\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"4.93\", \"created_time\": \"2026-09-30T00:43:24.06959Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-bace-6b44-8907d0263079\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"13.00\", \"created_time\": \"2026-09-30T00:43:24.037703Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-a3f8-debe-f37cc9b5503e\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:23.996758Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6019-ac54-1046-14e4bf57cbc2\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:23.615648Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6019-a5df-85a1-ba3368969d4f\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"18.00\", \"created_time\": \"2026-09-30T00:43:23.609866Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6fb9-92f1-1737-bfbae23cbfb7\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:23.603057Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-63f1-918f-b84c-bb4473de3501\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"7.50\", \"created_time\": \"2026-09-30T00:43:23.603057Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6019-9f33-b684-5d693c495066\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"6.00\", \"created_time\": \"2026-09-30T00:43:23.603057Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6019-9d91-a49c-c8a20863f852\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"15.00\", \"created_time\": \"2026-09-30T00:43:22.983727Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6c51-856e-bf50-c68d6aeebaf9\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"0.01\", \"created_time\": \"2026-09-30T00:43:22.749381Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6c51-8c47-45ce-6f70539e8e38\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"3.05\", \"created_time\": \"2026-09-30T00:43:22.737545Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6c51-8ec3-a5f8-516373fb38d8\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:22.737545Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6869-8866-8cb5-9dd5fff8d120\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"0.10\", \"created_time\": \"2026-09-30T00:43:22.196341Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6869-b5ad-0e02-909ddcecf913\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"0.10\", \"created_time\": \"2026-09-30T00:43:22.196341Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6869-b53d-01f5-12121b7b0331\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"0.84\", \"created_time\": \"2026-09-30T00:43:22.196341Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6869-b3fe-0769-e46a5742f4c4\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"0.10\", \"created_time\": \"2026-09-30T00:43:22.196341Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6869-b234-1537-55b37648b9d6\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"0.10\", \"created_time\": \"2026-09-30T00:43:22.196341Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6869-b14d-05a3-0d45fd3e6611\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"3.17\", \"created_time\": \"2026-09-30T00:43:20.705701Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-4159-8852-16ac-abf864bc6c6e\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:20.618597Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2500\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5d71-bdf4-f739-e9a0f127ef20\", \"yes_price_dollars\": \"0.7500\"}, {\"count_fp\": \"18.00\", \"created_time\": \"2026-09-30T00:43:20.618597Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2500\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d3-add1-b675-fdd6-d8b93d6ab91b\", \"yes_price_dollars\": \"0.7500\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:20.265576Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-4541-9bda-dc3f-3e4cc428c569\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"72.25\", \"created_time\": \"2026-09-30T00:43:20.141869Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-4159-a44e-8f49-618ee6153532\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:19.719051Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-ac96-eefe-d00daa491582\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:19.704955Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2500\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-8451-6b13-916832e82290\", \"yes_price_dollars\": \"0.7500\"}, {\"count_fp\": \"16.00\", \"created_time\": \"2026-09-30T00:43:19.704955Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2500\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-82bc-40fe-dc4f1be9ca5d\", \"yes_price_dollars\": \"0.7500\"}, {\"count_fp\": \"15.00\", \"created_time\": \"2026-09-30T00:43:19.692062Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-bcec-7fb8-c5178c222cc7\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:19.692062Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2500\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-bc64-6b37-4e8d475d7876\", \"yes_price_dollars\": \"0.7500\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:19.692062Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-bbb1-43ee-32523d66fe36\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:19.679347Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2500\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-8db7-88d2-400d7632969b\", \"yes_price_dollars\": \"0.7500\"}, {\"count_fp\": \"15.00\", \"created_time\": \"2026-09-30T00:43:19.679347Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-8615-a843-63c6d96247f2\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:19.671254Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-8772-2543-766373df67c4\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"6.00\", \"created_time\": \"2026-09-30T00:43:19.665865Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-bfd9-754b-0f5136160559\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"3.00\", \"created_time\": \"2026-09-30T00:43:19.665865Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-b827-6ce0-e1fe090279a1\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"22.00\", \"created_time\": \"2026-09-30T00:43:19.665865Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-b5fe-6336-c4263bb4a471\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:19.665865Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2700\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-b4e1-7d86-105892ab07f4\", \"yes_price_dollars\": \"0.7300\"}, {\"count_fp\": \"17.00\", \"created_time\": \"2026-09-30T00:43:19.665865Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-4d11-b569-7c0d-fbe6d9cfe4e2\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"16.00\", \"created_time\": \"2026-09-30T00:43:19.665865Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2500\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-4d11-b541-7077-b6347bca2e10\", \"yes_price_dollars\": \"0.7500\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:19.665865Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-4d11-b1c4-6aa4-5bc1ce7e6d17\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"200.00\", \"created_time\": \"2026-09-30T00:43:19.665865Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d3-a401-b720-5846-a18163dc41f7\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:19.485824Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-a7ad-fddd-38f0bf6e272b\", \"yes_price_dollars\": \"0.7200\"}, {\"count_fp\": \"4.00\", \"created_time\": \"2026-09-30T00:43:19.350898Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.3100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-bce6-9c60-188b65c205ad\", \"yes_price_dollars\": \"0.6900\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:19.350898Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.3100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-b73c-a80b-461cab79def6\", \"yes_price_dollars\": \"0.6900\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:19.350898Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.3100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-b717-a282-6d1433243f0f\", \"yes_price_dollars\": \"0.6900\"}, {\"count_fp\": \"1.45\", \"created_time\": \"2026-09-30T00:43:19.350898Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.3200\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-b26f-9685-5f008a3dfadc\", \"yes_price_dollars\": \"0.6800\"}, {\"count_fp\": \"6.55\", \"created_time\": \"2026-09-30T00:43:19.348397Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.3200\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-5139-88f7-5aa6-3a170940b540\", \"yes_price_dollars\": \"0.6800\"}, {\"count_fp\": \"6.00\", \"created_time\": \"2026-09-30T00:43:19.045097Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.3100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-4d11-99d8-a7ad-99ea6b4328e6\", \"yes_price_dollars\": \"0.6900\"}, {\"count_fp\": \"14.00\", \"created_time\": \"2026-09-30T00:43:18.966242Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.3200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-3db1-bba7-7f4f-5c514ca7faab\", \"yes_price_dollars\": \"0.6800\"}, {\"count_fp\": \"14.00\", \"created_time\": \"2026-09-30T00:43:18.956811Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.3100\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-3db1-8f50-4302-4c8bc01d80fa\", \"yes_price_dollars\": \"0.6900\"}, {\"count_fp\": \"14.00\", \"created_time\": \"2026-09-30T00:43:18.956811Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.3000\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-3db1-8740-5c9f-50c6cc76ca0a\", \"yes_price_dollars\": \"0.7000\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:18.949831Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.3300\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d3-c929-a421-f6c4-da949a5c9196\", \"yes_price_dollars\": \"0.6700\"}, {\"count_fp\": \"25.08\", \"created_time\": \"2026-09-30T00:43:18.94979Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.3100\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-3db1-9ca9-1f86-af72a8f3dfed\", \"yes_price_dollars\": \"0.6900\"}, {\"count_fp\": \"5.00\", \"created_time\": \"2026-09-30T00:43:18.94979Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.3200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-3179-9366-3be7-317a74fbfcd3\", \"yes_price_dollars\": \"0.6800\"}, {\"count_fp\": \"10.92\", \"created_time\": \"2026-09-30T00:43:18.943781Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.3100\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-3db1-ac79-a68d-1e4d7d740e0a\", \"yes_price_dollars\": \"0.6900\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:18.943781Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2900\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-3db1-a586-b512-cdc6fa8705bd\", \"yes_price_dollars\": \"0.7100\"}]}"
+   },
+   {
+    "receive_ts_ms": 1790729010306,
+    "text": "{\"cursor\": \"EhIKEAcjUNRgGaXfhaG6M2iWnU8aDAirtvHVBhCAlsilAg\", \"trades\": [{\"count_fp\": \"4.00\", \"created_time\": \"2026-09-30T00:43:28.875486Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-fd81-8fda-3ba4-74fe9af3295e\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"19.00\", \"created_time\": \"2026-09-30T00:43:28.585603Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2000\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-fd81-89cd-187d-ab2a42d48910\", \"yes_price_dollars\": \"0.8000\"}, {\"count_fp\": \"6.00\", \"created_time\": \"2026-09-30T00:43:28.317055Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1700\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-fd81-a727-64ae-62c46204a1ee\", \"yes_price_dollars\": \"0.8300\"}, {\"count_fp\": \"51.76\", \"created_time\": \"2026-09-30T00:43:28.317055Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1600\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-fd81-a62b-54f1-fd83b34365b2\", \"yes_price_dollars\": \"0.8400\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:28.205228Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-fd81-b6df-6a7f-88003262a3d4\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"151.53\", \"created_time\": \"2026-09-30T00:43:28.205228Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-e9c9-b5de-55ff-1c28fa394679\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"5.42\", \"created_time\": \"2026-09-30T00:43:28.205228Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-e9c9-b2b7-496d-9c169cd74f90\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"0.01\", \"created_time\": \"2026-09-30T00:43:28.205228Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-e5b1-bfd4-65e5-a4967db2f4a9\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"7.50\", \"created_time\": \"2026-09-30T00:43:28.205228Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-e5b1-be0e-6b85-ef630a62241d\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"0.01\", \"created_time\": \"2026-09-30T00:43:28.205228Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-e5b1-b7d6-4618-9bf227779f4e\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"13.00\", \"created_time\": \"2026-09-30T00:43:28.205228Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-e5b1-b72e-4ce8-16edd1b5a8a1\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:28.205228Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-e5b1-b1ed-57d8-1914da7671d3\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"0.01\", \"created_time\": \"2026-09-30T00:43:28.205228Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-e199-bfd6-5dbd-e7a572ea8acf\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"18.76\", \"created_time\": \"2026-09-30T00:43:28.205228Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1900\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-e199-bc68-4b7b-d8e39b96fe52\", \"yes_price_dollars\": \"0.8100\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:28.189016Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1700\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-de59-8aad-0f39-65d55f514e7e\", \"yes_price_dollars\": \"0.8300\"}, {\"count_fp\": \"0.24\", \"created_time\": \"2026-09-30T00:43:28.184998Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1900\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-e199-9a80-677b-36b5a06fa2a2\", \"yes_price_dollars\": \"0.8100\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:28.076455Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1900\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-e199-80b8-6412-45098c9a604a\", \"yes_price_dollars\": \"0.8100\"}, {\"count_fp\": \"1.98\", \"created_time\": \"2026-09-30T00:43:28.06887Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1700\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-d1f9-91f1-fb91-0a97ac05ac73\", \"yes_price_dollars\": \"0.8300\"}, {\"count_fp\": \"19.00\", \"created_time\": \"2026-09-30T00:43:27.081234Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1900\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-95d1-a82f-140d-7f4ccbe2bba6\", \"yes_price_dollars\": \"0.8100\"}, {\"count_fp\": \"5.64\", \"created_time\": \"2026-09-30T00:43:27.081234Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1900\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-95d1-a6ab-0d66-4e35d1aff5fb\", \"yes_price_dollars\": \"0.8100\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:27.059235Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1900\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-95d1-ac93-99ff-fd37aae224a2\", \"yes_price_dollars\": \"0.8100\"}, {\"count_fp\": \"14.00\", \"created_time\": \"2026-09-30T00:43:26.959306Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2000\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-8571-af8a-387b-9f51d0f20c32\", \"yes_price_dollars\": \"0.8000\"}, {\"count_fp\": \"7.00\", \"created_time\": \"2026-09-30T00:43:26.959306Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1900\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-8571-a5d6-3c87-2160ab5d4fca\", \"yes_price_dollars\": \"0.8100\"}, {\"count_fp\": \"20.00\", \"created_time\": \"2026-09-30T00:43:26.959306Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1900\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-8571-a4e3-20ce-0d2e5cb8a6c8\", \"yes_price_dollars\": \"0.8100\"}, {\"count_fp\": \"11.58\", \"created_time\": \"2026-09-30T00:43:26.584306Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-8909-8fc7-4444-0741734b9af4\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"10.98\", \"created_time\": \"2026-09-30T00:43:26.584306Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1900\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-8571-8882-464f-c22908561427\", \"yes_price_dollars\": \"0.8100\"}, {\"count_fp\": \"9.02\", \"created_time\": \"2026-09-30T00:43:26.391523Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1900\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-8571-8a12-f74c-fa0bc814d12b\", \"yes_price_dollars\": \"0.8100\"}, {\"count_fp\": \"4.57\", \"created_time\": \"2026-09-30T00:43:26.260746Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1700\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b139-b939-6c88-fa58d0a5684f\", \"yes_price_dollars\": \"0.8300\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:26.245981Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-8571-a8ff-2967-d18bed5ecae1\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"0.40\", \"created_time\": \"2026-09-30T00:43:26.245981Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-8571-a659-238d-47eea2c50a20\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"0.64\", \"created_time\": \"2026-09-30T00:43:26.108247Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1700\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b139-adfd-c0f3-ac996c80d017\", \"yes_price_dollars\": \"0.8300\"}, {\"count_fp\": \"1.36\", \"created_time\": \"2026-09-30T00:43:26.108247Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1700\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-aa61-a006-d317-f7c49cd14ba6\", \"yes_price_dollars\": \"0.8300\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:26.108247Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-8909-a533-fa3c-982256d80ce0\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"5.00\", \"created_time\": \"2026-09-30T00:43:26.108247Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-8909-a2ba-e54d-f38fcbb1adb3\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:26.085162Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-8909-9c37-0b11-6104f45e11ac\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"4.00\", \"created_time\": \"2026-09-30T00:43:25.889078Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1900\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b8e9-ae3d-5c14-c4b301aa1a8d\", \"yes_price_dollars\": \"0.8100\"}, {\"count_fp\": \"1.24\", \"created_time\": \"2026-09-30T00:43:25.889078Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b8e9-a795-50a3-468de62a1e7a\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:25.889078Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2000\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b8e9-a33c-7906-aab67b8f59d3\", \"yes_price_dollars\": \"0.8000\"}, {\"count_fp\": \"11.99\", \"created_time\": \"2026-09-30T00:43:25.785897Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b8e9-b33a-6d89-97058d92ccd5\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"0.01\", \"created_time\": \"2026-09-30T00:43:25.785897Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b8e9-b141-7f17-3bac90b08967\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"3.00\", \"created_time\": \"2026-09-30T00:43:25.735379Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b8e9-8d47-d776-e7ec881f2d6a\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"15.00\", \"created_time\": \"2026-09-30T00:43:25.714061Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b8e9-9dc3-535e-c3ead6368126\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"6.00\", \"created_time\": \"2026-09-30T00:43:25.698941Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b8e9-aadf-162a-b274d470dc09\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"4.00\", \"created_time\": \"2026-09-30T00:43:25.698941Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b8e9-a53a-3b69-f31a0377d746\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:25.698941Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b8e9-a005-2884-d14f913e7cf8\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"1.35\", \"created_time\": \"2026-09-30T00:43:25.490422Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b8e9-8f5c-bf50-b3e95919d117\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"1.65\", \"created_time\": \"2026-09-30T00:43:25.490422Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b8e9-8a5c-aa24-dfb984959ec5\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"7.67\", \"created_time\": \"2026-09-30T00:43:25.397194Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-bcc1-8737-cd26-87d8553366a8\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"26.00\", \"created_time\": \"2026-09-30T00:43:25.397194Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b8e9-888a-f64d-e4ef0bb52fb5\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"1.65\", \"created_time\": \"2026-09-30T00:43:25.397194Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-b8e9-8784-fcd0-517978a89247\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"17.00\", \"created_time\": \"2026-09-30T00:43:25.094895Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-bcc1-bc8a-0fca-c05cf1034772\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"7.50\", \"created_time\": \"2026-09-30T00:43:25.094895Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-bcc1-b645-1b7c-68bbc932ad49\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"12.33\", \"created_time\": \"2026-09-30T00:43:24.923855Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-bcfb-32e9-112f6f513830\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"0.01\", \"created_time\": \"2026-09-30T00:43:24.602488Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-9d2c-3ab6-e067a4d757c9\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"14.29\", \"created_time\": \"2026-09-30T00:43:24.602488Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-99a4-0171-6246757da138\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"36.00\", \"created_time\": \"2026-09-30T00:43:24.413458Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-9ab3-beb8-df03b38e0a88\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"30.00\", \"created_time\": \"2026-09-30T00:43:24.407552Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-b027-6999-85b745d058e8\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"6.00\", \"created_time\": \"2026-09-30T00:43:24.407552Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-b973-60dc-6f76259caed3\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:24.341292Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-879e-4a30-0c2b66686fd3\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"6.00\", \"created_time\": \"2026-09-30T00:43:24.341292Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2500\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-82f0-5637-6c2ff103f03d\", \"yes_price_dollars\": \"0.7500\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:24.341292Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-8253-495d-8aa0d06915fc\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"22.00\", \"created_time\": \"2026-09-30T00:43:24.337698Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-b647-bfcd-31f13066b950\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"10.00\", \"created_time\": \"2026-09-30T00:43:24.333318Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2500\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-8994-002d-f58f7a926d1d\", \"yes_price_dollars\": \"0.7500\"}, {\"count_fp\": \"16.00\", \"created_time\": \"2026-09-30T00:43:24.324856Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-bf2a-d4bc-36d9049ac1cd\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:24.324856Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2700\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-beee-f0fa-0f975298ea57\", \"yes_price_dollars\": \"0.7300\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:24.324856Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-bad7-e675-244ca22b20d0\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"4.00\", \"created_time\": \"2026-09-30T00:43:24.324856Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2700\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-b7f0-fbf6-4029c91f2392\", \"yes_price_dollars\": \"0.7300\"}, {\"count_fp\": \"11.00\", \"created_time\": \"2026-09-30T00:43:24.324856Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-b7c3-c27b-ad3ae3c2e12e\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:24.324856Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2700\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-b15d-cb1b-6ff3e9e7322e\", \"yes_price_dollars\": \"0.7300\"}, {\"count_fp\": \"6.00\", \"created_time\": \"2026-09-30T00:43:24.316884Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-bf5f-def5-1055a458f39a\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"17.00\", \"created_time\": \"2026-09-30T00:43:24.316884Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-bb2e-d51e-ea4f9eba30c0\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"19.00\", \"created_time\": \"2026-09-30T00:43:24.311988Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2700\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-bff9-e77c-3ae399a5082a\", \"yes_price_dollars\": \"0.7300\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:24.311988Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-b72f-c1ca-c3483141a7da\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:24.308876Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-952a-0e1e-770a6f75f582\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"17.00\", \"created_time\": \"2026-09-30T00:43:24.308876Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2300\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-93a4-0a41-dd5be932c342\", \"yes_price_dollars\": \"0.7700\"}, {\"count_fp\": \"23.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-ad5d-d28c-d581decddd5f\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"20.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-a7fc-e309-e92323043795\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-a750-c39c-7f94d330566b\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"30.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2500\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-a6d8-ee1b-99a1af167de5\", \"yes_price_dollars\": \"0.7500\"}, {\"count_fp\": \"15.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-a6a6-c72f-6f6c860a59a3\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"8.08\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-a4d9-d3fe-072cd36009e5\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"18.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-a35d-fe5a-d74737197fe0\", \"yes_price_dollars\": \"0.7900\"}, {\"count_fp\": \"30.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2400\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-a338-fcb3-f329dd6f82ae\", \"yes_price_dollars\": \"0.7600\"}, {\"count_fp\": \"20.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2000\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-aef3-f02c-09b12a71d3a0\", \"yes_price_dollars\": \"0.8000\"}, {\"count_fp\": \"7.50\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-a7a5-e43d-48cb1318359c\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"0.01\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2200\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-a646-feff-aebdeb8f2db0\", \"yes_price_dollars\": \"0.7800\"}, {\"count_fp\": \"200.00\", \"created_time\": \"2026-09-30T00:43:24.301444Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2600\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d3-6ef9-aa80-d183-5b3b78aac33c\", \"yes_price_dollars\": \"0.7400\"}, {\"count_fp\": \"20.00\", \"created_time\": \"2026-09-30T00:43:24.299613Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1900\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-9227-3290-106751502afe\", \"yes_price_dollars\": \"0.8100\"}, {\"count_fp\": \"4.00\", \"created_time\": \"2026-09-30T00:43:24.299613Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2000\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-9197-3bef-7e7046d86058\", \"yes_price_dollars\": \"0.8000\"}, {\"count_fp\": \"4.93\", \"created_time\": \"2026-09-30T00:43:24.164763Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-bdc4-cae1-c5f256cd0d21\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:24.164763Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-ac61-b5e1-ce4f-e40b1a7e6415\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"1.07\", \"created_time\": \"2026-09-30T00:43:24.164763Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-be36-ee08-a60f57b83c65\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"4.00\", \"created_time\": \"2026-09-30T00:43:24.164763Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-bcb1-eb8b-59e7da6dd1fc\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"167.00\", \"created_time\": \"2026-09-30T00:43:24.164763Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1900\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-bb10-f4a3-c2b14882b470\", \"yes_price_dollars\": \"0.8100\"}, {\"count_fp\": \"14.00\", \"created_time\": \"2026-09-30T00:43:24.164763Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d3-7351-bed1-f934-8812dc2b46a3\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"1.00\", \"created_time\": \"2026-09-30T00:43:24.08516Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-a3da-02cf-45977f43d07d\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"4.93\", \"created_time\": \"2026-09-30T00:43:24.06959Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-bace-6b44-8907d0263079\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"13.00\", \"created_time\": \"2026-09-30T00:43:24.037703Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-9079-a3f8-debe-f37cc9b5503e\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"8.00\", \"created_time\": \"2026-09-30T00:43:23.996758Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.1800\", \"taker_book_side\": \"ask\", \"taker_outcome_side\": \"no\", \"taker_side\": \"no\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6019-ac54-1046-14e4bf57cbc2\", \"yes_price_dollars\": \"0.8200\"}, {\"count_fp\": \"2.00\", \"created_time\": \"2026-09-30T00:43:23.615648Z\", \"is_block_trade\": false, \"no_price_dollars\": \"0.2100\", \"taker_book_side\": \"bid\", \"taker_outcome_side\": \"yes\", \"taker_side\": \"yes\", \"ticker\": \"KXXRP15M-26SEP292045-45\", \"trade_id\": \"072350d4-6019-a5df-85a1-ba3368969d4f\", \"yes_price_dollars\": \"0.7900\"}]}"
+   }
+  ],
+  "session_totals": {
+   "BTC": [
+    1319,
+    1700
+   ],
+   "ETH": [
+    625,
+    1700
+   ],
+   "SOL": [
+    1119,
+    1700
+   ],
+   "XRP": [
+    1166,
+    1700
+   ]
+  },
+  "ticker": "KXXRP15M-26SEP292045-45",
+  "union_ids": 150,
+  "what": "two consecutive captured 100-trade polls of the same market (newest first) that overlap"
+ },
+ "kalshi_zero_quote_market": {
+  "market": {
+   "can_close_early": true,
+   "close_time": "2026-09-30T00:45:00Z",
+   "created_time": "2026-09-28T20:01:15.781297Z",
+   "custom_strike": {
+    "round_digits": "2"
+   },
+   "event_ticker": "KXBTC15M-26SEP292045",
+   "exchange_index": 2,
+   "expected_expiration_time": "2026-09-30T00:50:00Z",
+   "expiration_time": "2026-10-07T00:45:00Z",
+   "expiration_value": "",
+   "floor_strike": 83545.85,
+   "last_price_dollars": "0.0010",
+   "latest_expiration_time": "2026-10-07T00:45:00Z",
+   "liquidity_dollars": "0.0000",
+   "market_type": "binary",
+   "no_ask_dollars": "1.0000",
+   "no_bid_dollars": "0.9990",
+   "no_sub_title": "Target price: TBD",
+   "notional_value_dollars": "1.0000",
+   "occurrence_datetime": "2026-09-30T00:50:00Z",
+   "open_interest_fp": "741268.66",
+   "open_time": "2026-09-30T00:30:00Z",
+   "previous_price_dollars": "0.0000",
+   "previous_yes_ask_dollars": "0.0000",
+   "previous_yes_bid_dollars": "0.0000",
+   "price_level_structure": "tapered_deci_cent",
+   "price_ranges": [
+    {
+     "end": "0.1000",
+     "start": "0.0000",
+     "step": "0.0010"
+    },
+    {
+     "end": "0.9000",
+     "start": "0.1000",
+     "step": "0.0100"
+    },
+    {
+     "end": "1.0000",
+     "start": "0.9000",
+     "step": "0.0010"
+    }
+   ],
+   "result": "",
+   "rules_primary": "If the simple average of the sixty seconds of CF Benchmarks' BRTI before 8:45 PM EDT on Sep 29, 2026 is at least the simple average of the sixty seconds of CF Benchmarks' BRTI before 8:30 PM EDT on September 29, 2026, then the market resolves to Yes.",
+   "rules_secondary": "Not all cryptocurrency price data is the same. While checking a source like Google or Coinbase may help guide your decision, the price used to determine this market is based on CF Benchmarks' corresponding Real Time Index (RTI). At the last minute before expiration, 60 RTI prices are collected. The official and final value is the average of these prices, rounded to the nearest 2 decimal places.",
+   "settlement_timer_seconds": 1,
+   "status": "active",
+   "strike_type": "greater_or_equal",
+   "ticker": "KXBTC15M-26SEP292045-45",
+   "title": "BTC price up in next 15 mins?",
+   "updated_time": "2026-09-30T00:30:00.670011Z",
+   "volume_24h_fp": "1879724.88",
+   "volume_fp": "3033018.73",
+   "yes_ask_dollars": "0.0010",
+   "yes_ask_size_fp": "255480.29",
+   "yes_bid_dollars": "0.0000",
+   "yes_bid_size_fp": "0.00",
+   "yes_sub_title": "Target Price: $83,545.85"
+  },
+  "receive_ts_ms": 1790729039100,
+  "what": "a valid market object whose YES bid is \"0.0000\" with size \"0.00\" (no resting bid) and whose NO ask is the \"1.0000\" mirror; 10 such objects failed the whole MARKET_STATE in the session"
+ },
+ "note": "DEBUGGING EVIDENCE for code regressions only - never research evidence, never a model input.",
+ "provenance": "derived from first real session 20260930T004307Z-51664fe9",
+ "sanitization": "public market data only: no credentials, auth headers, account / connection ids, local paths or session directories; URLs reduced to host + path where only the endpoint matters; book deltas trimmed to at most 2 changes; every retained value is verbatim from the capture",
+ "source_raw_store_sha256": "075580413a93845c8159ea1c2ba6c2aa66ecec00fd3dc9d521ee60efb14e05ef",
+ "source_segment_sha256": {
+  "micro/segment-000001.jsonl.gz": "e3b3cc3b7a7ecffca70508b1aa7832172bbd8fbe91508b8ad888b7c7f60d9e54",
+  "micro/segment-000002.jsonl.gz": "ed9442b3052ae2cde3b85ad464508ee45c07553377db25d3e13e58d4554f7b44",
+  "micro/segment-000003.jsonl.gz": "971c147501f5ac9d953779f6de18979b42ab1f9989cb59a1e9e2d30f14f6bf10",
+  "perp/segment-000001.jsonl.gz": "67b55c3fd6882eecf030839b84f65d5d7be5306560d6eed5bb55c5bb33be4a40",
+  "perp/segment-000002.jsonl.gz": "239dd7a2f2400c89bd80c3dd6560f2f42dca2ac2f4a5b512a29640db2305eb8b",
+  "step3/segment-000001.jsonl.gz": "f97520603a80b5de6836aa8abff48661016f400f61de6561c0f29aadcf6a1ebb"
+ }
+}

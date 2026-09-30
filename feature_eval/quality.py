@@ -33,6 +33,9 @@ from dataclasses import asdict, dataclass
 from market_data.storage import read_session, segment_files
 
 VERDICTS = ("PASS", "DEGRADED", "REJECT")
+UNAVAILABLE = "UNAVAILABLE"      # Step 6.4: a source / book whose REQUIRED data was terminally access-denied (HTTP 403 /
+                                 # 451). Excluded from research inputs exactly like REJECT (features MISSING, never zero);
+                                 # it degrades the session like any non-PASS source, and it is never a data defect.
 _RANK = {"PASS": 0, "DEGRADED": 1, "REJECT": 2}
 
 
@@ -122,6 +125,7 @@ def validate_session(session_dir, config=None, previous=None, coinbase_status=No
     from market_data.features.dataset import discover_markets
     from market_data.replay import load_sessions
     from market_data.types import EventType, IngestMode
+    from microstructure.reconstruction import BookStatus
     from microstructure.replay import load_micro_sessions, rebuild_books
     from perp_data.replay import load_perp_sessions
     from perp_data.types import PerpEventType
@@ -213,17 +217,22 @@ def validate_session(session_dir, config=None, previous=None, coinbase_status=No
             a["mapping_errors"] += _mapping_error(e, SERIES_ASSET)
         for g in gaps:
             acc(_src_key(g.source, g.asset))["gap_ms"] += max(0, g.duration_ms or 0)
-    # reconnects from the manifests
-    reconnects = {}
+    # reconnects (and, Step 6.4, terminally unavailable streams / books) from the manifests
+    reconnects, unavailable = {}, {}
     for rel in ("manifest.json", os.path.join("perp", "manifest.json"), os.path.join("micro", "manifest.json")):
         p = os.path.join(session_dir, rel)
         if os.path.exists(p):
             try:
                 with open(p, encoding="utf-8") as f:
-                    for k, v in (json.load(f).get("reconnects") or {}).items():
-                        reconnects[k] = reconnects.get(k, 0) + int(v)
+                    man = json.load(f)
+                for k, v in (man.get("reconnects") or {}).items():
+                    reconnects[k] = reconnects.get(k, 0) + int(v)
+                for k, v in (man.get("unavailable") or {}).items():
+                    unavailable[k] = v
             except (OSError, ValueError):
                 pass
+    rep["checks"]["unavailable"] = {k: {"status": (v or {}).get("status"), "kind": (v or {}).get("kind"),
+                                        "endpoint": (v or {}).get("endpoint")} for k, v in sorted(unavailable.items())}
     hours = max(span_min / 60.0, 1e-9)
     total_minutes = max(1, int(span_min) + 1)
     for k, a in sorted(per.items()):
@@ -258,6 +267,9 @@ def validate_session(session_dir, config=None, previous=None, coinbase_status=No
         rc = reconnects.get(src, 0)
         if rc / hours > cfg.reconnects_per_hour_degraded:
             v, why = worst(v, "DEGRADED"), why + [f"{rc} reconnects ({rc / hours:.1f}/h)"]
+        if k in unavailable:                     # required data terminally access-denied: UNAVAILABLE, not a defect
+            v, why = UNAVAILABLE, [f"required endpoint access-denied (HTTP {unavailable[k].get('status')}): "
+                                   "UNAVAILABLE for the session"]
         rep["sources"][k] = {"verdict": v, "reasons": why, "events": a["events"], "by_type": dict(sorted(a["by_type"].items())),
                              "availability": None if cov is None else round(cov, 4), "gap_share": round(gshare, 4),
                              "future_timestamps": a["future"], "receive_regressions": a["regress"],
@@ -275,6 +287,9 @@ def validate_session(session_dir, config=None, previous=None, coinbase_status=No
             share = max(0.0, min(1.0, ready / span))
             v = "PASS" if share >= cfg.book_ready_degraded else ("DEGRADED" if share >= cfg.book_ready_reject else "REJECT")
             why = [] if v == "PASS" else [f"book valid {share:.0%} of its span"]
+            if tr.base == BookStatus.UNAVAILABLE:
+                v, why = UNAVAILABLE, ["required REST snapshot access-denied: book UNAVAILABLE for the session "
+                                       "(no snapshot fabricated; features MISSING)"]
             if key[0] == "coinbase_l2" and coinbase_status in ("CONTRADICTS_CURRENT_POLICY",):
                 v, why = "REJECT", why + ["Coinbase sequence semantics contradict the reconstruction policy: fail closed"]
             books[f"{key[0]}:{key[1]}"] = {"verdict": v, "reasons": why, "valid_share": round(share, 4),

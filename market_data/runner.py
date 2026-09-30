@@ -3,7 +3,8 @@ Feed runners — one thread per source; a failing source never blocks the others
 
 WsFeedRunner    connect -> subscribe -> (after a reconnect: backfill) -> read loop.
                 Transport errors -> RECONNECTING, exponential backoff (Backoff), retry. Missing credentials /
-                dependencies -> DISCONNECTED with the reason (no retry storm). recv timeouts only trigger
+                dependencies -> DISCONNECTED with the reason (no retry storm). A source whose required data is
+                terminally unavailable (SourceUnavailable, Step 6.4) is stopped the same way. recv timeouts only trigger
                 liveness evaluation (STALE after stale_after_ms without messages, monotonic clock).
 PollRunner      the same state machine for REST polling (Kalshi): each cycle is one "message".
 
@@ -12,7 +13,7 @@ Both runners accept injected connect/get/sleep/clock functions, so every path is
 """
 import threading
 
-from market_data.feed import Backoff, FeedHealth, FeedMonitor, FeedState
+from market_data.feed import Backoff, FeedHealth, FeedMonitor, FeedState, SourceUnavailable
 from market_data.transport.kalshi_auth import AuthUnavailable
 from market_data.transport.ws import WebSocket, WebSocketClosed
 
@@ -67,6 +68,11 @@ class WsFeedRunner(threading.Thread):
             except AuthUnavailable as e:
                 self.monitor.on_disconnect(self.clock.mono_ns(), f"credentials unavailable: {e}")
                 self.health.set(FeedState.DISCONNECTED, self.clock.mono_ns(), "credentials unavailable")
+                self.collector.on_source_disabled(self.adapter, str(e))
+                break
+            except SourceUnavailable as e:                           # terminal (Step 6.4): stop, never reconnect
+                self.monitor.on_disconnect(self.clock.mono_ns(), f"source unavailable: {e}")
+                self.health.set(FeedState.DISCONNECTED, self.clock.mono_ns(), "source unavailable")
                 self.collector.on_source_disabled(self.adapter, str(e))
                 break
             except Exception as e:                                   # noqa: BLE001 - every transport error reconnects

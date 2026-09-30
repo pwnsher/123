@@ -51,6 +51,9 @@ class EventFlag(str, Enum):
     ONE_SIDED_BOOK = "ONE_SIDED_BOOK"
     CROSSED_BOOK = "CROSSED_BOOK"
     SNAPSHOT = "SNAPSHOT"                    # delivered as part of a subscription snapshot
+    NO_QUOTE = "NO_QUOTE"                    # a side quoted 0.0000 with size 0 (or the venue's $1.00 mirror of such a
+                                             # side): no resting order -> unavailable (None), never a zero price (6.4)
+    LEGACY_SCHEMA = "LEGACY_SCHEMA"          # parsed from a documented earlier response shape (historical captures)
 
 
 class AggressorSemantics(str, Enum):

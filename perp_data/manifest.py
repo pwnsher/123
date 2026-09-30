@@ -51,6 +51,7 @@ class PerpManifest:
     clock_anomalies: list = field(default_factory=list)
     store: dict = field(default_factory=dict)
     notes: list = field(default_factory=list)
+    unavailable: dict = field(default_factory=dict)   # "<source>:<stream|asset>" -> terminal HTTP detail (6.4)
     synthetic: bool = False
     research_only: bool = True
 

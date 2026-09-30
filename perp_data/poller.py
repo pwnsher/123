@@ -3,13 +3,19 @@ Read-only REST polling for the perp venues (driven by Step 3's PollRunner; one r
 
 Each call polls the venue's streams that are due (adapter.rest_urls(): {stream: (url, params, interval_s)})
 with GET only, and hands every response to PerpCollector.on_rest (raw first, then normalization). A failing
-stream is recorded and skipped; the others continue. Only if EVERY due stream failed does poll() raise, so
-the runner backs off and reports the venue as RECONNECTING. Due times use the monotonic clock.
+stream is recorded and skipped; the others continue. Only if EVERY due stream failed with a RETRYABLE error does
+poll() raise, so the runner backs off and reports the venue as RECONNECTING. Due times use the monotonic clock.
+
+Step 6.4: a stream answered with a TERMINAL HttpError (403 / 451 access denied) is UNAVAILABLE for the session: it is
+recorded once (collector.on_stream_unavailable), never requested again, and never counted as a transient failure - so
+it cannot make the venue "reconnect" and it never disables the venue's websocket or its other streams. Its features
+stay MISSING (never zero).
 
 Backfill on reconnect (backfill()): Binance aggTrades fromId = last seen aggregate id + 1 (an exact recovery
 when the gap is shorter than one page); Bybit / OKX recent trades (duplicates collapse by trade id).
 Backfilled events are BACKFILLED with receive_ts = when the response arrived.
 """
+from market_data.transport.http import is_terminal
 
 
 class PerpPoller:
@@ -17,13 +23,14 @@ class PerpPoller:
         self.adapter, self.getter, self.collector, self.clock = adapter, getter, collector, clock
         self.next_due = {}                               # stream -> mono ns
         self.requests = 0
+        self.unavailable = {}                            # stream -> terminal HttpError detail (Step 6.4)
 
     def poll(self, reconnect=False):
         streams = self.adapter.rest_urls()
         now = self.clock.mono_ns()
         n_ev = n_f = n_g = 0
-        due = [s for s in streams if self.next_due.get(s, 0) <= now]
-        failed = 0
+        due = [s for s in streams if s not in self.unavailable and self.next_due.get(s, 0) <= now]
+        failed = attempted = 0
         for s in due:
             url, params, interval_s = streams[s]
             self.next_due[s] = now + int(interval_s * 1e9)
@@ -31,13 +38,19 @@ class PerpPoller:
                 body = self.getter.get_json(url, params)
                 self.requests += 1
             except Exception as err:                        # noqa: BLE001 - one stream failing never stops the others
+                if is_terminal(err):                        # access denied: this stream only, for the session
+                    self.unavailable[s] = err.to_dict()
+                    self.collector.on_stream_unavailable(self.adapter, s, self.clock.wall_ms(), err)
+                    continue
+                attempted += 1
                 failed += 1
                 self.collector.on_poll_error(f"{self.adapter.source}:{s}", self.clock.wall_ms(), str(err))
                 continue
+            attempted += 1
             e, f, g = self.collector.on_rest(self.adapter, s, body, self.clock.wall_ms(), self.clock.mono_ns())
             n_ev, n_f, n_g = n_ev + e, n_f + f, n_g + g
         self.collector.tick()
-        if due and failed == len(due):
+        if attempted and failed == attempted:
             raise ConnectionError(f"all {failed} {self.adapter.source} REST streams failed")
         return n_ev, n_f, n_g
 

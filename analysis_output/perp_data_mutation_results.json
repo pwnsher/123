@@ -4,7 +4,7 @@
   "unmutated": {
    "caught": false,
    "returncode": 0,
-   "seconds": 20.0,
+   "seconds": 16.3,
    "failed_test": null,
    "passed_tests": [
     "2 EXISTING perp research / shadow / promotion / live-veto chain ",
@@ -24,7 +24,7 @@
   "guards_disabled_only": {
    "caught": false,
    "returncode": 0,
-   "seconds": 19.1,
+   "seconds": 17.3,
    "failed_test": null,
    "passed_tests": [
     "2 EXISTING perp research / shadow / promotion / live-veto chain ",
@@ -52,7 +52,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 6.0,
+    "seconds": 5.3,
     "failed_test": "FAIL  18 LEAKAGE: future / delayed liquidation, OI, funding, trade, book, backfill, post-close, labels; canaries: CausalityError: features at 1790000940000 requested after ingesting data received at 1790001060500",
     "passed_tests": [
      "17 receive-time causality + guards"
@@ -61,7 +61,7 @@
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 6.2,
+    "seconds": 5.2,
     "failed_test": "FAIL  18 LEAKAGE: future / delayed liquidation, OI, funding, trade, book, backfill, post-close, labels; canaries: AssertionError: 1790000940000",
     "passed_tests": []
    }
@@ -76,7 +76,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 5.7,
+    "seconds": 5.1,
     "failed_test": "FAIL  18 LEAKAGE: future / delayed liquidation, OI, funding, trade, book, backfill, post-close, labels; canaries: CausalityError: features at 1790000940000 requested after ingesting data received at 1790000989846",
     "passed_tests": [
      "7 liquidation side semantics per venue + aggregation; unobserved"
@@ -85,7 +85,7 @@
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 6.4,
+    "seconds": 5.1,
     "failed_test": "FAIL  18 LEAKAGE: future / delayed liquidation, OI, funding, trade, book, backfill, post-close, labels; canaries: AssertionError: 1790000940000",
     "passed_tests": [
      "7 liquidation side semantics per venue + aggregation; unobserved"
@@ -102,7 +102,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 5.8,
+    "seconds": 4.9,
     "failed_test": "FAIL  18 LEAKAGE: future / delayed liquidation, OI, funding, trade, book, backfill, post-close, labels; canaries: CausalityError: features at 1790000940000 requested after ingesting data received at 1790001099068",
     "passed_tests": [
      "6 open interest: native + coin units, OI change / pct / notional"
@@ -111,7 +111,7 @@
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 6.2,
+    "seconds": 5.3,
     "failed_test": "FAIL  18 LEAKAGE: future / delayed liquidation, OI, funding, trade, book, backfill, post-close, labels; canaries: AssertionError: 1790000940000",
     "passed_tests": [
      "6 open interest: native + coin units, OI change / pct / notional"
@@ -128,7 +128,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 6.0,
+    "seconds": 5.0,
     "failed_test": "FAIL  16 backfill: BACKFILLED, event time kept, visible only from retrieval; exact id recovery: AssertionError: ",
     "passed_tests": [
      "4 perp trade normalization + aggressor side (maker flag inverted"
@@ -137,7 +137,7 @@
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 6.0,
+    "seconds": 5.0,
     "failed_test": "FAIL  16 backfill: BACKFILLED, event time kept, visible only from retrieval; exact id recovery: AssertionError: ",
     "passed_tests": [
      "4 perp trade normalization + aggressor side (maker flag inverted"
@@ -153,14 +153,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.4,
     "failed_test": "FAIL  7 liquidation side semantics per venue + aggregation; unobserved is MISSING, not 0: AssertionError: ",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.4,
     "failed_test": "FAIL  7 liquidation side semantics per venue + aggregation; unobserved is MISSING, not 0: AssertionError: ",
     "passed_tests": []
    }
@@ -175,14 +175,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.4,
     "failed_test": "FAIL  4 perp trade normalization + aggressor side (maker flag inverted, taker fields, OKX contracts): AssertionError: ",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.4,
     "failed_test": "FAIL  4 perp trade normalization + aggressor side (maker flag inverted, taker fields, OKX contracts): AssertionError: ",
     "passed_tests": []
    }
@@ -197,14 +197,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.3,
     "failed_test": "FAIL  6 open interest: native + coin units, OI change / pct / notional / accel, no raw contract mixing: AssertionError: ",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.4,
     "failed_test": "FAIL  6 open interest: native + coin units, OI change / pct / notional / accel, no raw contract mixing: AssertionError: ",
     "passed_tests": []
    }
@@ -219,14 +219,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 6.3,
+    "seconds": 5.5,
     "failed_test": "FAIL  21 joint Step-3 + Step-4 dataset == batch paths; features / labels / provenance (families) separate: AssertionError: 1790000640000",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 6.3,
+    "seconds": 5.2,
     "failed_test": "FAIL  21 joint Step-3 + Step-4 dataset == batch paths; features / labels / provenance (families) separate: AssertionError: 1790000640000",
     "passed_tests": []
    }
@@ -241,14 +241,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  2 EXISTING perp research / shadow / promotion / live-veto chain byte-identical; veto INACTIVE: AssertionError: EXISTING PERP VETO CHAIN CHANGED: perp_live.py",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.3,
     "failed_test": "FAIL  2 EXISTING perp research / shadow / promotion / live-veto chain byte-identical; veto INACTIVE: AssertionError: EXISTING PERP VETO CHAIN CHANGED: perp_live.py",
     "passed_tests": []
    }

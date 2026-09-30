@@ -4,7 +4,7 @@
   "unmutated": {
    "caught": false,
    "returncode": 0,
-   "seconds": 77.4,
+   "seconds": 52.3,
    "failed_test": null,
    "passed_tests": [
     "2 EXISTING perp veto chain byte-identical, INACTIVE, never impor",
@@ -26,7 +26,7 @@
   "guards_disabled_only": {
    "caught": false,
    "returncode": 0,
-   "seconds": 75.5,
+   "seconds": 52.6,
    "failed_test": null,
    "passed_tests": [
     "2 EXISTING perp veto chain byte-identical, INACTIVE, never impor",
@@ -55,14 +55,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  20 receive-time causality; streaming == batch; guards: CausalityError: features at 10000 requested after ingesting data received at 10300",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  20 receive-time causality; streaming == batch; guards: AssertionError: ",
     "passed_tests": []
    }
@@ -76,14 +76,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 38.9,
+    "seconds": 29.5,
     "failed_test": "FAIL  26 joint Step 2-5 dataset == batch paths; earlier features unchanged; labels separate: AssertionError: 1790000640000",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 39.9,
+    "seconds": 29.1,
     "failed_test": "FAIL  26 joint Step 2-5 dataset == batch paths; earlier features unchanged; labels separate: AssertionError: 1790000640000",
     "passed_tests": []
    }
@@ -98,14 +98,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  7 sequence policies: Coinbase / Kalshi chains, Binance U/u/pu alignment, OKX prevSeqId, Kraken checksum, Bybit: AssertionError: ",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  7 sequence policies: Coinbase / Kalshi chains, Binance U/u/pu alignment, OKX prevSeqId, Kraken checksum, Bybit: AssertionError: ",
     "passed_tests": []
    }
@@ -120,7 +120,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  6 book states: NO_BOOK / AWAITING / WARMING_UP / READY / STALE / INVALID; reset + resnapshot: AssertionError: ",
     "passed_tests": []
    },
@@ -141,14 +141,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  15 OFI (L1, 5-level), depth added / removed, net change, cancel ESTIMATE: AssertionError: ",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.5,
     "failed_test": "FAIL  15 OFI (L1, 5-level), depth added / removed, net change, cancel ESTIMATE: AssertionError: ",
     "passed_tests": []
    }
@@ -162,14 +162,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 41.0,
+    "seconds": 29.4,
     "failed_test": "FAIL  26 joint Step 2-5 dataset == batch paths; earlier features unchanged; labels separate: AssertionError: 1790000640000",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 39.7,
+    "seconds": 28.9,
     "failed_test": "FAIL  26 joint Step 2-5 dataset == batch paths; earlier features unchanged; labels separate: AssertionError: 1790000640000",
     "passed_tests": []
    }
@@ -183,14 +183,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  8 Kalshi YES / NO bid-ask helpers with explicit units; adapter + engine in YES terms: AssertionError: ",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  8 Kalshi YES / NO bid-ask helpers with explicit units; adapter + engine in YES terms: AssertionError: ",
     "passed_tests": []
    }
@@ -204,14 +204,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  19 missing book -> None + MISSING (never 0), warm-up, stale, OKX unverified units: AssertionError: ",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  19 missing book -> None + MISSING (never 0), warm-up, stale, OKX unverified units: AssertionError: ",
     "passed_tests": []
    }
@@ -226,14 +226,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  6 book states: NO_BOOK / AWAITING / WARMING_UP / READY / STALE / INVALID; reset + resnapshot: AssertionError: ",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  6 book states: NO_BOOK / AWAITING / WARMING_UP / READY / STALE / INVALID; reset + resnapshot: AssertionError: ",
     "passed_tests": []
    }
@@ -247,14 +247,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  3 production isolation: nothing production / earlier-layer imports microstructure; read-only; LIVE refused: AssertionError: Step-5 feature imported by run_local.py: ['microstructure.features.engine']",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  3 production isolation: nothing production / earlier-layer imports microstructure; read-only; LIVE refused: AssertionError: Step-5 feature imported by run_local.py: ['microstructure.features.engine']",
     "passed_tests": []
    }
@@ -269,14 +269,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  2 EXISTING perp veto chain byte-identical, INACTIVE, never imports microstructure: AssertionError: EXISTING PERP VETO CHAIN CHANGED: perp_live.py",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  2 EXISTING perp veto chain byte-identical, INACTIVE, never imports microstructure: AssertionError: EXISTING PERP VETO CHAIN CHANGED: perp_live.py",
     "passed_tests": []
    }
@@ -290,14 +290,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  8c Bybit linear depths 1 / 50 / 200 / 1000: 500 rejected, 1000 accepted -> orderbook.1000.<symbol>: AssertionError: ",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  8c Bybit linear depths 1 / 50 / 200 / 1000: 500 rejected, 1000 accepted -> orderbook.1000.<symbol>: AssertionError: ",
     "passed_tests": []
    }
@@ -312,14 +312,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  8a Kraken official v2 example: raw JSON -> adapter -> event -> reconstruction -> checksum 3310070434: AssertionError: ",
     "passed_tests": []
    },
    "guards_disabled": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.4,
     "failed_test": "FAIL  8a Kraken official v2 example: raw JSON -> adapter -> event -> reconstruction -> checksum 3310070434: AssertionError: ",
     "passed_tests": []
    }

@@ -19,6 +19,11 @@ from enum import Enum
 from typing import Optional
 
 
+class SourceUnavailable(Exception):
+    """Terminal for the session (Step 6.4): data the source NEEDS is access-denied (e.g. the REST snapshot a diff-depth
+    book must start from answered HTTP 451). The runner stops the source cleanly: no reconnect loop, no retry storm."""
+
+
 class FeedState(str, Enum):
     DISCONNECTED = "DISCONNECTED"
     CONNECTED = "CONNECTED"

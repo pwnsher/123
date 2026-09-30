@@ -1,7 +1,7 @@
 {
  "app_version": "kalshi-local-step6",
  "config_note": "lenient complexity gates for the SYNTHETIC self-test only (real runs use the predeclared defaults)",
- "generated_at_ms": 1790708909223,
+ "generated_at_ms": 1790732754989,
  "kind": "synthetic_selftest",
  "never": "APPROVED_FOR_PRODUCTION",
  "note": "SYNTHETIC - code-correctness evidence only; never feature selection, tuning or a predictive claim",
@@ -13,7 +13,7 @@
     "allowed": false,
     "gated_out": 1
    },
-   "dataset_fingerprint": "9c7970390538805d8a1aa14d8de4bf0314ffae67fbed97b44596c72ec6d86c20",
+   "dataset_fingerprint": "7bd4187a12b193c590f5a15f17d9a0d464ca37e2303633d2e938e8489bcd3156",
    "economics_input_rule": "Platt-calibrated when its gate passed in every fold, else uncalibrated (predeclared)",
    "environment": {
     "hash_seed_independent": true,
@@ -21,7 +21,7 @@
     "machine": "x86_64",
     "note": "all randomness uses random.Random(seed) instances; dict / set iteration never decides a result",
     "packages": "standard library only (no numpy / scipy / sklearn / pandas)",
-    "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
     "python": "3.12.3",
     "seed": 20260928
    },
@@ -860,14 +860,14 @@
     "allowed": false,
     "gated_out": 1
    },
-   "dataset_fingerprint": "9c7970390538805d8a1aa14d8de4bf0314ffae67fbed97b44596c72ec6d86c20",
+   "dataset_fingerprint": "7bd4187a12b193c590f5a15f17d9a0d464ca37e2303633d2e938e8489bcd3156",
    "environment": {
     "hash_seed_independent": true,
     "implementation": "CPython",
     "machine": "x86_64",
     "note": "all randomness uses random.Random(seed) instances; dict / set iteration never decides a result",
     "packages": "standard library only (no numpy / scipy / sklearn / pandas)",
-    "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
     "python": "3.12.3",
     "seed": 20260928
    },
@@ -1142,14 +1142,14 @@
     "allowed": false,
     "gated_out": 1
    },
-   "dataset_fingerprint": "9c7970390538805d8a1aa14d8de4bf0314ffae67fbed97b44596c72ec6d86c20",
+   "dataset_fingerprint": "7bd4187a12b193c590f5a15f17d9a0d464ca37e2303633d2e938e8489bcd3156",
    "environment": {
     "hash_seed_independent": true,
     "implementation": "CPython",
     "machine": "x86_64",
     "note": "all randomness uses random.Random(seed) instances; dict / set iteration never decides a result",
     "packages": "standard library only (no numpy / scipy / sklearn / pandas)",
-    "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
     "python": "3.12.3",
     "seed": 20260928
    },
@@ -1447,14 +1447,14 @@
     "allowed": false,
     "gated_out": 1
    },
-   "dataset_fingerprint": "9c7970390538805d8a1aa14d8de4bf0314ffae67fbed97b44596c72ec6d86c20",
+   "dataset_fingerprint": "7bd4187a12b193c590f5a15f17d9a0d464ca37e2303633d2e938e8489bcd3156",
    "environment": {
     "hash_seed_independent": true,
     "implementation": "CPython",
     "machine": "x86_64",
     "note": "all randomness uses random.Random(seed) instances; dict / set iteration never decides a result",
     "packages": "standard library only (no numpy / scipy / sklearn / pandas)",
-    "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
     "python": "3.12.3",
     "seed": 20260928
    },
@@ -1844,7 +1844,7 @@
     }
    },
    "best_development_configuration": {
-    "experiment_fingerprint": "6f641dbfff11cf925af9458c1ede5a680a8c4b04ff78176cba6c4850353c1169",
+    "experiment_fingerprint": "010cbded5af9dfe257bc7858806fa595a3b1bdbcf1938a06d561570bff5d2579",
     "families": [
      "SETTLEMENT",
      "SPOT_PRICE_MOMENTUM",
@@ -3729,14 +3729,14 @@
     "seed": 20260928,
     "stable_share": 0.6666666666666666
    },
-   "dataset_fingerprint": "9c7970390538805d8a1aa14d8de4bf0314ffae67fbed97b44596c72ec6d86c20",
+   "dataset_fingerprint": "7bd4187a12b193c590f5a15f17d9a0d464ca37e2303633d2e938e8489bcd3156",
    "environment": {
     "hash_seed_independent": true,
     "implementation": "CPython",
     "machine": "x86_64",
     "note": "all randomness uses random.Random(seed) instances; dict / set iteration never decides a result",
     "packages": "standard library only (no numpy / scipy / sklearn / pandas)",
-    "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
     "python": "3.12.3",
     "seed": 20260928
    },
@@ -4426,7 +4426,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "700f018fc56262c802d026e027f1e0db53e8a89753075fe5ae427cff917f2ccc",
+     "experiment_fingerprint": "d9b2dd15c1153f7c69e2cd482570bc8aaacf8dab4a0196740f80c45f638bf673",
      "families": [
       "SETTLEMENT"
      ],
@@ -5019,7 +5019,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "8a196d934f89d5730060ed9905946ead13f3e427e70959ac076c5a8be814a315",
+     "experiment_fingerprint": "d85a78ea31ac6639318dc1b2917efc52eb8df215eb8c6798152bac6ab60cf49c",
      "families": [
       "SETTLEMENT"
      ],
@@ -5694,7 +5694,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "96c67b55771461edb575492fbc8380ceb5a09a9acc378756717d8d2961bdad99",
+     "experiment_fingerprint": "51e0e51ff3a230b2c5ab205364a8b4a91a88cd3d96a580f0cf4e601de9ad2cbf",
      "families": [
       "SETTLEMENT"
      ],
@@ -6281,7 +6281,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "d034c60076daadb560e4265fd446e2d451d33a6dff56cec1b1d3fde3bb175191",
+     "experiment_fingerprint": "299b0a3b5dcad1045f22ea6e3752542ae2301c46063fe1165f4df2008b66473f",
      "families": [
       "SPOT_PRICE_MOMENTUM",
       "SPOT_VOLATILITY"
@@ -6893,7 +6893,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "dcda6908a715055ff968fd65e6dbb381617bb4b7e7dbb94efc37b03308ba286d",
+     "experiment_fingerprint": "b706bd255629ab59316c76f591906a376b8ff7d8099eb96f58a1a56e82be61f3",
      "families": [
       "SPOT_PRICE_MOMENTUM",
       "SPOT_VOLATILITY"
@@ -7597,7 +7597,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "8acab306535d8582085f35976a7c29226da1fc0e0d6fd88c834df7019b3a4e2f",
+     "experiment_fingerprint": "31ce3597705e82472c9f16beb1a891baf7544f7175a795c909c0bea76698ca31",
      "families": [
       "SPOT_PRICE_MOMENTUM",
       "SPOT_VOLATILITY"
@@ -8220,7 +8220,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "d9183c339be0f69ab7087285ac2e7fdd21cec5248df8a86ca37cc45dc55e8f12",
+     "experiment_fingerprint": "30a5301ab9fc4d95925f1b6005c7f865e92ac6964a5ba2009a3d13f786543f15",
      "families": [
       "PERP_FLOW"
      ],
@@ -8821,7 +8821,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "6a43d63eaa01e1095cc72a1c428f4956fe1567f04679b35d7448596dc1ee246e",
+     "experiment_fingerprint": "592c60c923ad03dce412538b454143a9b5d1fba3fab6dabdaa77db41e717c186",
      "families": [
       "PERP_FLOW"
      ],
@@ -9509,7 +9509,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "c564c1bccfb670bd51bcc45ea4535c7b4536a5077ee54c7b4b848ea445e4ad41",
+     "experiment_fingerprint": "cff10f74424519165ced23491c03d51755cf2849c7eb7d55ce521cb58faf7294",
      "families": [
       "PERP_FLOW"
      ],
@@ -10112,7 +10112,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "a5c865f0c442d4e92af9de41dc90fc7deaae9f4adc6628572310bdc0a9cdee04",
+     "experiment_fingerprint": "6ad716cde1a982793dc6b0957ae60cd1216719ede3dbb999f7c571b0c0a38776",
      "families": [
       "ORDER_FLOW"
      ],
@@ -10709,7 +10709,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "72e4af2590151d1b0d5c5731f15d3ac1cb270af9addef0f45e2c6ce0215574bf",
+     "experiment_fingerprint": "89a667e72ad5810aa3171b1c4f4531e3a2242a742c54aaad7938a583b6e7e343",
      "families": [
       "ORDER_FLOW"
      ],
@@ -11404,7 +11404,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "10b355c26a722cbe0b57d397057b90960b12f92ee70b9f4a08747a5a3211c190",
+     "experiment_fingerprint": "d2c9dd94569b9f8a7c18a5ac0f9b70971f0786fa7908334c43ab61af299fe105",
      "families": [
       "ORDER_FLOW"
      ],
@@ -11997,7 +11997,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "b35462ebb1a7e8e04484a55c054d9fcdeadb69dfaef0c7f8cefabfb66af49da2",
+     "experiment_fingerprint": "4a025bb255660adb90c7d593b2ea3c85a39ca7dafd37dde3b96982768b05b557",
      "families": [
       "SETTLEMENT",
       "SPOT_PRICE_MOMENTUM",
@@ -12623,7 +12623,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "f71749c5c4315b8cbc39d1ef08cede28eec7272bf5c26bfc9fa4abda8e26c59e",
+     "experiment_fingerprint": "76d78f447de3d771e5e2f870879de1ab30e2ad77dd830ea41aa70b35099d8b7d",
      "families": [
       "SETTLEMENT",
       "SPOT_PRICE_MOMENTUM",
@@ -13341,7 +13341,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "6f641dbfff11cf925af9458c1ede5a680a8c4b04ff78176cba6c4850353c1169",
+     "experiment_fingerprint": "010cbded5af9dfe257bc7858806fa595a3b1bdbcf1938a06d561570bff5d2579",
      "families": [
       "SETTLEMENT",
       "SPOT_PRICE_MOMENTUM",
@@ -13971,7 +13971,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "a997b4d3ff6be3504c9180242ffc7ccb113dd0b95c35c66cdd96f539d1db6f56",
+     "experiment_fingerprint": "079709fba359d37fb0128fb397881a33415d22fe6de002100b4f9ba43859c1c8",
      "families": [
       "PERP_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -14605,7 +14605,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "89351af75fd250d30aec23a6eeeffd5b39bf887bb698efe77487a9a997cb2c2d",
+     "experiment_fingerprint": "d1bfa56cc6aee8bca12a47c49a2d997df87b4b4362d0a50ada7c72ab3d78707b",
      "families": [
       "PERP_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -15331,7 +15331,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "4878d7f5039fc84f866a8267cc6aac29ce166b933588263ce86c30eb493e7da0",
+     "experiment_fingerprint": "819fe736458b1c77d1d06453a77560b7a84e3771778b8fe211f3a4709e6ba0e0",
      "families": [
       "PERP_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -15969,7 +15969,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "343f668b12ec9532b21f6093f7c674c92cc255c95b8457dbf27260f41d351d6e",
+     "experiment_fingerprint": "95a68b0f4ea6ad5d2b31a442ff0a0a22a3d92e1d8f65e0d5ca9ee97a349db3c3",
      "families": [
       "ORDER_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -16603,7 +16603,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "bb3b0241c483b70f876adee12776d6e43bd59df9d7f739d5b61d288830a2bfd8",
+     "experiment_fingerprint": "836d9f4fcacccdd5d28662969254520fe37b36a010f1511b4380e6daa472e526",
      "families": [
       "ORDER_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -17329,7 +17329,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "6d41dabe1f5ade1dc866b85287673b3941b71075f1fda6f30bd65087056cef57",
+     "experiment_fingerprint": "18e41b8cab4fde16857adc662a63766d47f58463e84bd3cf1ca08d461ba670de",
      "families": [
       "ORDER_FLOW",
       "SPOT_PRICE_MOMENTUM",
@@ -17975,7 +17975,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "3c22ecd118dafa3db67b70a470f813cddfcc21b49ece4462da5a2d33998f5c8e",
+     "experiment_fingerprint": "cb947d27e5c23d678d9cd110dcf893e5347d510c582d7af632680a9aa8ffb00d",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW"
@@ -18594,7 +18594,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "1782640d6ed3ac96591ac6fa67b191a15b90067949b76ec407daae93e361a99f",
+     "experiment_fingerprint": "5a1c304edb31359a1837665e73ad72d9d6c67f35bce72f2b15d546567c30c121",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW"
@@ -19311,7 +19311,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "798d9c5179dc3e311d6f0d98985ea7020d136e3ddd867e4d563f4c1b5a901b7c",
+     "experiment_fingerprint": "2e16e117adb860e4b821f6a6bd26ec6f9d2680e7cd3f0f558cacaa374e05e627",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW"
@@ -19928,7 +19928,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "8883be4bd7e8d0606fea8cf4250272cb7c10fd28abe88ff037c9248ca077a2ae",
+     "experiment_fingerprint": "588318dc4ad1e26a323ffa9493e6670f7da19658d4535924237d1b0098cdd582",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW",
@@ -20598,7 +20598,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "b15061dc5d05e4a05640f7602c6f46c0803916586faa61ed6573dbc91d8742bb",
+     "experiment_fingerprint": "27d7a2f8d2345e96ebf28ce3c3f93144c659f00fda9283bdc195d67648aa99bb",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW",
@@ -21360,7 +21360,7 @@
       },
       "status": "OK"
      },
-     "experiment_fingerprint": "919d3ab36097ba37f90f5f680af27c818982fc674e85de1fbdb8d87752466a1c",
+     "experiment_fingerprint": "1a4aad415d0c9e7682153767364c8203e84c32c3fe9f93991ed979f3314425d6",
      "families": [
       "ORDER_FLOW",
       "PERP_FLOW",

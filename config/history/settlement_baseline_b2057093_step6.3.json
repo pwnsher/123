@@ -22,7 +22,7 @@
   "engine.py": "0e06cf7189bf6f32acbee4e96e9999be2997807abb24ff6cd5ac1335e737413c",
   "fingerprint.py": "a4c8ecf673940f348c8f17628e1f542df5f674fa4945a45d164cf6420a5266db",
   "kalshi_markets.py": "607dc4febf204d9764a8cb5d5ff7c820b83d4341cfbd90a246a1a992baf52cf6",
-  "market_rules.py": "f2f93848bd1ba3cf5726df25e6fed9efc26dd5a22f5639897bb95e2a9510949c",
+  "market_rules.py": "4ff4aaf59c95e4eb8f5e7d1223e637efe7e02a5534220c69780f24d3b022e789",
   "overlap.py": "6c1d628be4a33407f64e2961ff523a8e80ca0102ab294c405578c7137e9e215e",
   "policy.py": "66166570cbf45a6977a38f936b3884f7b953fa149fb06c4289d4227e1a6a69c5",
   "proxy.py": "369db361b2756bce341eeba74fa57d1f913e92c39367870fe141f4b9a585ce22",
@@ -77,5 +77,5 @@
    "version": 1
   }
  },
- "settlement_fingerprint": "6fed6efd324417353fa53a8a981cbdcbeb9d121103bbe7925c284874f737c1bf"
+ "settlement_fingerprint": "b205709349492b71c5d50a93232bdceeb0be514151b554132e46d466bff8ad5c"
 }
