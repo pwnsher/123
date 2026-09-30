@@ -46,6 +46,7 @@ analysis_output/*
 !analysis_output/step6_research_ledger.json
 !analysis_output/step6_research_ledger.jsonl
 !analysis_output/step6_research_status.json
+!analysis_output/step6_4_first_real_session_replay.json
 settlement_data/*
 !settlement_data/README.md
 market_data_sessions/

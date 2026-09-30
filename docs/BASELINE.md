@@ -169,6 +169,12 @@ every fingerprint, the 47 fixtures, LIVE refusal and S1–S20). After, 22/22 sui
 CPython 3.10.20, 3.11.15, 3.12.3 and 3.13.12 (the same 1 skip on 3.10/3.11). `scripts/mutation_test_step6.py`: 27/27
 mutations (S1–S27) caught; the unmutated control passes.
 
+Step 6.4 (first real-feed corrections): before, 22/22 suites and 434 checks (re-verified from the delivered Step-6.3
+ZIP, byte-identical to commit f21dc95, plus every fingerprint, the 47 fixtures and S1–S30). After, 22/22 suites, 443
+checks passed, 0 failed on CPython 3.10.20, 3.11.15, 3.12.3 and 3.13.12 (the same 1 skip on 3.10/3.11);
+`run_all_tests.py` ALL SUITES PASSED on each. `scripts/mutation_test_step6.py`: 39/39 mutations (S1–S39) caught; the
+unmutated control passes. The Step 3 / 4 / 5 mutation harnesses still catch 7/7, 9/9 and 13/13.
+
 Step 6.3 (final pre-collection hardening): before, 22/22 suites and 431 checks (re-verified from the delivered Step-6.2
 ZIP, byte-identical to commit f61415b, plus every fingerprint and S1–S27). After, 22/22 suites, 434 checks passed,
 0 failed on CPython 3.10.20, 3.11.15, 3.12.3 and 3.13.12 (the same 1 skip on 3.10/3.11); `run_all_tests.py` ALL SUITES
@@ -228,6 +234,7 @@ no issues. `compileall`: clean on 3.10–3.13.
 | 2026-09-29 | Step 6.1 | **Deliberate, versioned research-settlement correction.** The settlement fingerprint `3eba791c…` → `ba4e50c3…` (versioned contract rules: AT_LEAST equality → YES, official precision, precision-aware verification, engine v2). Step-6 universe v1 `e4c856ba…` → v2 `920c0a8a…`; Step-6 baseline `7469fc0f…` → `bc7f1b47…` (OLD / NEW / WHY in STEP6_FEATURE_EVALUATION.md §18 and SETTLEMENT_ENGINE.md; old files archived in `config/history/`) | Step-1 artifacts identical; 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…`, market-data `969cec83…`, perp-data `90543ddf…`, microstructure `695d8e77…`, perp veto `499c1e16…` unchanged; production P(UP), calls, thresholds, windows, stops, sizing, execution and LIVE refusal unchanged; mutations S1–S20 caught; real-data result INSUFFICIENT_DATA |
 | 2026-09-29 | Step 6.2 | **Deliberate, versioned provenance pass.** Settlement `ba4e50c3…` → `4884524a…` (per-market rule provenance, exact CF text); market-data `969cec83…` → `60990595…` (versioned Kalshi rule / fee metadata capture; no feature changed); universe v2 → v3 `edef198f…`; Step-6 baseline `bc7f1b47…` → `2344b12c…`; fee model v3 (OLD / NEW / WHY in STEP6_FEATURE_EVALUATION.md §19; old files archived in `config/history/`) | Step-1 artifacts identical; 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…`, perp-data `90543ddf…`, microstructure `695d8e77…`, perp veto `499c1e16…` unchanged; production P(UP), calls, thresholds, windows, stops, sizing, execution and LIVE refusal unchanged; mutations S1–S27 caught; real-data result INSUFFICIENT_DATA |
 | 2026-09-29 | Step 6.3 | **Final pre-collection hardening (small, versioned).** Settlement `4884524a…` → `b2057093…` (exact CF decimals on every ingestion path; CF value schemas v2, documented value = string, JSON numbers legacy / exact-token only, lossy floats fail closed); market-data `60990595…` → `ca98d418…` (exact CF decoding in both CF adapters; Kalshi event-metadata retry with backoff; no feature changed); universe v3 → v4 `cc25a506…` (embedded source fingerprints only); Step-6 baseline `2344b12c…` → `7fa394cf…`; fee model v4 (separate maker / taker default multipliers; `schedule_definition_sha256` / `source_document_sha256`) (OLD / NEW / WHY in STEP6_FEATURE_EVALUATION.md §20; old files archived in `config/history/`) | Step-1 artifacts identical; 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…`, perp-data `90543ddf…`, microstructure `695d8e77…`, perp veto `499c1e16…` unchanged; production P(UP), confidence, calls, NO_CALL, thresholds, entry window, stops, sizing, execution and LIVE refusal unchanged; mutations S1–S30 caught; real-data result INSUFFICIENT_DATA |
+| 2026-09-30 | Step 6.4 | **First real-feed corrections (versioned, from session `20260930T004307Z-51664fe9`).** Settlement `b2057093…` → `6fed6efd…` (rule parser v2: exact live index ids); market-data `ca98d418…` → `faf21c0a…` (clock reordering, typed HTTP errors, Kalshi `orderbook_fp` / zero quotes / incremental trade dedup); perp-data `90543ddf…` → `8a4743ef…` (terminal REST streams); microstructure `695d8e77…` → `69719619…` (per-book / per-chain ordering, UNAVAILABLE books); universe v4 → v5 `c9ea4d09…`; Step-6 baseline `7fa394cf…` → `8260096c…` (OLD / NEW / WHY in STEP6_FEATURE_EVALUATION.md §21; old files archived in `config/history/`) | Step-1 artifacts identical; 47 fixtures MATCH; legacy `8d94f241…` / extended `784141876…`, perp veto `499c1e16…` unchanged; production P(UP), confidence, calls, NO_CALL, thresholds, entry window, stops, sizing, execution and LIVE refusal unchanged; no feature added, no gate loosened; mutations S1–S39 caught; real-data result INSUFFICIENT_DATA |
 
 ### Step 2 notes
 
@@ -278,6 +285,18 @@ no issues. `compileall`: clean on 3.10–3.13.
   * docs.
 * No existing module changed: `market_data/` and `settlement/` are untouched (their fingerprints verify), and
   so are all perp-veto chain files and `kalshi_dashboard.py`. No OLD/NEW/WHY re-baseline was needed.
+
+### Step 6.4 notes (first real-feed corrections)
+
+* The first REAL session (`20260930T004307Z-51664fe9`, 1.15 min, DEGRADED) is debugging evidence only. It is not in
+  the repository; a 97 KB sanitized excerpt is (`real_capture_fixtures/`). `scripts/replay_real_feed_analysis.py`
+  re-runs the current code over a stored session read-only.
+* Book ordering is per book / per chain, the clock monitor ignores out-of-processing-order samples, Kalshi REST
+  parses `orderbook_fp` and zero quotes, the rule parser knows the live ETH / SOL / XRP index ids, 403 / 451 REST
+  endpoints are terminal per stream or book (never bypassed), and Kalshi trade polling is incremental with trade_id
+  dedup.
+* Earlier-stage test edits: `test_stage21.py` (new settlement, market-data and perp-data pins, OLD values in
+  comments).
 
 ### Step 6.3 notes (final pre-collection hardening)
 
