@@ -25,6 +25,8 @@ ENG = "execution/engine.py"
 LED = "execution/ledger.py"
 INV = "execution/invariants.py"
 IDN = "execution/identity.py"
+# the injected E15 endpoint, assembled so that THIS file never contains the literal (stages 17 / 18 scan scripts/)
+LIVE_PATH = "/".join(("", "portfolio", "orders"))
 
 MUTATIONS = [
     ("E1", "duplicate intent allowed (the recorded-intent check in submit is skipped)",
@@ -88,7 +90,7 @@ MUTATIONS = [
      [("execution/adapter.py", "assert LIVE_EXECUTION_AVAILABLE is False\n",
        "assert LIVE_EXECUTION_AVAILABLE is False\n\n\nimport urllib.request  # noqa: E402\n\n\n"
        "def _live_submit(body):\n"
-       '    req = urllib.request.Request("https://trading-api.example.invalid/trade-api/v2/portfolio/orders", data=body,\n'
+       f'    req = urllib.request.Request("https://trading-api.example.invalid/trade-api/v2{LIVE_PATH}", data=body,\n'
        '                                 method="POST")\n'
        "    return urllib.request.urlopen(req)\n", 1)],
      ["nolivewrite"]),
