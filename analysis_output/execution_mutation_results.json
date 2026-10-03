@@ -1,0 +1,332 @@
+{
+ "note": "Each mutation breaks one Step-6.5 execution-safety rule in a temporary copy; CAUGHT = the behavioural Stage-23 tests fail (never the fingerprint test).",
+ "controls": {
+  "unmutated": {
+   "caught": false,
+   "returncode": 0,
+   "seconds": 2.8,
+   "failed_test": null,
+   "passed_tests": [
+    "1 duplicate intent: idempotent replay, one order; reused intent_",
+    "2 deterministic execution key / client_order_id (order, decimal ",
+    "3 duplicate fill notifications never double-count; conflicting d",
+    "4-5 partial / multiple / delayed / no fills; weighted average 2@",
+    "6 missing fee = UNKNOWN (never 0); duplicate fee never double-co",
+    "8 invalid transitions fail closed; forged history refused",
+    "9 lost acknowledgement -> UNKNOWN -> HALTED; proven by lookup; n",
+    "10 ambiguous submit: halted, never retried; only proof releases ",
+    "12 crash before submit (before / after SUBMITTING is persisted)",
+    "13 crash after submit / before the ACK is persisted",
+    "14 crash after ACK; filled while down -> FILLED restored",
+    "15 crash after a partial fill / before fill persistence",
+    "17 duplicate order prevented after restarts",
+    "18 conflicting observed position -> POSITION_MISMATCH, halted, l",
+    "19 conflicting fills (price cap, rewritten fill) -> FILL_MISMATC",
+    "20 market lock while execution unknown; survives restart",
+    "21 an expired intent cannot submit (also after a restart)",
+    "22-24 execution never increases size, widens price or flips side",
+    "25 journal transaction rollback (atomic multi-event writes)",
+    "27 cancelled partial fill retains (and settles) the filled expos",
+    "33 UNKNOWN / HALTED survives restart",
+    "34 reconciliation mismatch survives restart; stale evidence neve",
+    "35 no live-write network path: structural scan, stub refuses, pr",
+    "39 clean-restart demonstration (separate processes)"
+   ]
+  }
+ },
+ "mutations": [
+  {
+   "id": "E1",
+   "mutation": "duplicate intent allowed (the recorded-intent check in submit is skipped)",
+   "tests": [
+    "dupintent",
+    "noduprestart"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  1 duplicate intent: idempotent replay, one order; reused intent_id with other content refused: JournalConflict: intent i1 already recorded with different content",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E2",
+   "mutation": "idempotency key becomes random / non-deterministic",
+   "tests": [
+    "dupintent",
+    "identity"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  1 duplicate intent: idempotent replay, one order; reused intent_id with other content refused: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E3",
+   "mutation": "execution can flip side (the side invariant is removed)",
+   "tests": [
+    "reducerisk"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.1,
+    "failed_test": "FAIL  22-24 execution never increases size, widens price or flips side; intent validation: AssertionError: side increase accepted",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E4",
+   "mutation": "execution can increase requested size (the count cap is removed)",
+   "tests": [
+    "reducerisk"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.1,
+    "failed_test": "FAIL  22-24 execution never increases size, widens price or flips side; intent validation: AssertionError: size increase accepted",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E5",
+   "mutation": "execution can worsen max price (the limit-price cap is removed)",
+   "tests": [
+    "reducerisk"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  22-24 execution never increases size, widens price or flips side; intent validation: AssertionError: price increase accepted",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E6",
+   "mutation": "ambiguous submit automatically retries",
+   "tests": [
+    "ambsubmit",
+    "lostack"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  9 lost acknowledgement -> UNKNOWN -> HALTED; proven by lookup; never resubmitted: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E7",
+   "mutation": "duplicate fill double counted",
+   "tests": [
+    "dupfill"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.1,
+    "failed_test": "FAIL  3 duplicate fill notifications never double-count; conflicting duplicate refused: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E8",
+   "mutation": "duplicate fee double counted",
+   "tests": [
+    "fees"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.1,
+    "failed_test": "FAIL  6 missing fee = UNKNOWN (never 0); duplicate fee never double-counted: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E9",
+   "mutation": "unknown fee converted to zero",
+   "tests": [
+    "fees"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  6 missing fee = UNKNOWN (never 0); duplicate fee never double-counted: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E10",
+   "mutation": "invalid state transition accepted (an undefined pair falls back to 'allowed for everyone')",
+   "tests": [
+    "transition"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.1,
+    "failed_test": "FAIL  8 invalid transitions fail closed; forged history refused: AssertionError: ExecState.CREATED -> ExecState.FILLED accepted",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E11",
+   "mutation": "crash recovery loses the active order (in-flight / outstanding executions are not recovered)",
+   "tests": [
+    "crashbefore",
+    "crashafter",
+    "crashack",
+    "crashpartial"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  12 crash before submit (before / after SUBMITTING is persisted): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E12",
+   "mutation": "reconciliation mismatch ignored (no halt on POSITION_MISMATCH / FILL_MISMATCH)",
+   "tests": [
+    "conflictpos",
+    "conflictfill",
+    "mismatchrestart"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  18 conflicting observed position -> POSITION_MISMATCH, halted, locked: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E13",
+   "mutation": "execution-unknown market accepts a new intent (UNKNOWN / HALTED no longer lock the market)",
+   "tests": [
+    "lockunknown",
+    "unknownrestart"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  20 market lock while execution unknown; survives restart: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E14",
+   "mutation": "journal transition is not atomic (no BEGIN / COMMIT / ROLLBACK: every statement autocommits)",
+   "tests": [
+    "rollback"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  25 journal transaction rollback (atomic multi-event writes): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E15",
+   "mutation": "writable live endpoint introduced (a network POST path inside the execution package)",
+   "tests": [
+    "nolivewrite"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  35 no live-write network path: structural scan, stub refuses, production never imports execution: AssertionError: ('/tmp/mut-exec-n7fadhal/repo/execution/adapter.py', {'urllib.request'})",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E16",
+   "mutation": "expired intent still submits",
+   "tests": [
+    "expired"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  21 an expired intent cannot submit (also after a restart): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E17",
+   "mutation": "market lock is memory-only and lost on restart (only executions seen by THIS process can lock)",
+   "tests": [
+    "lockunknown",
+    "mismatchrestart",
+    "unknownrestart"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  20 market lock while execution unknown; survives restart: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E18",
+   "mutation": "partial fill incorrectly treated as full fill",
+   "tests": [
+    "partialfill"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  4-5 partial / multiple / delayed / no fills; weighted average 2@0.40 + 3@0.50 = 0.46: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E19",
+   "mutation": "cancelled partial order discards the existing filled position",
+   "tests": [
+    "cancelpartial"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  27 cancelled partial fill retains (and settles) the filled exposure: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E20",
+   "mutation": "same intent after restart creates a second client_order_id (a per-process salt)",
+   "tests": [
+    "identity",
+    "demo"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.4,
+    "failed_test": "FAIL  2 deterministic execution key / client_order_id (order, decimal text, processes, persisted): AssertionError: {'8c0dbac86c359985e44a0ce18ae7c07ef46054221dc7c6a09bbbde0dafa8d7de x150cba585b0058ec4b45b2907ddba76', '8c0dbac86c359985e44a0ce18ae7c07ef46054221dc7c6a09bbbde0dafa8d7de x13f7f563beedc9fd",
+    "passed_tests": []
+   }
+  }
+ ],
+ "all_caught_and_controls_pass": true
+}

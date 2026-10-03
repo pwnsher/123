@@ -46,7 +46,8 @@ manually promoted, inactive-by-default live veto.
 | Perp research data (Step 4) | `py collect_research_data.py [--dry-run]` (Step 3 + Step 4 read-only, one session), `scripts/replay_perp_data.py`, `scripts/build_research_dataset.py`, `scripts/bench_perp_data.py`, `scripts/mutation_test_perp_data.py`, `py -m perp_data.fingerprint --verify` |
 | Microstructure research (Step 5) | `py collect_research_data.py --all-research [--dry-run]` (Steps 3 + 4 + 5, one session), `scripts/replay_microstructure.py`, `scripts/build_micro_dataset.py`, `scripts/lead_lag_analysis.py`, `scripts/prune_sessions.py`, `scripts/bench_microstructure.py`, `scripts/mutation_test_microstructure.py`, `py -m microstructure.fingerprint --verify` |
 | Feature evaluation (Step 6, research only) | `py run_step6_research.py [--dry-run / --validate-only / --dataset-only / --family-ablation / --calibration / --report / --synthetic-selftest]`, `py validate_research_session.py <session>`, `py research_status.py`, `scripts/bench_step6.py`, `scripts/mutation_test_step6.py`, `py -m feature_eval.fingerprint --verify` (docs/STEP6_FEATURE_EVALUATION.md) |
-| Tests | `py run_all_tests.py` (stages 1–22, each in its own process) |
+| Execution foundation (Step 6.5, PAPER ONLY) | `scripts/execution_restart_demo.py`, `scripts/mutation_test_execution.py` (E1–E20), `py -m execution.fingerprint --verify` (docs/EXECUTION_ARCHITECTURE.md) |
+| Tests | `py run_all_tests.py` (stages 1–23, each in its own process) |
 
 ## 4. Prediction and signal path (per coin, every `POLL_SECONDS` = 4 s)
 
@@ -289,6 +290,12 @@ Market Data → Feature Engine → Prediction Model → Calibration → Signal E
 * Only an execution engine may call an order endpoint, and it accepts only an `OrderIntent`: a CALL
   plus an approving `RiskDecision` within its contract limit. In this build every engine refuses,
   and LIVE cannot be constructed.
+
+Step 6.5 built the execution FOUNDATION beside this boundary, in `execution/` (paper / shadow only, see
+`docs/EXECUTION_ARCHITECTURE.md`): an immutable `OrderIntent`, deterministic execution keys and client order ids, an
+explicit state machine, an append-only SQLite journal, a Decimal ledger, a deterministic paper adapter, reconciliation,
+journal-derived market locks, restart recovery and fault injection. Nothing in production imports it,
+`FutureKalshiExecutionAdapter` is a stub that refuses every call, and `kalshi_core.execution` still refuses LIVE.
 
 ## 14. Failure handling (existing behaviour, unchanged)
 

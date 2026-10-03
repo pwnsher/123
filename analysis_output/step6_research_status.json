@@ -115,7 +115,7 @@
   ],
   "status": "INSUFFICIENT_DATA"
  },
- "sessions_root": "/home/user/123/market_data_sessions",
+ "sessions_root": "market_data_sessions",
  "settled_markets_per_asset": {},
  "settlement_convention": {
   "reason": "no research matrix built yet",

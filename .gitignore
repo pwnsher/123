@@ -11,6 +11,11 @@ __pycache__/
 venv/
 env/
 
+# execution journals / any local database (never shipped)
+*.sqlite
+*.sqlite3
+*.db
+
 # runtime data written by the watcher / research tools (local only)
 kalshi_results.json
 kalshi_calls.json
@@ -47,6 +52,7 @@ analysis_output/*
 !analysis_output/step6_research_ledger.jsonl
 !analysis_output/step6_research_status.json
 !analysis_output/step6_4_first_real_session_replay.json
+!analysis_output/execution_mutation_results.json
 settlement_data/*
 !settlement_data/README.md
 market_data_sessions/

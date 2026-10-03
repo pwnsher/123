@@ -1,0 +1,586 @@
+{
+ "execution_fingerprint": "d67c7c7ff001befbe86f96006fd8d996177bb0b813b648e38cc5ebdcb8e1a650",
+ "format": "execution_fingerprint_v1/canonical_ast_v2_sha256",
+ "modules": {
+  "execution/__init__.py": "d7f85979ed3982a85f8427f17ce61e116f622667d59b110d047700ddafed5bbb",
+  "execution/adapter.py": "5c60b3509e031fdb9a12e7008109bcdd21cf4139a41787822d1eded511748b27",
+  "execution/audit.py": "da6de0ae8ec27f7d618fddd1a6841229843137e8288bbde34022fa33fb056f94",
+  "execution/engine.py": "f88aae3150771fc5f83567d935111bbfffef937e38cfdcae6a8530e73506b7be",
+  "execution/faults.py": "cb906d495f5afbd28f243f89f1e494ce586dae20108b167a7f1e3bb549cfafb1",
+  "execution/fingerprint.py": "d5f7a21f7241ce82d2f71fd5ed7cddf12ecd2850c96196100c5bbfaa5b014ff2",
+  "execution/identity.py": "c5959fff17283385e7d2d2c4da3b7278607ab79606dfe31e752deacce75eca83",
+  "execution/intent.py": "f561829f6ac3d242dd2c4efa1674b95485f694bac38aab5cc17392586f93bfce",
+  "execution/invariants.py": "90bf2dfef7d0f9bc141155ea655aee4300fc3882546ee460cbb89971432cf8e4",
+  "execution/journal.py": "ab71285cf978dc872661d3261b95a5085e0bd58a8397485de917cff60ae80927",
+  "execution/ledger.py": "cd23fb6d09b00fb98127f132349427c02e1a5862c9766e61ad7ecef2c63bf19e",
+  "execution/money.py": "56e3542dd72f0f94027511cf51e4585df50cd2b5f4df7959064128f91acc4736",
+  "execution/paper.py": "d5ca8652ccf65ed9384a9bdf5cbaccb87a1dc7c54f0260b71d4ee36a01915a38",
+  "execution/reconcile.py": "3a4f6fb7e1bbdb7ff419d313f3d14a17a7ca06262a3f55ac1acf2609cb704b5a",
+  "execution/risk.py": "c196f78ee7e6936315ab5371bb5d5f0bae99b1647d8f87d2239edcc2d44e73fd",
+  "execution/states.py": "73f0fc06ae3938a3e139c05b5d261e8bb9b3c4b1d3c573b10fe3fa20601378ee"
+ },
+ "semantics": {
+  "adapter_protocol": {
+   "methods": [
+    "submit_order",
+    "cancel_order",
+    "get_order",
+    "get_fills",
+    "get_positions",
+    "get_balance",
+    "reconcile"
+   ],
+   "order_statuses": [
+    "RESTING",
+    "FILLED",
+    "CANCELLED",
+    "EXPIRED",
+    "REJECTED"
+   ],
+   "version": "adapter_protocol_v1"
+  },
+  "architecture": "execution_foundation_v1",
+  "audit_schema_version": 1,
+  "client_order_id": {
+   "hex_chars": 30,
+   "prefix": "x1",
+   "version": "coid_v1"
+  },
+  "execution_key": {
+   "fields": [
+    "intent_id",
+    "market_ticker",
+    "asset",
+    "side",
+    "requested_contracts",
+    "max_limit_price",
+    "time_in_force",
+    "expires_at",
+    "risk_decision_id"
+   ],
+   "serialization": "json sort_keys separators(',',':') ascii; Decimal canonical text",
+   "version": "exec_key_v1"
+  },
+  "fault_points": [
+   "before_journal_write",
+   "journal_mid_transaction",
+   "after_journal_write",
+   "before_submit",
+   "during_submit",
+   "after_submit_before_ack",
+   "after_ack",
+   "before_fill_persist",
+   "after_partial_fill",
+   "during_cancel",
+   "after_cancel",
+   "before_settlement_update",
+   "during_recovery"
+  ],
+  "invariants": [
+   "order side == intent side (never flipped: UP stays UP, DOWN stays DOWN)",
+   "order market_ticker == intent market_ticker",
+   "0 < order count <= intent requested_contracts (never increased)",
+   "0 < order limit_price <= intent max_limit_price (never widened)",
+   "order time_in_force == intent time_in_force; order expiry <= intent expires_at",
+   "order client_order_id == the deterministic id of the intent's execution key",
+   "filled quantity <= requested_contracts; every fill price <= max_limit_price",
+   "an intent is never submitted at or after its expires_at",
+   "provenance (model / calibration / signal fingerprints, risk decision id / snapshot) is never rewritten"
+  ],
+  "journal": {
+   "ddl_sha256": "a07e41b20b87a747785d2a2f8f8971cd991b9466d3ad20df2a5bb7d1ef06f481",
+   "event_columns": [
+    "event_id",
+    "schema_version",
+    "kind",
+    "intent_id",
+    "execution_key",
+    "previous_state",
+    "new_state",
+    "ts_ms",
+    "reason",
+    "actor",
+    "market_ticker",
+    "asset",
+    "side",
+    "order_id",
+    "client_order_id",
+    "requested_size",
+    "filled_size",
+    "remaining_size",
+    "limit_price",
+    "average_fill_price",
+    "fees",
+    "adapter_name",
+    "adapter_event_id",
+    "reconciliation_status",
+    "reconciliation_reason",
+    "payload_json"
+   ],
+   "event_kinds": [
+    "TRANSITION",
+    "ORDER_REF",
+    "FILL",
+    "FEE",
+    "MARK",
+    "RECONCILIATION",
+    "SETTLEMENT",
+    "AUDIT"
+   ],
+   "schema_version": 1
+  },
+  "ledger": "ledger_v1",
+  "live_execution_available": false,
+  "order_intent": {
+   "fields": [
+    "intent_id",
+    "candidate_id",
+    "created_at",
+    "market_ticker",
+    "asset",
+    "side",
+    "requested_contracts",
+    "max_limit_price",
+    "time_in_force",
+    "decision_ts",
+    "expires_at",
+    "raw_probability",
+    "calibrated_probability",
+    "market_price",
+    "estimated_fee",
+    "estimated_slippage",
+    "estimated_net_ev",
+    "model_id",
+    "model_fingerprint",
+    "calibration_fingerprint",
+    "signal_fingerprint",
+    "risk_decision_id",
+    "risk_snapshot_hash",
+    "schema_version"
+   ],
+   "schema_version": 1,
+   "sides": [
+    "YES",
+    "NO"
+   ],
+   "time_in_force": [
+    "IMMEDIATE_OR_CANCEL",
+    "FILL_OR_KILL",
+    "GOOD_TIL_EXPIRY"
+   ]
+  },
+  "paper_venue": {
+   "cancel_modes": [
+    "OK",
+    "LOST_ACK",
+    "AMBIGUOUS_NOT_DONE",
+    "FILL_THEN_CANCEL"
+   ],
+   "submit_modes": [
+    "ACCEPT",
+    "REJECT",
+    "LOST_ACK",
+    "TIMEOUT_NOT_RECEIVED",
+    "CRASH_AFTER_ACCEPT"
+   ],
+   "version": "paper_venue_v1"
+  },
+  "reconciliation": {
+   "rules": [
+    "pre-submit executions are never queried and are CONSISTENT (nothing was sent)",
+    "order lookup failed while a request was in flight (SUBMITTING / CANCEL_PENDING / UNKNOWN / HALTED) -> EXECUTION_UNKNOWN; otherwise -> ACCOUNTING_INCOMPLETE (unsafe)",
+    "order not found: authoritative absence + no fills + flat position -> RECOVERABLE_DIFFERENCE to REJECTED; otherwise EXECUTION_UNKNOWN (never assume the submit failed)",
+    "order parameters differing from the recorded intent -> FILL_MISMATCH",
+    "fills query failed -> ACCOUNTING_INCOMPLETE (unsafe)",
+    "fills deduplicated by fill_id; the same id with different content -> FILL_MISMATCH",
+    "a journaled fill the venue no longer reports -> FILL_MISMATCH",
+    "fill total > requested, a fill price > max_limit_price, or fill total != the order's filled size -> FILL_MISMATCH",
+    "position query failed or stale -> ACCOUNTING_INCOMPLETE (unsafe)",
+    "reported position != ledger exposure of the market (both sides) -> POSITION_MISMATCH",
+    "venue-implied state unreachable from the journal state by a reconciliation transition -> FILL_MISMATCH",
+    "venue-implied state != journal state and reachable -> RECOVERABLE_DIFFERENCE; equal -> CONSISTENT (or ACCOUNTING_INCOMPLETE, safe, when a fee is UNKNOWN)"
+   ],
+   "verdicts": [
+    "CONSISTENT",
+    "RECOVERABLE_DIFFERENCE",
+    "EXECUTION_UNKNOWN",
+    "POSITION_MISMATCH",
+    "FILL_MISMATCH",
+    "ACCOUNTING_INCOMPLETE"
+   ],
+   "version": "reconciliation_v1"
+  },
+  "transition_graph": [
+   [
+    null,
+    "CREATED",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "ACKNOWLEDGED",
+    "CANCELLED",
+    [
+     "ENGINE",
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "ACKNOWLEDGED",
+    "CANCEL_PENDING",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "ACKNOWLEDGED",
+    "EXECUTION_UNKNOWN",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "ACKNOWLEDGED",
+    "EXPIRED",
+    [
+     "ENGINE",
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "ACKNOWLEDGED",
+    "FILLED",
+    [
+     "ENGINE",
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "ACKNOWLEDGED",
+    "HALTED_FOR_RECONCILIATION",
+    [
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "ACKNOWLEDGED",
+    "PARTIALLY_FILLED",
+    [
+     "ENGINE",
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "CANCELLED",
+    "HALTED_FOR_RECONCILIATION",
+    [
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "CANCELLED",
+    "SETTLEMENT_PENDING",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "CANCEL_PENDING",
+    "CANCELLED",
+    [
+     "ENGINE",
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "CANCEL_PENDING",
+    "EXECUTION_UNKNOWN",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "CANCEL_PENDING",
+    "FILLED",
+    [
+     "ENGINE",
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "CANCEL_PENDING",
+    "HALTED_FOR_RECONCILIATION",
+    [
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "CANCEL_PENDING",
+    "PARTIALLY_FILLED",
+    [
+     "ENGINE",
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "CREATED",
+    "REJECTED",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "CREATED",
+    "VALIDATED",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "EXECUTION_UNKNOWN",
+    "HALTED_FOR_RECONCILIATION",
+    [
+     "ENGINE",
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "EXPIRED",
+    "HALTED_FOR_RECONCILIATION",
+    [
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "EXPIRED",
+    "SETTLEMENT_PENDING",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "FILLED",
+    "HALTED_FOR_RECONCILIATION",
+    [
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "FILLED",
+    "SETTLEMENT_PENDING",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "HALTED_FOR_RECONCILIATION",
+    "ACKNOWLEDGED",
+    [
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "HALTED_FOR_RECONCILIATION",
+    "CANCELLED",
+    [
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "HALTED_FOR_RECONCILIATION",
+    "EXPIRED",
+    [
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "HALTED_FOR_RECONCILIATION",
+    "FILLED",
+    [
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "HALTED_FOR_RECONCILIATION",
+    "PARTIALLY_FILLED",
+    [
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "HALTED_FOR_RECONCILIATION",
+    "REJECTED",
+    [
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "HALTED_FOR_RECONCILIATION",
+    "SETTLEMENT_PENDING",
+    [
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "PARTIALLY_FILLED",
+    "CANCELLED",
+    [
+     "ENGINE",
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "PARTIALLY_FILLED",
+    "CANCEL_PENDING",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "PARTIALLY_FILLED",
+    "EXECUTION_UNKNOWN",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "PARTIALLY_FILLED",
+    "EXPIRED",
+    [
+     "ENGINE",
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "PARTIALLY_FILLED",
+    "FILLED",
+    [
+     "ENGINE",
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "PARTIALLY_FILLED",
+    "HALTED_FOR_RECONCILIATION",
+    [
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "PARTIALLY_FILLED",
+    "PARTIALLY_FILLED",
+    [
+     "ENGINE",
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "PARTIALLY_FILLED",
+    "SETTLEMENT_PENDING",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "PRECHECK",
+    "EXPIRED",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "PRECHECK",
+    "READY",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "PRECHECK",
+    "REJECTED",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "READY",
+    "EXPIRED",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "READY",
+    "REJECTED",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "READY",
+    "SUBMITTING",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "SETTLEMENT_PENDING",
+    "CLOSED",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "SETTLEMENT_PENDING",
+    "HALTED_FOR_RECONCILIATION",
+    [
+     "RECONCILIATION"
+    ]
+   ],
+   [
+    "SUBMITTING",
+    "ACKNOWLEDGED",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "SUBMITTING",
+    "EXECUTION_UNKNOWN",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "SUBMITTING",
+    "REJECTED",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "VALIDATED",
+    "EXPIRED",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "VALIDATED",
+    "PRECHECK",
+    [
+     "ENGINE"
+    ]
+   ],
+   [
+    "VALIDATED",
+    "REJECTED",
+    [
+     "ENGINE"
+    ]
+   ]
+  ]
+ },
+ "semantics_sha256": "8c24f4b15bfe2e86c27eef46c7a7ca53c3cf890276c681368b24f8711aad067b"
+}

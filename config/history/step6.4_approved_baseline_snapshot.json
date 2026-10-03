@@ -1,0 +1,33 @@
+{
+ "files_sha256": {
+  "config/market_data_baseline.json": "2c432847b41c39333093e7ed721e9ccf63c994b2a9481f021d51caa15fa4b8e4",
+  "config/microstructure_baseline.json": "f560e6340f99873abf644c86a6963c9bb7ad22d252cdecdeda2cb4d9116109fd",
+  "config/perp_data_baseline.json": "cedfebe95ff1e2a76ef311d1b2728a7ce0a4a942fd7deb419d9ac1cb1c0dfcc4",
+  "config/settlement_baseline.json": "05f62645cc5f132b9129ad50d232a3774fd3673afcf9e971abf7892d4fcaf222",
+  "config/step6_baseline.json": "67b110af5697a75c50f6e27e50137652875754e9d99e14676ff28a6f8e5f6ecb",
+  "config/step6_feature_universe.json": "ffdb525c46ae1cb1f501e2cd510fc1d2ea28e11ba48200ce8d62fc32ed3043f6",
+  "config/strategy_baseline.json": "8f052394a830be88f4bd4c506b5d8069222e3c9b1c06c0bc63e3817463185d04",
+  "regression/strategy_cases.json": "e942ba3716e42a55fbf8e6086283eb0c8f124564b1cb44a3301b6c12c47abf9c",
+  "step5_baseline_manifest.json": "6a2994ff8bdc2d36b41608515c77a13d71fd371030487b5e62b2b064cd096db8"
+ },
+ "fingerprints": {
+  "existing_perp_veto": "499c1e16da5d9cc763babe7dea31db7104ebc3f1460a17241af83240c8de523b",
+  "extended_strategy": "784141876a1b7f4c9f605036ef1358a6a3ea51ef32fced1f80f74045a6adef8c",
+  "feature_universe": "c9ea4d09ca02d3cec1e0e4dad3116215e822d95f75fe3517cfe1daf974020564",
+  "legacy_strategy": "8d94f241e8fc8edadc76058e1f12f430b6e4f499f4c0a30fba1cb5cf07dad82a",
+  "market_data": "faf21c0af4bd3a9e828197081134faec3b7300bc870a982a143f2b2ce587911f",
+  "microstructure": "6971961992c95099c180c59af4b4840b6b8cd1d61842ef30d60417024d51dd32",
+  "perp_data": "8a4743efcc1dddfb797aed9b3db3ec13819e8cef58ad352c7990325e50cad8f3",
+  "settlement": "6fed6efd324417353fa53a8a981cbdcbeb9d121103bbe7925c284874f737c1bf",
+  "step6": "8260096c58b4ac5fb3234bcad443317fec0294df80eb3b26be4129a2329cac03"
+ },
+ "verification": {
+  "checks": 443,
+  "failures": 0,
+  "live": "refused",
+  "mutations_S1_S39": "all caught, control passes",
+  "production_fixtures": "47 MATCH",
+  "suites": 22
+ },
+ "what": "Step 6.4 approved baseline, archived before Step 6.5 edits (commit ef4ab9e; ZIP sha256 91c289119a36a5c069685dd45e1f463dd0a9ea71d39ba98260177d7068740b43)"
+}

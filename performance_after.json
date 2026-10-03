@@ -16,5 +16,5 @@
  "I_step5_analysis_2000reps_s": 0.6491180670000176,
  "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39",
  "python": "3.12.3",
- "repo": "/home/claude/opt"
+ "repo": "."
 }

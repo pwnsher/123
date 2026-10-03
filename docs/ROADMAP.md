@@ -25,7 +25,7 @@ Step 1 (this baseline) froze the legacy strategy. Every later phase must:
 | 11 | Walk-forward evaluation | shared framework for all phases | **started (Step 6)**: `feature_eval.splits` (purged chronological splits + walk-forward) and `feature_eval.ledger` are reusable by later phases |
 | 12 | Execution simulator | realistic fills, queue, fees, latency | not started |
 | 13 | Risk manager | implements `kalshi_core.interfaces.RiskManager` | not started |
-| 14 | Kalshi execution engine | behind `kalshi_core.execution`; LIVE stays unavailable until 17 | not started |
+| 14 | Kalshi execution engine | behind `kalshi_core.execution`; LIVE stays unavailable until 17 | **foundation built (Step 6.5, paper / shadow only)**: `execution/`, docs/EXECUTION_ARCHITECTURE.md; OrderIntent, deterministic idempotency, state machine, append-only journal, ledger, paper adapter, reconciliation, persistent market locks, restart recovery; **no live adapter** (stub refuses), not wired into production |
 | 15 | Local dashboard | successor to the legacy page | not started |
 | 16 | Shadow validation | full pipeline in shadow against real markets | not started |
 | 17 | Micro-live validation | smallest possible real exposure, explicit gates and kill switch | not started |
