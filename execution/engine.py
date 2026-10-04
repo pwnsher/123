@@ -28,6 +28,10 @@ from execution.journal import JournalConflict
 from execution.ledger import ExecutionLedger
 from execution.money import UNKNOWN, from_jsonable, jsonable
 from execution.reconcile import MISMATCH_VERDICTS, assess
+
+# a journal history containing any of these (after SUBMITTING) proves the venue acknowledged the order
+POST_ACK_STATES = ("ACKNOWLEDGED", "PARTIALLY_FILLED", "FILLED", "CANCEL_PENDING", "CANCELLED", "EXPIRED",
+                   "SETTLEMENT_PENDING", "CLOSED")
 from execution.risk import check_intent_against_approval
 from execution.states import (ENGINE, OUTSTANDING, PRE_SUBMIT, RECONCILIATION, TERMINAL, UNSAFE, ExecState,
                               check_transition)
@@ -105,9 +109,11 @@ class ExecutionEngine:
                 continue
             p = ev["payload"]
             if ev["kind"] == "FILL":
-                lg.add_fill(p["fill_id"], p["qty"], p["price"])
+                lg.add_fill(p["fill_id"], p["qty"], p["price"], ev["order_id"], ev["client_order_id"], p.get("fee_id"))
             elif ev["kind"] == "FEE":
                 lg.add_fee(p["fee_id"], from_jsonable(p["amount"]), p.get("fill_id"))
+            elif ev["kind"] == "FEE_RESOLUTION":
+                lg.resolve_fee(p["fee_id"], from_jsonable(p["amount"], "fee resolution"))
             elif ev["kind"] == "MARK":
                 lg.set_mark(from_jsonable(p["mark"], "mark"))
             elif ev["kind"] == "SETTLEMENT":
@@ -355,6 +361,11 @@ class ExecutionEngine:
         intent, coid = self._intent(key)
         if st in TERMINAL or st in PRE_SUBMIT:
             return "CONSISTENT"
+        view = self._views()[key]
+        submitted = any(h[2] == S.SUBMITTING.value for h in view.history)
+        if not submitted:
+            return "CONSISTENT"                       # e.g. expired before submission: nothing was ever sent
+        acknowledged = any(h[2] in POST_ACK_STATES for h in view.history)
         snap = self.adapter.reconcile(coid, intent.market_ticker)
         ledgers = self._ledgers()
         lg = ledgers[key]
@@ -362,8 +373,8 @@ class ExecutionEngine:
         for k2, l2 in ledgers.items():
             if k2 != key and l2.market_ticker == intent.market_ticker:
                 other[l2.side] += l2.filled_size
-        a = assess(st, intent, coid, snap, lg, other)
-        if a.new_fills:
+        a = assess(st, intent, coid, snap, lg, other, journal_order_id=view.order_id, acknowledged=acknowledged)
+        if a.new_fills or a.fee_resolutions:
             self.faults.hit("before_fill_persist")
         n = self._count(key, "RECONCILIATION")
         rid = f"r:{key}:{n}"
@@ -379,6 +390,11 @@ class ExecutionEngine:
             evs.append(self._event(key, intent, coid, "FEE", event_id=f"fee:{self.adapter.name}:{f.fee_id}",
                                    ts_ms=f.ts_ms, payload={"fee_id": f.fee_id, "amount": jsonable(f.fee),
                                                            "fill_id": f.fill_id}))
+        for f in a.fee_resolutions:           # append-only: the original UNKNOWN FEE event is never touched
+            evs.append(self._event(key, intent, coid, "FEE_RESOLUTION",
+                                   event_id=f"feeres:{self.adapter.name}:{f.fee_id}", ts_ms=f.ts_ms,
+                                   payload={"fee_id": f.fee_id, "fill_id": f.fill_id, "amount": jsonable(f.fee),
+                                            "resolves_event_id": f"fee:{self.adapter.name}:{f.fee_id}"}))
         with self.j.transaction():
             self.j.append_many(evs)
         self._apply(key, st, a, rid)
@@ -403,7 +419,10 @@ class ExecutionEngine:
                 st = S.HALTED_FOR_RECONCILIATION
             if st in (S.SUBMITTING,):
                 return                                          # never resolved here: _submit owns this state
-            self._transition(key, a.implied_state, f"reconciled: {a.reason}"[:300], RECONCILIATION, rid)
+            if a.implied_state == st and not (st == S.PARTIALLY_FILLED and a.new_fills):
+                return                                          # new evidence only (e.g. a fee resolution)
+            self._transition(key, a.implied_state, f"reconciled: {a.reason}"[:300], RECONCILIATION, rid,
+                             order_id=a.details.get("order_id"))
 
     # ---------------- marks ----------------
     def set_mark(self, key, mark):

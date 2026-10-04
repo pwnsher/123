@@ -1,5 +1,5 @@
 """
-Persistent, append-only execution journal (SQLite, JOURNAL_SCHEMA_VERSION 1).
+Persistent, append-only execution journal (SQLite, JOURNAL_SCHEMA_VERSION 2).
 
 Execution truth never lives only in process memory: every state transition, order reference, fill, fee, mark,
 reconciliation verdict, settlement and audit record is an EVENT appended inside an explicit transaction
@@ -12,6 +12,14 @@ Every event has a deterministic event_id. Appending an event whose id already ex
 identical ("DUPLICATE") and an error when it differs (JournalConflict) - a replayed notification can never be
 double-counted and history can never be silently rewritten.
 
+Schema history:
+    1  Step 6.5    TRANSITION, ORDER_REF, FILL, FEE, MARK, RECONCILIATION, SETTLEMENT, AUDIT
+    2  Step 6.5.1  + FEE_RESOLUTION: an UNKNOWN fee observation later resolved by an authoritative amount is a NEW event
+                   (payload: fee_id, fill_id, amount, resolves_event_id); the original FEE event is never touched.
+                   Tables, columns and triggers are unchanged, so a version-1 journal is a valid version-2 journal:
+                   opening one upgrades only the meta row (recording migrated_from=1); its events keep their own
+                   schema_version=1 column. A journal NEWER than this code (or an unknown version) is refused.
+
 reconstruct() replays the history (ordered by seq) through the authoritative transition table, so the current
 state of every execution is rebuilt deterministically after a restart; an invalid history raises.
 """
@@ -23,8 +31,10 @@ from execution.faults import NO_FAULTS
 from execution.money import jsonable
 from execution.states import ExecState, check_transition
 
-JOURNAL_SCHEMA_VERSION = 1
-EVENT_KINDS = ("TRANSITION", "ORDER_REF", "FILL", "FEE", "MARK", "RECONCILIATION", "SETTLEMENT", "AUDIT")
+JOURNAL_SCHEMA_VERSION = 2
+MIGRATABLE_SCHEMA_VERSIONS = (1,)        # older journals whose content is a valid subset of the current schema
+EVENT_KINDS = ("TRANSITION", "ORDER_REF", "FILL", "FEE", "FEE_RESOLUTION", "MARK", "RECONCILIATION", "SETTLEMENT",
+               "AUDIT")
 EVENT_COLUMNS = ("event_id", "schema_version", "kind", "intent_id", "execution_key", "previous_state", "new_state",
                  "ts_ms", "reason", "actor", "market_ticker", "asset", "side", "order_id", "client_order_id",
                  "requested_size", "filled_size", "remaining_size", "limit_price", "average_fill_price", "fees",
@@ -124,8 +134,14 @@ class Journal:
         row = self.conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()
         if row is None:
             self.conn.execute("INSERT INTO meta (key, value) VALUES ('schema_version', ?)", (str(JOURNAL_SCHEMA_VERSION),))
+        elif int(row[0]) in MIGRATABLE_SCHEMA_VERSIONS:
+            old = int(row[0])                   # one atomic meta-only upgrade; no event or intent row is touched
+            self.conn.executescript(f"BEGIN IMMEDIATE; UPDATE meta SET value='{int(JOURNAL_SCHEMA_VERSION)}' WHERE "
+                                    f"key='schema_version'; INSERT OR IGNORE INTO meta (key, value) VALUES "
+                                    f"('migrated_from', '{old}'); COMMIT;")
         elif int(row[0]) != JOURNAL_SCHEMA_VERSION:
-            raise JournalError(f"journal schema {row[0]} != supported {JOURNAL_SCHEMA_VERSION}")
+            raise JournalError(f"journal schema {row[0]} is not supported (this code reads {JOURNAL_SCHEMA_VERSION} and "
+                               f"migrates {list(MIGRATABLE_SCHEMA_VERSIONS)}); refusing to open it")
         self._in_tx = False
 
     def close(self):

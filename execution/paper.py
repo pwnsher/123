@@ -226,7 +226,8 @@ class PaperExecutionAdapter(ExecutionAdapter):
         self._query()
         out = []
         for f in self.venue.fills.get(client_order_id, []):
-            out.append(FillReport(fill_id=f["fill_id"], order_id=f["order_id"], client_order_id=client_order_id,
+            out.append(FillReport(fill_id=f["fill_id"], order_id=f["order_id"],      # a test may inject another id:
+                                  client_order_id=f.get("client_order_id", client_order_id),
                                   qty=dec(f["qty"]), price=dec(f["price"]),
                                   fee=UNKNOWN if f["fee"] == "UNKNOWN" else dec(f["fee"]), fee_id=f["fee_id"],
                                   ts_ms=f["ts_ms"]))

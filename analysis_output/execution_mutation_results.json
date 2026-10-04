@@ -4,7 +4,7 @@
   "unmutated": {
    "caught": false,
    "returncode": 0,
-   "seconds": 3.3,
+   "seconds": 3.6,
    "failed_test": null,
    "passed_tests": [
     "1 duplicate intent: idempotent replay, one order; reused intent_",
@@ -30,7 +30,13 @@
     "33 UNKNOWN / HALTED survives restart",
     "34 reconciliation mismatch survives restart; stale evidence neve",
     "35 no live-write network path: structural scan, stub refuses, pr",
-    "39 clean-restart demonstration (separate processes)"
+    "39 clean-restart demonstration (separate processes)",
+    "45 [6.5.1] fill identity: changed order_id / client_order_id, wr",
+    "46 [6.5.1] known fee: same -> idempotent; changed -> FILL_MISMAT",
+    "47 [6.5.1] UNKNOWN fee resolves append-only to known; no double ",
+    "48 [6.5.1] the same fill switching fee_id fails closed",
+    "49 [6.5.1] authoritative absence after ACK -> mismatch / halt, n",
+    "51 [6.5.1] unreachable reconciliation implications -> mismatch ("
    ]
   }
  },
@@ -74,7 +80,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  22-24 execution never increases size, widens price or flips side; intent validation: AssertionError: side increase accepted",
     "passed_tests": []
    }
@@ -145,7 +151,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  6 missing fee = UNKNOWN (never 0); duplicate fee never double-counted: AssertionError: ",
     "passed_tests": []
    }
@@ -190,7 +196,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.2,
     "failed_test": "FAIL  12 crash before submit (before / after SUBMITTING is persisted): AssertionError: ",
     "passed_tests": []
    }
@@ -250,7 +256,7 @@
     "caught": true,
     "returncode": 1,
     "seconds": 0.2,
-    "failed_test": "FAIL  35 no live-write network path: structural scan, stub refuses, production never imports execution: AssertionError: ('/tmp/mut-exec-7xrrye9n/repo/execution/adapter.py', {'urllib.request'})",
+    "failed_test": "FAIL  35 no live-write network path: structural scan, stub refuses, production never imports execution: AssertionError: ('/tmp/mut-exec-qjas34tq/repo/execution/adapter.py', {'urllib.request'})",
     "passed_tests": []
    }
   },
@@ -322,8 +328,120 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
+    "seconds": 0.4,
+    "failed_test": "FAIL  2 deterministic execution key / client_order_id (order, decimal text, processes, persisted): AssertionError: {'8c0dbac86c359985e44a0ce18ae7c07ef46054221dc7c6a09bbbde0dafa8d7de x1045898c61dd830fbbab6769ed68045', '8c0dbac86c359985e44a0ce18ae7c07ef46054221dc7c6a09bbbde0dafa8d7de x1de1413d826826ae",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E21",
+   "mutation": "fill order_id mismatch is ignored (per-fill order check and the order_id identity field removed)",
+   "tests": [
+    "fillidentity"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  45 [6.5.1] fill identity: changed order_id / client_order_id, wrong-order new fills -> FILL_MISMATCH: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E22",
+   "mutation": "fill client_order_id mismatch is ignored (per-fill check and the client_order_id identity field removed)",
+   "tests": [
+    "fillidentity"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  45 [6.5.1] fill identity: changed order_id / client_order_id, wrong-order new fills -> FILL_MISMATCH: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E23",
+   "mutation": "changed known fee is accepted as CONSISTENT",
+   "tests": [
+    "feecontra"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  46 [6.5.1] known fee: same -> idempotent; changed -> FILL_MISMATCH, halted, survives restart: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E24",
+   "mutation": "UNKNOWN fee can never resolve to known (the resolution is ignored by the ledger)",
+   "tests": [
+    "feeresolve"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  47 [6.5.1] UNKNOWN fee resolves append-only to known; no double count; restart / repeat safe: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E25",
+   "mutation": "UNKNOWN -> known is double counted as another fee",
+   "tests": [
+    "feeresolve"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  47 [6.5.1] UNKNOWN fee resolves append-only to known; no double count; restart / repeat safe: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E26",
+   "mutation": "the same fill can switch fee_id silently (fee mapping check and the fee_id identity field removed)",
+   "tests": [
+    "feeremap"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  48 [6.5.1] the same fill switching fee_id fails closed: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E27",
+   "mutation": "authoritative absence after an acknowledgement is recovered to REJECTED (journal-history check removed)",
+   "tests": [
+    "ackabsence"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
     "seconds": 0.3,
-    "failed_test": "FAIL  2 deterministic execution key / client_order_id (order, decimal text, processes, persisted): AssertionError: {'8c0dbac86c359985e44a0ce18ae7c07ef46054221dc7c6a09bbbde0dafa8d7de x142725df5edd936a4359ac8fdd7fec3', '8c0dbac86c359985e44a0ce18ae7c07ef46054221dc7c6a09bbbde0dafa8d7de x1ae3d93ccb6def7e",
+    "failed_test": "FAIL  49 [6.5.1] authoritative absence after ACK -> mismatch / halt, never InvalidTransition: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "E28",
+   "mutation": "an unreachable reconciliation implied state bypasses the central reachability validation",
+   "tests": [
+    "unreachable"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  51 [6.5.1] unreachable reconciliation implications -> mismatch (central reachability): AssertionError: (<ExecState.CANCELLED: 'CANCELLED'>, 'ACKNOWLEDGED', 'RECOVERABLE_DIFFERENCE', 'venue proves ACKNOWLEDGED (filled 0)')",
     "passed_tests": []
    }
   }

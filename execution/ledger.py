@@ -1,12 +1,15 @@
 """
-Position / accounting ledger (exact Decimal; LEDGER_VERSION "ledger_v1").
+Position / accounting ledger (exact Decimal; LEDGER_VERSION "ledger_v2").
 
 One ExecutionLedger per execution (its filled exposure); market_position() aggregates them per
 (asset, market_ticker, side). Rules:
-    * fills are keyed by fill_id: a repeated notification with identical content is ignored (never double-counted);
-      the same fill_id with DIFFERENT content raises FillConflict (contradictory evidence -> reconciliation);
-    * fees are keyed by fee_id the same way; every fill expects a fee record - a fill without one, or a fee reported as
-      UNKNOWN, makes fees_paid UNKNOWN (never zero);
+    * fills are keyed by fill_id. A fill's IDENTITY is (qty, price, order_id, client_order_id, fee_id): a repeated
+      notification with identical identity is ignored (never double-counted); the same fill_id with ANY identity
+      field changed raises FillConflict (contradictory evidence -> reconciliation);
+    * fees: exactly ONE logical fee (fee_id) per fill. The first observation of a fee may be UNKNOWN; a later
+      authoritative amount RESOLVES it (resolve_fee: the same logical fee, never a second charge); a known fee observed
+      again with a different amount raises FillConflict. A fill without a fee record, or a fee still UNKNOWN, makes
+      fees_paid UNKNOWN (never zero);
     * a missing mark is UNKNOWN (never zero) -> unrealized PnL UNKNOWN;
     * average_entry_price = sum(qty * price) / sum(qty), exact (2 @ 0.40 + 3 @ 0.50 -> 0.46);
     * realized / unrealized PnL are reported as AUTHORITATIVE only when accounting is complete.
@@ -17,7 +20,8 @@ from decimal import Decimal
 
 from execution.money import UNKNOWN, dec, price as _price, qty as _qty
 
-LEDGER_VERSION = "ledger_v1"
+LEDGER_VERSION = "ledger_v2"
+FILL_IDENTITY = ("qty", "price", "order_id", "client_order_id", "fee_id")
 ZERO = Decimal(0)
 
 
@@ -31,9 +35,9 @@ class ExecutionLedger:
         self.requested_size = _qty(requested_size, "requested_size", positive=True)
         self.max_limit_price = _price(max_limit_price, "max_limit_price")
         self._fills = []                 # [(fill_id, qty, price)] in arrival order (each id at most once)
-        self._fill_index = {}            # fill_id -> (qty, price)
-        self._fees = []                  # [(fee_id, Decimal | UNKNOWN)]
-        self._fee_index = {}             # fee_id -> amount
+        self._fill_index = {}            # fill_id -> {FILL_IDENTITY field: value}
+        self._fees = []                  # [fee_id] one entry per logical fee, in arrival order
+        self._fee_index = {}             # fee_id -> current amount (Decimal | UNKNOWN; UNKNOWN until resolved)
         self.fee_for_fill = {}           # fill_id -> fee_id
         self.mark_price = UNKNOWN
         self.settlement_status = "NONE"  # NONE | PENDING | SETTLED
@@ -42,13 +46,17 @@ class ExecutionLedger:
         self.settlement_value = None     # the official expiration value, when given (reference only)
 
     # ---------------- inputs ----------------
-    def add_fill(self, fill_id, qty, price):
+    def add_fill(self, fill_id, qty, price, order_id=None, client_order_id=None, fee_id=None):
         q, p = _qty(qty, "fill qty", positive=True), _price(price, "fill price")
+        ident = {"qty": q, "price": p, "order_id": order_id, "client_order_id": client_order_id, "fee_id": fee_id}
         if fill_id in self._fill_index:
-            if self._fill_index[fill_id] != (q, p):
-                raise FillConflict(f"fill {fill_id} reported as {self._fill_index[fill_id]} and {(q, p)}")
+            old = self._fill_index[fill_id]
+            changed = [k for k in FILL_IDENTITY if old[k] != ident[k]]
+            if changed:
+                raise FillConflict(f"fill {fill_id}: {', '.join(changed)} changed "
+                                   f"({', '.join(f'{old[k]} -> {ident[k]}' for k in changed)})")
             return "DUPLICATE"
-        self._fill_index[fill_id] = (q, p)
+        self._fill_index[fill_id] = ident
         self._fills.append((fill_id, q, p))
         return "ADDED"
 
@@ -60,11 +68,32 @@ class ExecutionLedger:
             if self._fee_index[fee_id] != a:
                 raise FillConflict(f"fee {fee_id} reported as {self._fee_index[fee_id]!r} and {a!r}")
             return "DUPLICATE"
+        if fill_id is not None and self.fee_for_fill.get(fill_id, fee_id) != fee_id:
+            raise FillConflict(f"fill {fill_id} already maps to fee {self.fee_for_fill[fill_id]}, not {fee_id}")
         self._fee_index[fee_id] = a
-        self._fees.append((fee_id, a))
+        self._fees.append(fee_id)
         if fill_id is not None:
             self.fee_for_fill[fill_id] = fee_id
         return "ADDED"
+
+    def fee_amount(self, fee_id):
+        return self._fee_index[fee_id]
+
+    def resolve_fee(self, fee_id, amount):
+        """An authoritative amount for a fee first observed as UNKNOWN: the SAME logical fee, never a second charge.
+        Resolving an already-known fee to the same amount is a no-op; to a different amount is a contradiction."""
+        a = dec(amount, "fee resolution")
+        if a < 0:
+            raise ValueError("a fee cannot be negative")
+        if fee_id not in self._fee_index:
+            raise FillConflict(f"fee {fee_id} resolved before it was observed")
+        cur = self._fee_index[fee_id]
+        if cur is not UNKNOWN:
+            if cur != a:
+                raise FillConflict(f"fee {fee_id} is {cur} and cannot be resolved to {a}")
+            return "DUPLICATE"
+        self._fee_index[fee_id] = a
+        return "RESOLVED"
 
     def set_mark(self, mark):
         self.mark_price = UNKNOWN if mark is UNKNOWN else _price(mark, "mark")
@@ -81,7 +110,7 @@ class ExecutionLedger:
     def copy(self):
         c = ExecutionLedger(self.execution_key, self.market_ticker, self.asset, self.side, self.requested_size,
                             self.max_limit_price)
-        c._fills, c._fill_index = list(self._fills), dict(self._fill_index)
+        c._fills, c._fill_index = list(self._fills), {k: dict(v) for k, v in self._fill_index.items()}
         c._fees, c._fee_index, c.fee_for_fill = list(self._fees), dict(self._fee_index), dict(self.fee_for_fill)
         c.mark_price, c.settlement_status = self.mark_price, self.settlement_status
         c.settlement_result, c.settlement_price, c.settlement_value = (self.settlement_result, self.settlement_price,
@@ -90,6 +119,9 @@ class ExecutionLedger:
 
     def fill_ids(self):
         return [fid for fid, _q, _p in self._fills]
+
+    def fill_identity(self, fill_id):
+        return dict(self._fill_index[fill_id])
 
     def fill_values(self):
         return [(q, p) for _fid, q, p in self._fills]
@@ -117,7 +149,7 @@ class ExecutionLedger:
 
     @property
     def fees_known(self):
-        if any(a is UNKNOWN for _fid, a in self._fees):
+        if any(self._fee_index[fid] is UNKNOWN for fid in self._fees):
             return False
         return all(fid in self.fee_for_fill for fid, _q, _p in self._fills)
 
@@ -125,7 +157,7 @@ class ExecutionLedger:
     def fees_paid(self):
         if not self.fees_known:
             return UNKNOWN
-        return sum((a for _fid, a in self._fees), ZERO)
+        return sum((self._fee_index[fid] for fid in self._fees), ZERO)
 
     @property
     def realized_pnl(self):

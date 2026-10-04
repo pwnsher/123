@@ -1,4 +1,4 @@
-# Execution architecture (Step 6.5: execution foundation, ZERO live orders)
+# Execution architecture (Step 6.5 + 6.5.1: execution foundation, ZERO live orders)
 
 Status: **paper / shadow only.** This step adds the infrastructure a future live executor will need: identity,
 state, persistence, accounting, reconciliation and failure handling. It **cannot place a real order**, it is **not
@@ -166,26 +166,50 @@ history is refused. The only way into SUBMITTING is from READY: no path re-submi
 
 ## 7. Persistent journal
 
-`execution/journal.py`, SQLite, `JOURNAL_SCHEMA_VERSION = 1`, tables `meta`, `intents`, `events`.
+`execution/journal.py`, SQLite, `JOURNAL_SCHEMA_VERSION = 2` (Step 6.5.1), tables `meta`, `intents`, `events`.
+
+* **Schema history:** v1 (Step 6.5). v2 (Step 6.5.1) adds the `FEE_RESOLUTION` event kind; tables, columns, triggers
+  and the DDL hash are unchanged. A v1 journal is a valid v2 journal: opening one upgrades only the `meta` row
+  (`schema_version = 2`, `migrated_from = 1`) and touches no event or intent row (each event keeps its own
+  `schema_version` column). A newer or unknown schema is refused (`JournalError`).
 
 * **Append-only:** triggers abort any UPDATE / DELETE on `events` and `intents`.
 * **Transactional:** every write runs inside `journal.transaction()` (`BEGIN IMMEDIATE ... COMMIT`; any exception,
   including a simulated process death, rolls back). Multi-event writes (EXECUTION_UNKNOWN + HALTED, fills + fees,
   settlement + SETTLEMENT_PENDING) are one atomic unit. Writes outside a transaction raise `JournalError`.
 * **Deterministic event ids:** `t:<key>:<n>` transitions, `r:<key>:<n>` reconciliations, `fill:<adapter>:<fill_id>`,
-  `fee:<adapter>:<fee_id>`, `m:<key>:<n>` marks, `s:<key>` settlement, `a:<intent_id>:intent` audit. The same id with
+  `fee:<adapter>:<fee_id>`, `feeres:<adapter>:<fee_id>` fee resolutions, `m:<key>:<n>` marks, `s:<key>` settlement, `a:<intent_id>:intent` audit. The same id with
   identical content is a no-op (`DUPLICATE`); with different content it raises `JournalConflict`.
 * **Persist first:** SUBMITTING is committed before the adapter is called; CANCEL_PENDING before a cancel is sent.
 * **Replay:** `reconstruct()` rebuilds every execution's state, order id, history and last reconciliation verdict;
   the ledger, locks and positions are all derived from it. Nothing authoritative lives in memory.
-* Event kinds: TRANSITION, ORDER_REF, FILL, FEE, MARK, RECONCILIATION, SETTLEMENT, AUDIT.
+* Event kinds: TRANSITION, ORDER_REF, FILL, FEE, FEE_RESOLUTION, MARK, RECONCILIATION, SETTLEMENT, AUDIT.
 
 ## 8. Position ledger
 
-`execution/ledger.py` (`ledger_v1`), one ledger per execution, rebuilt from journal events:
+`execution/ledger.py` (`ledger_v2`), one ledger per execution, rebuilt from journal events:
 
-* fills keyed by `fill_id` (a duplicate notification is ignored; the same id with other content raises
-  `FillConflict`); fees keyed by `fee_id` the same way;
+* fills keyed by `fill_id`. A fill's **immutable identity** is `(qty, price, order_id, client_order_id, fee_id)`: a
+  duplicate notification with the same identity is ignored; the same `fill_id` with ANY identity field changed raises
+  `FillConflict` (reconciliation turns it into FILL_MISMATCH);
+* fees: exactly ONE logical fee (`fee_id`) per fill (the Kalshi-oriented model; multiple fee components per fill are
+  not modelled and fail closed). The same `fee_id` with the same amount is a no-op; a fill re-mapped to another
+  `fee_id` raises `FillConflict`;
+* **fee observations / resolution** (Step 6.5.1): the first FEE observation may be UNKNOWN. When the venue later
+  reports an authoritative amount, reconciliation appends a `FEE_RESOLUTION` event (`fee_id, fill_id, amount,
+  resolves_event_id` = the original FEE event). The original FEE event is never updated or deleted. The reducer
+  (`resolve_fee`) applies the amount to the SAME logical fee, never as a second charge, so UNKNOWN then 0.05 gives
+  `fees_paid` 0.05 (not UNKNOWN, 0.10 or 0). Semantics:
+
+  | Journal | Venue | Result |
+  |---|---|---|
+  | KNOWN a | KNOWN a | no change (idempotent) |
+  | KNOWN a | KNOWN b != a | FILL_MISMATCH, halt, market locked; history unchanged |
+  | UNKNOWN | KNOWN a | FEE_RESOLUTION appended; verdict RECOVERABLE_DIFFERENCE (no state change) |
+  | UNKNOWN | UNKNOWN | no new evidence; ACCOUNTING_INCOMPLETE while any fee is UNKNOWN |
+  | KNOWN a | UNKNOWN | the venue omitting a value it already reported is not new evidence; the journaled a stands |
+  | fee_id A | fee_id B (same fill) | FILL_MISMATCH |
+
 * `average_entry_price = sum(q * p) / sum(q)` exactly (2 @ 0.40 + 3 @ 0.50 = 0.46);
 * a fill without a fee record, or a fee reported as UNKNOWN, makes `fees_paid` **UNKNOWN** (never zero);
 * a missing mark is **UNKNOWN** and unrealized PnL is UNKNOWN; `pnl_authoritative` is true only when accounting is
@@ -216,20 +240,39 @@ outside world, deterministic, saved and loaded as JSON so it survives a process 
 `execution/reconcile.py`: `assess(state, intent, client_order_id, snapshot, ledger, other_exposure)` is a pure
 function over the adapter snapshot (order lookup, fills, position, each collected independently so one failure does
 not hide another). Verdicts: CONSISTENT, RECOVERABLE_DIFFERENCE, EXECUTION_UNKNOWN, POSITION_MISMATCH, FILL_MISMATCH,
-ACCOUNTING_INCOMPLETE. Rules, in order:
+ACCOUNTING_INCOMPLETE. Rules, in order (`reconciliation_v2`):
 
 1. pre-submit executions are never queried and are CONSISTENT (nothing was sent)
 2. order lookup failed while a request was in flight (SUBMITTING / CANCEL_PENDING / UNKNOWN / HALTED) -> EXECUTION_UNKNOWN; otherwise -> ACCOUNTING_INCOMPLETE (unsafe)
-3. order not found: authoritative absence + no fills + flat position -> RECOVERABLE_DIFFERENCE to REJECTED; otherwise EXECUTION_UNKNOWN (never assume the submit failed)
-4. order parameters differing from the recorded intent -> FILL_MISMATCH
-5. fills query failed -> ACCOUNTING_INCOMPLETE (unsafe)
-6. fills deduplicated by fill_id; the same id with different content -> FILL_MISMATCH
-7. a journaled fill the venue no longer reports -> FILL_MISMATCH
-8. fill total > requested, a fill price > max_limit_price, or fill total != the order's filled size -> FILL_MISMATCH
-9. position query failed or stale -> ACCOUNTING_INCOMPLETE (unsafe)
-10. reported position != ledger exposure of the market (both sides) -> POSITION_MISMATCH
-11. venue-implied state unreachable from the journal state by a reconciliation transition -> FILL_MISMATCH
-12. venue-implied state != journal state and reachable -> RECOVERABLE_DIFFERENCE; equal -> CONSISTENT (or ACCOUNTING_INCOMPLETE, safe, when a fee is UNKNOWN)
+3. order not found + authoritative absence while the journal recorded an acknowledgement / order id / fill -> FILL_MISMATCH (contradiction, halt)
+4. order not found: authoritative absence + never acknowledged + no fills + flat position -> RECOVERABLE_DIFFERENCE to REJECTED; otherwise EXECUTION_UNKNOWN (never assume the submit failed)
+5. order parameters differing from the recorded intent, or an order_id differing from the journaled one -> FILL_MISMATCH
+6. fills query failed -> ACCOUNTING_INCOMPLETE (unsafe)
+7. every venue fill must carry this execution's client_order_id and the observed order_id -> else FILL_MISMATCH
+8. fills deduplicated by fill_id; the same id with any identity field changed (qty, price, order_id, client_order_id, fee_id) -> FILL_MISMATCH
+9. a journaled fill the venue no longer reports -> FILL_MISMATCH
+10. fees: one logical fee per fill; known == known -> no change; known != known -> FILL_MISMATCH; UNKNOWN -> known -> an append-only FEE_RESOLUTION (the same fee, never a second charge); known -> UNKNOWN or UNKNOWN -> UNKNOWN -> no new evidence
+11. fill total > requested, a fill price > max_limit_price, or fill total != the order's filled size -> FILL_MISMATCH
+12. position query failed or stale -> ACCOUNTING_INCOMPLETE (unsafe)
+13. reported position != ledger exposure of the market (both sides) -> POSITION_MISMATCH
+14. venue-implied state != journal state -> RECOVERABLE_DIFFERENCE; a fee resolution alone -> RECOVERABLE_DIFFERENCE (no state change); otherwise CONSISTENT (or ACCOUNTING_INCOMPLETE, safe, while a fee is UNKNOWN)
+15. CENTRAL: any CONSISTENT / RECOVERABLE_DIFFERENCE whose implied state the transition graph cannot reach from the journal state by a reconciliation transition -> FILL_MISMATCH (the engine never attempts an undefined transition)
+
+**Fill identity (Step 6.5.1).** Every venue fill must carry this execution's deterministic `client_order_id` and the
+order id the venue reports for the order; that order id must equal the one the journal recorded. A fill of another
+order is never accepted, however plausible its `fill_id`, quantity and price look.
+
+**Authoritative absence (Step 6.5.1).** "No such order" (authoritative) proves the submit failed ONLY when it does not
+contradict the journal: the execution was never acknowledged (no ACKNOWLEDGED-or-later state in its history, no
+recorded order id, no fill). Then HALTED_FOR_RECONCILIATION goes to REJECTED. If the journal recorded an
+acknowledgement, the venue denying the order is a contradiction: FILL_MISMATCH, halt, market locked. An execution
+that never reached SUBMITTING (for example, expired before submission) is never queried at all.
+
+**Central reachability (Step 6.5.1).** `assess()` validates every CONSISTENT / RECOVERABLE_DIFFERENCE implied state
+against the transition graph at a single exit point (EXECUTION_UNKNOWN is judged as HALTED, as the engine halts it
+first). An unreachable implication, for example CANCELLED to ACKNOWLEDGED, FILLED to CANCELLED, EXPIRED to FILLED or
+ACKNOWLEDGED to REJECTED, becomes FILL_MISMATCH. The engine therefore never attempts an undefined transition, and no
+`InvalidTransition` escapes reconciliation.
 
 Examples from the brief, each covered by a Stage-23 test:
 
@@ -352,8 +395,9 @@ OLD / NEW / WHY entry below.
 | Date | OLD | NEW | Why |
 |---|---|---|---|
 | Step 6.5 | (none) | `d67c7c7ff001befbe86f96006fd8d996177bb0b813b648e38cc5ebdcb8e1a650` | initial execution foundation |
+| Step 6.5.1 | `d67c7c7ff001befbe86f96006fd8d996177bb0b813b648e38cc5ebdcb8e1a650` | `93a08cce52f31f01707aa9329b447a5efbee25e44e1e476f292efdb722a6970a` | audit corrections. Reconciliation v1 to v2: full fill identity, fee reconciliation, history-aware authoritative absence, central reachability. Ledger v1 to v2: fill identity, one fee per fill, `resolve_fee`. Journal schema 1 to 2: `FEE_RESOLUTION` (DDL unchanged, v1 migrated meta-only). Modules changed: engine, journal, ledger, paper (per-fill `client_order_id` in `get_fills`), reconcile. The old baseline is archived in `config/history/execution_baseline_step6.5.json`. |
 
-## 21. Mutation tests (E1-E20)
+## 21. Mutation tests (E1-E28)
 
 `py scripts/mutation_test_execution.py` applies each mutation to a temporary copy and runs the behavioural Stage-23
 tests there (never the fingerprint test, which would catch any edit). The unmutated control must pass.
@@ -362,7 +406,12 @@ E6 ambiguous submit retried; E7 duplicate fill double counted; E8 duplicate fee 
 zero; E10 invalid transition accepted; E11 crash recovery loses the active order; E12 reconciliation mismatch
 ignored; E13 unknown market accepts a new intent; E14 non-atomic journal; E15 writable live endpoint; E16 expired
 intent submits; E17 memory-only lock lost on restart; E18 partial treated as full; E19 cancelled partial discards
-the filled position; E20 a second client_order_id after restart. Results: `analysis_output/execution_mutation_results.json`.
+the filled position; E20 a second client_order_id after restart.
+Step 6.5.1: E21 fill order_id mismatch ignored; E22 fill client_order_id mismatch ignored; E23 changed known fee
+accepted; E24 UNKNOWN fee never resolves; E25 UNKNOWN to known double counted; E26 a fill switches fee_id silently;
+E27 authoritative absence after an acknowledgement recovered to REJECTED (journal-history check removed); E28 an
+unreachable implied state bypasses the central reachability validation.
+Results: `analysis_output/execution_mutation_results.json`.
 
 ## 22. Deferred work
 

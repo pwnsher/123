@@ -1014,7 +1014,310 @@ def test_docs():
         assert "EXECUTION_ARCHITECTURE" in open(os.path.join(HERE, "docs", f), encoding="utf-8").read(), f
     mut = json.load(open(os.path.join(HERE, "analysis_output", "execution_mutation_results.json")))
     assert mut["all_caught_and_controls_pass"] is True
-    assert {m["id"] for m in mut["mutations"]} >= {f"E{i}" for i in range(1, 21)}
+    assert {m["id"] for m in mut["mutations"]} >= {f"E{i}" for i in range(1, 29)}
+    for s in ("fee_resolution", "6.5.1", "fill identity", "authoritative absence", "central reachability", "e28"):
+        assert s in low, s
+
+
+# ═══════════════════ Step 6.5.1: reconciliation / accounting hardening ═══════════════════
+def _filled_env(fee="0.05", qty="5"):
+    env = Env()
+    it = intent()
+    k, coid = ids(it)
+    env.eng.submit(it)
+    env.venue.fill(coid, qty, "0.45", fee=fee)
+    env.eng.reconcile(k)
+    return env, k, coid
+
+
+def _halted_mismatch(env, k, verdict="FILL_MISMATCH"):
+    assert env.eng.state(k) == S.HALTED_FOR_RECONCILIATION, env.eng.state(k)
+    assert env.eng.j.reconstruct()[k].last_verdict == verdict
+    assert env.eng.market_lock_status("BTC", BTC)[0]
+
+
+def test_fill_identity():
+    """651.1-3: a fill's immutable identity (order_id, client_order_id, fee_id, qty, price) is reconciled."""
+    # 1. a previously journaled fill changes order_id (qty / price unchanged)
+    env, k, coid = _filled_env()
+    assert env.eng.state(k) == S.FILLED
+    oid = env.venue.fills[coid][0]["order_id"]
+    env.venue.fills[coid][0]["order_id"] = "po-someone-else"
+    n_fill = env.eng.j.count("FILL")
+    assert env.eng.reconcile(k) == "FILL_MISMATCH"
+    _halted_mismatch(env, k)
+    assert env.eng.j.count("FILL") == n_fill and env.eng.ledger(k).fill_identity(
+        env.eng.ledger(k).fill_ids()[0])["order_id"] == oid                    # the journal is never rewritten
+    # 2. a previously journaled fill changes client_order_id
+    env, k, coid = _filled_env()
+    env.venue.fills[coid][0]["client_order_id"] = "x1" + "0" * 30
+    assert env.eng.reconcile(k) == "FILL_MISMATCH"
+    _halted_mismatch(env, k)
+    # 3. a NEW fill references the wrong order_id (looks valid otherwise) -> never accepted
+    env, k, coid = _filled_env(qty="2")
+    assert env.eng.state(k) == S.PARTIALLY_FILLED
+    env.venue.fill(coid, "1", "0.45")
+    env.venue.fills[coid][-1]["order_id"] = "po-another-order"
+    assert env.eng.reconcile(k) == "FILL_MISMATCH" and env.eng.ledger(k).filled_size == D("2")
+    _halted_mismatch(env, k)
+    # 4. a NEW fill references the wrong client_order_id
+    env, k, coid = _filled_env(qty="2")
+    env.venue.fill(coid, "1", "0.45")
+    env.venue.fills[coid][-1]["client_order_id"] = "x1" + "f" * 30
+    assert env.eng.reconcile(k) == "FILL_MISMATCH" and env.eng.ledger(k).filled_size == D("2")
+    _halted_mismatch(env, k)
+    # the very first fill of an order is validated too (nothing journaled yet)
+    env = Env()
+    it = intent()
+    k, coid = ids(it)
+    env.eng.submit(it)
+    env.venue.fill(coid, "5", "0.45")
+    env.venue.fills[coid][0]["order_id"] = "po-another-order"
+    assert env.eng.reconcile(k) == "FILL_MISMATCH" and env.eng.ledger(k).filled_size == 0
+    # the venue reporting a different order id for our client_order_id than the journal recorded
+    env, k, coid = _filled_env(qty="2")
+    env.venue.orders[coid]["order_id"] = "po-renamed"
+    for f in env.venue.fills[coid]:
+        f["order_id"] = "po-renamed"
+    assert env.eng.reconcile(k) == "FILL_MISMATCH"
+    _halted_mismatch(env, k)
+    # ledger level: every identity field is checked
+    lg = ExecutionLedger("k", BTC, "BTC", "YES", "5", "0.50")
+    lg.add_fill("f1", "2", "0.40", "o1", "c1", "fee-f1")
+    assert lg.add_fill("f1", "2", "0.40", "o1", "c1", "fee-f1") == "DUPLICATE"
+    for args in (("o2", "c1", "fee-f1"), ("o1", "c2", "fee-f1"), ("o1", "c1", "fee-f2")):
+        try:
+            lg.add_fill("f1", "2", "0.40", *args); raise AssertionError(f"identity change accepted {args}")
+        except FillConflict:
+            pass
+
+
+def test_known_fee_contradiction():
+    """651.4 / 651.7 / 651.15: KNOWN -> SAME KNOWN is idempotent; KNOWN -> DIFFERENT KNOWN halts and survives restart."""
+    env, k, coid = _filled_env(fee="0.05")
+    env.eng.set_mark(k, "0.60")
+    for _ in range(3):
+        assert env.eng.reconcile(k) == "CONSISTENT"
+    lg = env.eng.ledger(k)
+    assert lg.fees_paid == D("0.05") and env.eng.j.count("FEE") == 1 and env.eng.j.count("FEE_RESOLUTION") == 0
+    env.venue.fills[coid][0]["fee"] = "0.07"
+    assert env.eng.reconcile(k) == "FILL_MISMATCH"
+    _halted_mismatch(env, k)
+    assert env.eng.ledger(k).fees_paid == D("0.05")                           # history never silently changed
+    assert env.eng.j.count("FEE") == 1 and env.eng.j.count("FEE_RESOLUTION") == 0
+    for _ in range(2):                                                         # 15: survives restart, locked
+        eng = env.restart()
+        assert eng.state(k) == S.HALTED_FOR_RECONCILIATION
+        assert eng.market_lock_status("BTC", BTC)[0] and eng.ledger(k).fees_paid == D("0.05")
+        assert eng.reconcile(k) == "FILL_MISMATCH" and eng.state(k) == S.HALTED_FOR_RECONCILIATION
+    lg = ExecutionLedger("k", BTC, "BTC", "YES", "5", "0.50")
+    lg.add_fill("f1", "2", "0.40", fee_id="fee-f1")
+    lg.add_fee("fee-f1", "0.05", "f1")
+    assert lg.resolve_fee("fee-f1", "0.05") == "DUPLICATE" and lg.fees_paid == D("0.05")
+    try:
+        lg.resolve_fee("fee-f1", "0.07"); raise AssertionError("known fee rewritten")
+    except FillConflict:
+        pass
+
+
+def test_unknown_fee_resolution():
+    """651.5 / 651.6 / 651.13 / 651.14: UNKNOWN -> KNOWN resolves the SAME fee (append-only), never a second charge."""
+    env, k, coid = _filled_env(fee=UNKNOWN)
+    assert env.eng.ledger(k).fees_paid is UNKNOWN
+    env.venue.fills[coid][0]["fee"] = "UNKNOWN"
+    assert env.eng.reconcile(k) == "ACCOUNTING_INCOMPLETE"                     # D: UNKNOWN -> UNKNOWN
+    assert env.eng.ledger(k).fees_paid is UNKNOWN and env.eng.state(k) == S.FILLED
+    env.venue.fills[coid][0]["fee"] = "0.05"
+    assert env.eng.reconcile(k) == "RECOVERABLE_DIFFERENCE"                    # C: new evidence, not a contradiction
+    lg = env.eng.ledger(k)
+    assert lg.fees_paid == D("0.05") and lg.fees_paid != D("0.10") and env.eng.state(k) == S.FILLED
+    fee_ev = env.eng.j.events(k, "FEE")
+    res_ev = env.eng.j.events(k, "FEE_RESOLUTION")
+    assert len(fee_ev) == 1 and fee_ev[0]["payload"]["amount"] == "UNKNOWN"   # original observation preserved
+    assert len(res_ev) == 1 and res_ev[0]["payload"]["amount"] == "0.05"
+    assert res_ev[0]["payload"]["resolves_event_id"] == fee_ev[0]["event_id"]
+    env.eng.set_mark(k, "0.60")
+    lg = env.eng.ledger(k)
+    assert lg.accounting_complete and lg.unrealized_pnl == D("5") * D("0.60") - D("2.25") - D("0.05")
+    for _ in range(3):                                                         # 14: repeated reconciliation
+        assert env.eng.reconcile(k) == "CONSISTENT"
+    assert env.eng.j.count("FEE_RESOLUTION") == 1 and env.eng.ledger(k).fees_paid == D("0.05")
+    env.venue.fills[coid][0]["fee"] = "UNKNOWN"                                # the venue later omits it again
+    assert env.eng.reconcile(k) == "CONSISTENT" and env.eng.ledger(k).fees_paid == D("0.05")
+    env.venue.fills[coid][0]["fee"] = "0.05"
+    for _ in range(2):                                                         # 13: survives restart
+        eng = env.restart()
+        assert eng.ledger(k).fees_paid == D("0.05") and eng.reconcile(k) == "CONSISTENT"
+    env.venue.fills[coid][0]["fee"] = "0.06"                                   # a resolved fee is now KNOWN
+    assert eng.reconcile(k) == "FILL_MISMATCH" and eng.state(k) == S.HALTED_FOR_RECONCILIATION
+    # two fills, only one fee resolves: still UNKNOWN until both are known, never summed with UNKNOWN as 0
+    env = Env()
+    it = intent()
+    k, coid = ids(it)
+    env.eng.submit(it)
+    env.venue.fill(coid, "2", "0.40", fee=UNKNOWN)
+    env.venue.fill(coid, "3", "0.50", fee=UNKNOWN)
+    env.eng.reconcile(k)
+    env.venue.fills[coid][0]["fee"] = "0.02"
+    env.eng.reconcile(k)
+    assert env.eng.ledger(k).fees_paid is UNKNOWN
+    env.venue.fills[coid][1]["fee"] = "0.03"
+    env.eng.reconcile(k)
+    assert env.eng.ledger(k).fees_paid == D("0.05") and env.eng.j.count("FEE_RESOLUTION") == 2
+    env.eng.settle(SettlementReference(BTC, "yes"))
+    assert env.eng.ledger(k).realized_pnl == D("5") - D("2.30") - D("0.05")
+    # ledger level
+    lg = ExecutionLedger("k", BTC, "BTC", "YES", "5", "0.50")
+    lg.add_fill("f1", "2", "0.40", fee_id="fee-f1")
+    lg.add_fee("fee-f1", UNKNOWN, "f1")
+    assert lg.resolve_fee("fee-f1", "0.05") == "RESOLVED" and lg.fees_paid == D("0.05")
+    assert lg.resolve_fee("fee-f1", "0.05") == "DUPLICATE" and lg.fees_paid == D("0.05")
+    try:
+        lg.resolve_fee("fee-unseen", "0.01"); raise AssertionError("resolution of an unobserved fee accepted")
+    except FillConflict:
+        pass
+
+
+def test_fee_id_remap():
+    """651.8: one logical fee per fill; the same fill switching fee_id fails closed."""
+    env, k, coid = _filled_env(fee="0.05")
+    env.venue.fills[coid][0]["fee_id"] = "fee-other"
+    assert env.eng.reconcile(k) == "FILL_MISMATCH"
+    _halted_mismatch(env, k)
+    assert env.eng.ledger(k).fees_paid == D("0.05")
+    lg = ExecutionLedger("k", BTC, "BTC", "YES", "5", "0.50")
+    lg.add_fill("f1", "2", "0.40", fee_id="fee-a")
+    lg.add_fee("fee-a", "0.01", "f1")
+    try:
+        lg.add_fee("fee-b", "0.01", "f1"); raise AssertionError("second fee for one fill accepted")
+    except FillConflict:
+        pass
+
+
+def test_absence_after_ack():
+    """651.9 / 651.10: authoritative absence of an order the journal acknowledged is a contradiction, not REJECTED."""
+    env = Env()
+    it = intent()
+    k, coid = ids(it)
+    assert env.eng.submit(it) == S.ACKNOWLEDGED
+    del env.venue.orders[coid]
+    env.venue.lookup_authoritative = True
+    assert env.eng.reconcile(k) == "FILL_MISMATCH"                             # no InvalidTransition escapes
+    _halted_mismatch(env, k)
+    eng = env.restart()
+    assert eng.recover()[k] == "FILL_MISMATCH" and eng.state(k) == S.HALTED_FOR_RECONCILIATION
+    # HALTED after an acknowledged order (ambiguous cancel): HALTED -> REJECTED is a defined transition, but the
+    # journal proves the venue acknowledged the order, so absence is still a contradiction
+    env = Env()
+    env.eng.submit(intent())
+    env.venue.script_cancel("LOST_ACK")
+    assert env.eng.cancel(k) == S.HALTED_FOR_RECONCILIATION
+    del env.venue.orders[coid]
+    env.venue.lookup_authoritative = True
+    assert env.eng.reconcile(k) == "FILL_MISMATCH" and env.eng.state(k) == S.HALTED_FOR_RECONCILIATION
+    assert "REJECTED" not in [e["new_state"] for e in env.eng.j.events(k, "TRANSITION")]
+    # a partially filled order disappearing
+    env, k, coid = _filled_env(qty="2")
+    del env.venue.orders[coid]
+    env.venue.lookup_authoritative = True
+    assert env.eng.reconcile(k) == "FILL_MISMATCH"
+    _halted_mismatch(env, k)
+    # an intent that expired BEFORE submission is never queried (nothing was sent): no false halt, no lock
+    env = Env()
+    env.faults.arm("before_journal_write", nth=5)
+    crash(env.eng.submit, it)
+    env.clock.advance(70_000)
+    eng = env.restart()
+    assert eng.submit(it) == S.EXPIRED
+    env.venue.lookup_authoritative = True
+    assert eng.reconcile(k) == "CONSISTENT" and eng.state(k) == S.EXPIRED and not eng.market_lock_status("BTC", BTC)[0]
+
+
+def test_absence_after_ambiguous_submit():
+    """651.11: HALTED after an ambiguous submit (never acknowledged) + authoritative absence -> REJECTED is safe."""
+    for mode in ("TIMEOUT_NOT_RECEIVED", "LOST_ACK"):
+        env = Env()
+        env.venue.script_submit(mode)
+        it = intent()
+        k, coid = ids(it)
+        assert env.eng.submit(it) == S.HALTED_FOR_RECONCILIATION
+        env.venue.orders.pop(coid, None)                                       # the venue proves nothing exists
+        env.venue.lookup_authoritative = True
+        assert env.eng.reconcile(k) == "RECOVERABLE_DIFFERENCE" and env.eng.state(k) == S.REJECTED, mode
+        assert not env.eng.market_lock_status("BTC", BTC)[0] and env.venue.submit_attempts == {coid: 1}
+
+
+def test_unreachable_implications():
+    """651.12: every venue-implied state is validated centrally against the transition graph -> mismatch, never an
+    InvalidTransition (several implications, not only ACKNOWLEDGED -> REJECTED)."""
+    from execution.adapter import AdapterSnapshot, OrderLookup, OrderView, PositionReport
+    from execution.reconcile import assess
+    it = intent()
+    k, coid = ids(it)
+    zero = {"YES": D(0), "NO": D(0)}
+
+    def snap(status, filled, yes, fills=()):
+        o = OrderView("po-1", coid, BTC, "YES", D("5"), D("0.5"), status, D(filled))
+        return AdapterSnapshot(OrderLookup(o, True), tuple(fills), PositionReport(BTC, D(yes), D(0)))
+
+    def ledger_with(qty):
+        lg = ExecutionLedger(k, BTC, "BTC", "YES", "5", "0.50")
+        if qty:
+            lg.add_fill("pf-1", qty, "0.45", "po-1", coid, "fee-1")
+            lg.add_fee("fee-1", "0.01", "pf-1")
+        return lg
+
+    from execution.adapter import FillReport
+    f5 = FillReport("pf-1", "po-1", coid, D("5"), D("0.45"), D("0.01"), "fee-1", T0)
+    cases = [(S.CANCELLED, snap("RESTING", "0", "0"), ledger_with(None), "ACKNOWLEDGED"),
+             (S.FILLED, snap("CANCELLED", "5", "5", [f5]), ledger_with("5"), "CANCELLED"),
+             (S.EXPIRED, snap("FILLED", "5", "5", [f5]), ledger_with(None), "FILLED"),
+             (S.SETTLEMENT_PENDING, snap("RESTING", "5", "5", [f5]), ledger_with("5"), "FILLED"),
+             (S.CANCELLED, snap("REJECTED", "0", "0"), ledger_with(None), "REJECTED")]
+    for st, sn, lg, implied in cases:
+        a = assess(st, it, coid, sn, lg, zero, journal_order_id="po-1", acknowledged=True)
+        assert a.verdict == "FILL_MISMATCH" and a.implied_state.value == implied and a.details.get("unreachable"), \
+            (st, implied, a.verdict, a.reason)
+    # authoritative absence proposing REJECTED from ACKNOWLEDGED when the caller supplies no history (legacy call)
+    absent = AdapterSnapshot(OrderLookup(None, True), (), PositionReport(BTC, D(0), D(0)))
+    a = assess(S.ACKNOWLEDGED, it, coid, absent, ledger_with(None), zero)
+    assert a.verdict == "FILL_MISMATCH" and a.implied_state == S.REJECTED
+    assert assess(S.HALTED_FOR_RECONCILIATION, it, coid, absent, ledger_with(None), zero).implied_state == S.REJECTED
+    assert assess(S.EXECUTION_UNKNOWN, it, coid, absent, ledger_with(None), zero).verdict == "RECOVERABLE_DIFFERENCE"
+    # through the engine: a CANCELLED order the venue later shows RESTING
+    env = Env()
+    env.eng.submit(it)
+    assert env.eng.cancel(k) == S.CANCELLED
+    env.venue.orders[coid]["status"] = "RESTING"
+    assert env.eng.reconcile(k) == "FILL_MISMATCH"                             # no InvalidTransition
+    _halted_mismatch(env, k)
+    rec = env.eng.j.events(k, "RECONCILIATION")[-1]
+    assert rec["reconciliation_status"] == "FILL_MISMATCH" and "unreachable" in rec["reconciliation_reason"]
+
+
+def test_journal_schema_migration():
+    """Journal schema v1 (Step 6.5) is migrated meta-only; an unknown / newer schema is refused."""
+    d = tmpdir()
+    p = os.path.join(d, "j.sqlite")
+    env_j = Journal(p)
+    it = intent()
+    k, coid = ids(it)
+    with env_j.transaction():
+        env_j.record_intent(it, k, coid)
+        env_j.append({"kind": "MARK", "event_id": "m-1", "execution_key": k, "ts_ms": T0, "payload": {"mark": "0.5"}})
+    env_j.conn.execute("UPDATE meta SET value='1' WHERE key='schema_version'")    # a Step-6.5 journal
+    before = [dict(e) for e in env_j.events()]
+    env_j.close()
+    j2 = Journal(p)
+    meta = dict(j2.conn.execute("SELECT key, value FROM meta").fetchall())
+    assert meta["schema_version"] == "2" and meta["migrated_from"] == "1"
+    assert [dict(e) for e in j2.events()] == before and j2.intent_row(intent_id="i1") is not None
+    j2.conn.execute("UPDATE meta SET value='3' WHERE key='schema_version'")
+    j2.close()
+    try:
+        Journal(p); raise AssertionError("a newer journal schema was opened")
+    except JournalError:
+        pass
 
 
 def test_previous_stages():
@@ -1068,6 +1371,14 @@ TESTS = [
     ("isolation", "41 production isolation: strategy / perp-veto / Step-6.4 fingerprints, 47 fixtures, LIVE", test_production_isolation),
     ("secrets", "42 no secrets / databases / artifacts shipped", test_no_secrets_or_artifacts),
     ("docs", "43 docs/EXECUTION_ARCHITECTURE.md + mutation results", test_docs),
+    ("fillidentity", "45 [6.5.1] fill identity: changed order_id / client_order_id, wrong-order new fills -> FILL_MISMATCH", test_fill_identity),
+    ("feecontra", "46 [6.5.1] known fee: same -> idempotent; changed -> FILL_MISMATCH, halted, survives restart", test_known_fee_contradiction),
+    ("feeresolve", "47 [6.5.1] UNKNOWN fee resolves append-only to known; no double count; restart / repeat safe", test_unknown_fee_resolution),
+    ("feeremap", "48 [6.5.1] the same fill switching fee_id fails closed", test_fee_id_remap),
+    ("ackabsence", "49 [6.5.1] authoritative absence after ACK -> mismatch / halt, never InvalidTransition", test_absence_after_ack),
+    ("haltabsence", "50 [6.5.1] HALTED ambiguous submit + authoritative absence -> REJECTED", test_absence_after_ambiguous_submit),
+    ("unreachable", "51 [6.5.1] unreachable reconciliation implications -> mismatch (central reachability)", test_unreachable_implications),
+    ("migration", "52 [6.5.1] journal schema v1 -> v2 meta-only migration; newer schema refused", test_journal_schema_migration),
     ("previous", "44 all previous stage suites", test_previous_stages),
 ]
 

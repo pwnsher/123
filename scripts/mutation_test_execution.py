@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Mutation tests for the Step-6.5 execution foundation (paper / shadow only, offline, no network).
+Mutation tests for the Step-6.5 / 6.5.1 execution foundation (paper / shadow only, offline, no network).
 
     py scripts/mutation_test_execution.py [--out analysis_output/execution_mutation_results.json] [--only E1,E7]
 
-Each mutation breaks ONE execution-safety rule (E1-E20 of the Step-6.5 brief) in a TEMPORARY copy of the repository
+Each mutation breaks ONE execution-safety rule (E1-E20 of the Step-6.5 brief, E21-E28 of Step 6.5.1) in a TEMPORARY copy of the repository
 and runs the relevant BEHAVIOURAL Stage-23 tests there; CAUGHT = those tests fail. The execution-fingerprint test is
 deliberately never used to catch a mutation (it would flag any edit at all). Control: the unmutated copy must PASS the
 same tests. The working tree is never modified.
@@ -25,6 +25,8 @@ ENG = "execution/engine.py"
 LED = "execution/ledger.py"
 INV = "execution/invariants.py"
 IDN = "execution/identity.py"
+REC = "execution/reconcile.py"
+FILL_ID = 'FILL_IDENTITY = ("qty", "price", "order_id", "client_order_id", "fee_id")'
 # the injected E15 endpoint, assembled so that THIS file never contains the literal (stages 17 / 18 scan scripts/)
 LIVE_PATH = "/".join(("", "portfolio", "orders"))
 
@@ -120,6 +122,36 @@ MUTATIONS = [
        "    return CLIENT_ORDER_ID_PREFIX + hashlib.sha256((h + _PROCESS_SALT).encode()).hexdigest()[:CLIENT_ORDER_ID_HEX]"
        "\n\n\n_PROCESS_SALT = __import__(\"os\").urandom(8).hex()\n", 1)],
      ["identity", "demo"]),
+    ("E21", "fill order_id mismatch is ignored (per-fill order check and the order_id identity field removed)",
+     [(REC, "        if f.order_id != o.order_id:\n", "        if False:\n", 1),
+      (LED, FILL_ID, 'FILL_IDENTITY = ("qty", "price", "client_order_id", "fee_id")', 1)],
+     ["fillidentity"]),
+    ("E22", "fill client_order_id mismatch is ignored (per-fill check and the client_order_id identity field removed)",
+     [(REC, "        if f.client_order_id != client_order_id:\n", "        if False:\n", 1),
+      (LED, FILL_ID, 'FILL_IDENTITY = ("qty", "price", "order_id", "fee_id")', 1)],
+     ["fillidentity"]),
+    ("E23", "changed known fee is accepted as CONSISTENT",
+     [(REC, "            elif cur != f.fee:\n", "            elif False:\n", 1)],
+     ["feecontra"]),
+    ("E24", "UNKNOWN fee can never resolve to known (the resolution is ignored by the ledger)",
+     [(LED, '        self._fee_index[fee_id] = a\n        return "RESOLVED"\n', '        return "RESOLVED"\n', 1)],
+     ["feeresolve"]),
+    ("E25", "UNKNOWN -> known is double counted as another fee",
+     [(LED, '        self._fee_index[fee_id] = a\n        return "RESOLVED"\n',
+       '        self._fee_index[fee_id] = a\n        self._fees.append(fee_id)\n        return "RESOLVED"\n', 1)],
+     ["feeresolve"]),
+    ("E26", "the same fill can switch fee_id silently (fee mapping check and the fee_id identity field removed)",
+     [(REC, "            if scratch.fee_for_fill.get(f.fill_id) != f.fee_id:\n", "            if False:\n", 1),
+      (LED, FILL_ID, 'FILL_IDENTITY = ("qty", "price", "order_id", "client_order_id")', 1)],
+     ["feeremap"]),
+    ("E27", "authoritative absence after an acknowledgement is recovered to REJECTED (journal-history check removed)",
+     [(REC, "        if lookup.authoritative and (acknowledged or journal_order_id is not None or ledger.filled_size > 0):\n",
+       "        if False:\n", 1)],
+     ["ackabsence"]),
+    ("E28", "an unreachable reconciliation implied state bypasses the central reachability validation",
+     [(REC, '    if (a.verdict in ("CONSISTENT", "RECOVERABLE_DIFFERENCE") and a.implied_state is not None\n'
+            '            and not _reachable(state, a.implied_state)):\n', "    if False:\n", 1)],
+     ["unreachable"]),
 ]
 
 
