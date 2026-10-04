@@ -32,7 +32,6 @@ from execution.reconcile import MISMATCH_VERDICTS, assess
 # a journal history containing any of these (after SUBMITTING) proves the venue acknowledged the order
 POST_ACK_STATES = ("ACKNOWLEDGED", "PARTIALLY_FILLED", "FILLED", "CANCEL_PENDING", "CANCELLED", "EXPIRED",
                    "SETTLEMENT_PENDING", "CLOSED")
-from execution.risk import check_intent_against_approval
 from execution.states import (ENGINE, OUTSTANDING, PRE_SUBMIT, RECONCILIATION, TERMINAL, UNSAFE, ExecState,
                               check_transition)
 
@@ -241,7 +240,7 @@ class ExecutionEngine:
         locked, why = self.market_lock_status(intent.asset, intent.market_ticker, exclude=key)
         if locked:
             return S.REJECTED, "MARKET_LOCKED: " + "; ".join(why)[:300]
-        ok, reason = check_intent_against_approval(intent, self.risk_book.get(intent.risk_decision_id), now)
+        ok, reason = self.risk_book.verify(intent, now)
         if not ok:
             return S.REJECTED, reason
         if execution_key(intent) != key or client_order_id(key) != coid:
@@ -262,6 +261,9 @@ class ExecutionEngine:
                 exp[lg.side] += lg.filled_size
         if (pos.yes, pos.no) != (exp["YES"], exp["NO"]):
             return S.REJECTED, f"UNEXPLAINED_EXISTING_POSITION yes={pos.yes} no={pos.no}"
+        ok, reason = self.risk_book.consume(intent, key)          # single logical use, LAST: every check passed
+        if not ok:
+            return S.REJECTED, reason
         return None, None
 
     def _advance(self, key):

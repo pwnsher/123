@@ -1,11 +1,11 @@
 {
- "execution_fingerprint": "fd9ddf103edf15c4d62c512415257a62357565a41693d2ee4f41950b284b6775",
+ "execution_fingerprint": "93a08cce52f31f01707aa9329b447a5efbee25e44e1e476f292efdb722a6970a",
  "format": "execution_fingerprint_v1/canonical_ast_v2_sha256",
  "modules": {
   "execution/__init__.py": "d7f85979ed3982a85f8427f17ce61e116f622667d59b110d047700ddafed5bbb",
   "execution/adapter.py": "5c60b3509e031fdb9a12e7008109bcdd21cf4139a41787822d1eded511748b27",
   "execution/audit.py": "da6de0ae8ec27f7d618fddd1a6841229843137e8288bbde34022fa33fb056f94",
-  "execution/engine.py": "9173e8d70236a20d823fa6a7f4eae3e8b684a2d9576b51382d2a21d5de087e9e",
+  "execution/engine.py": "e56120c0f21cb07ebee3984b207cf50b4f9a8e56ad77c10500973f709acd0539",
   "execution/faults.py": "cb906d495f5afbd28f243f89f1e494ce586dae20108b167a7f1e3bb549cfafb1",
   "execution/fingerprint.py": "d5f7a21f7241ce82d2f71fd5ed7cddf12ecd2850c96196100c5bbfaa5b014ff2",
   "execution/identity.py": "c5959fff17283385e7d2d2c4da3b7278607ab79606dfe31e752deacce75eca83",
@@ -16,7 +16,7 @@
   "execution/money.py": "56e3542dd72f0f94027511cf51e4585df50cd2b5f4df7959064128f91acc4736",
   "execution/paper.py": "21e0dc4df29133e53772235f1ac7959765c4d1c2422794adb6bb78105997221a",
   "execution/reconcile.py": "71a8216bd66b75dd50caedf37aa23f92a72270460e3f155cdb81ef232feef867",
-  "execution/risk.py": "5a020e2eef07b47b6de7b3b65f4dd8bc7dda7053d7e4faf1267ff9a21b401791",
+  "execution/risk.py": "c196f78ee7e6936315ab5371bb5d5f0bae99b1647d8f87d2239edcc2d44e73fd",
   "execution/states.py": "73f0fc06ae3938a3e139c05b5d261e8bb9b3c4b1d3c573b10fe3fa20601378ee"
  },
  "semantics": {

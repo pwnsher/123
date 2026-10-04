@@ -327,7 +327,7 @@ proof with no fills and a flat position.
 
 ## 15. Risk boundary
 
-Every intent carries `risk_decision_id` and `risk_snapshot_hash`. Before READY to SUBMITTING the engine requires a
+Every intent carries `risk_decision_id` and `risk_snapshot_hash`. Since Step 6.6 the approval itself is bound and single-use (see `docs/RISK_ARCHITECTURE.md`; the durable book is `risk.manager.StoreApprovalBook`). Before READY to SUBMITTING the engine requires a
 matching approval in the `RiskApprovalBook`. It rejects RISK_APPROVAL_MISSING, RISK_VETO, RISK_SNAPSHOT_MISMATCH,
 RISK_APPROVAL_EXPIRED, RISK_APPROVAL_SCOPE_MISMATCH (ticker / asset / side), SIZE_EXCEEDS_APPROVAL and
 PRICE_EXCEEDS_APPROVAL. The book is lookup-only: execution can never manufacture an approval, raise the approved size,
@@ -396,6 +396,7 @@ OLD / NEW / WHY entry below.
 |---|---|---|---|
 | Step 6.5 | (none) | `d67c7c7ff001befbe86f96006fd8d996177bb0b813b648e38cc5ebdcb8e1a650` | initial execution foundation |
 | Step 6.5.1 | `d67c7c7ff001befbe86f96006fd8d996177bb0b813b648e38cc5ebdcb8e1a650` | `93a08cce52f31f01707aa9329b447a5efbee25e44e1e476f292efdb722a6970a` | audit corrections. Reconciliation v1 to v2: full fill identity, fee reconciliation, history-aware authoritative absence, central reachability. Ledger v1 to v2: fill identity, one fee per fill, `resolve_fee`. Journal schema 1 to 2: `FEE_RESOLUTION` (DDL unchanged, v1 migrated meta-only). Modules changed: engine, journal, ledger, paper (per-fill `client_order_id` in `get_fills`), reconcile. The old baseline is archived in `config/history/execution_baseline_step6.5.json`. |
+| Step 6.6 | `93a08cce52f31f01707aa9329b447a5efbee25e44e1e476f292efdb722a6970a` | `fd9ddf103edf15c4d62c512415257a62357565a41693d2ee4f41950b284b6775` | approval validation only (Step 6.6 risk integration). `execution/risk.py`: `RiskApproval` gains optional binding fields (`candidate_id`, `policy_fingerprint`, signal / model / calibration fingerprints, `issued_at`, `binding_hash`). `approval_binding_hash` and `check_intent_against_approval` now also reject RISK_APPROVAL_TAMPERED, RISK_APPROVAL_CANDIDATE_MISMATCH, RISK_POLICY_CHANGED and RISK_APPROVAL_PROVENANCE_MISMATCH. The book gains `verify` and `consume` (single logical use). `execution/engine.py`: the pre-submit check calls `risk_book.verify(...)`, and `risk_book.consume(...)` runs LAST, after every other check passed. The fingerprint's semantics block (states, transitions, journal, reconciliation, invariants) is unchanged. The old baseline is archived in `config/history/execution_baseline_step6.5.1.json`. |
 
 ## 21. Mutation tests (E1-E28)
 

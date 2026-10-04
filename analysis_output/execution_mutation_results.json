@@ -4,7 +4,7 @@
   "unmutated": {
    "caught": false,
    "returncode": 0,
-   "seconds": 3.6,
+   "seconds": 3.4,
    "failed_test": null,
    "passed_tests": [
     "1 duplicate intent: idempotent replay, one order; reused intent_",
@@ -94,7 +94,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  22-24 execution never increases size, widens price or flips side; intent validation: AssertionError: size increase accepted",
     "passed_tests": []
    }
@@ -256,7 +256,7 @@
     "caught": true,
     "returncode": 1,
     "seconds": 0.2,
-    "failed_test": "FAIL  35 no live-write network path: structural scan, stub refuses, production never imports execution: AssertionError: ('/tmp/mut-exec-qjas34tq/repo/execution/adapter.py', {'urllib.request'})",
+    "failed_test": "FAIL  35 no live-write network path: structural scan, stub refuses, production never imports execution: AssertionError: ('/tmp/mut-exec-69by5tar/repo/execution/adapter.py', {'urllib.request'})",
     "passed_tests": []
    }
   },
@@ -328,8 +328,8 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.4,
-    "failed_test": "FAIL  2 deterministic execution key / client_order_id (order, decimal text, processes, persisted): AssertionError: {'8c0dbac86c359985e44a0ce18ae7c07ef46054221dc7c6a09bbbde0dafa8d7de x1045898c61dd830fbbab6769ed68045', '8c0dbac86c359985e44a0ce18ae7c07ef46054221dc7c6a09bbbde0dafa8d7de x1de1413d826826ae",
+    "seconds": 0.3,
+    "failed_test": "FAIL  2 deterministic execution key / client_order_id (order, decimal text, processes, persisted): AssertionError: {'8c0dbac86c359985e44a0ce18ae7c07ef46054221dc7c6a09bbbde0dafa8d7de x18748a85c53e83ba1d464cae46e2bba', '8c0dbac86c359985e44a0ce18ae7c07ef46054221dc7c6a09bbbde0dafa8d7de x1532e0f5f9a77996",
     "passed_tests": []
    }
   },
@@ -426,7 +426,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
+    "seconds": 0.2,
     "failed_test": "FAIL  49 [6.5.1] authoritative absence after ACK -> mismatch / halt, never InvalidTransition: AssertionError: ",
     "passed_tests": []
    }
@@ -440,7 +440,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  51 [6.5.1] unreachable reconciliation implications -> mismatch (central reachability): AssertionError: (<ExecState.CANCELLED: 'CANCELLED'>, 'ACKNOWLEDGED', 'RECOVERABLE_DIFFERENCE', 'venue proves ACKNOWLEDGED (filled 0)')",
     "passed_tests": []
    }

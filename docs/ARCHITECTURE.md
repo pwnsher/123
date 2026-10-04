@@ -47,7 +47,8 @@ manually promoted, inactive-by-default live veto.
 | Microstructure research (Step 5) | `py collect_research_data.py --all-research [--dry-run]` (Steps 3 + 4 + 5, one session), `scripts/replay_microstructure.py`, `scripts/build_micro_dataset.py`, `scripts/lead_lag_analysis.py`, `scripts/prune_sessions.py`, `scripts/bench_microstructure.py`, `scripts/mutation_test_microstructure.py`, `py -m microstructure.fingerprint --verify` |
 | Feature evaluation (Step 6, research only) | `py run_step6_research.py [--dry-run / --validate-only / --dataset-only / --family-ablation / --calibration / --report / --synthetic-selftest]`, `py validate_research_session.py <session>`, `py research_status.py`, `scripts/bench_step6.py`, `scripts/mutation_test_step6.py`, `py -m feature_eval.fingerprint --verify` (docs/STEP6_FEATURE_EVALUATION.md) |
 | Execution foundation (Step 6.5, PAPER ONLY) | `scripts/execution_restart_demo.py`, `scripts/mutation_test_execution.py` (E1–E20), `py -m execution.fingerprint --verify` (docs/EXECUTION_ARCHITECTURE.md) |
-| Tests | `py run_all_tests.py` (stages 1–23, each in its own process) |
+| Risk manager foundation (Step 6.6, PAPER ONLY) | `scripts/risk_restart_demo.py`, `scripts/mutation_test_risk.py` (R1–R35), `py -m risk.fingerprint --verify` (docs/RISK_ARCHITECTURE.md) |
+| Tests | `py run_all_tests.py` (stages 1–24, each in its own process) |
 
 ## 4. Prediction and signal path (per coin, every `POLL_SECONDS` = 4 s)
 
@@ -296,6 +297,12 @@ Step 6.5 built the execution FOUNDATION beside this boundary, in `execution/` (p
 explicit state machine, an append-only SQLite journal, a Decimal ledger, a deterministic paper adapter, reconciliation,
 journal-derived market locks, restart recovery and fault injection. Nothing in production imports it,
 `FutureKalshiExecutionAdapter` is a stub that refuses every call, and `kalshi_core.execution` still refuses LIVE.
+
+Step 6.6 added the risk manager FOUNDATION in `risk/` (paper / shadow only, see `docs/RISK_ARCHITECTURE.md`). It turns
+a proposed RiskCandidate plus an explicit RiskSnapshot and versioned RiskPolicy into a deterministic RiskDecision
+(APPROVE / REDUCE / VETO). Only an approval may become an OrderIntent, and execution verifies the approval's binding
+and consumes it once. It creates no signal, never overrides NO_CALL, makes no network request, and is not imported by
+production code.
 
 ## 14. Failure handling (existing behaviour, unchanged)
 

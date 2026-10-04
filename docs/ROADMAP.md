@@ -10,6 +10,20 @@ Step 1 (this baseline) froze the legacy strategy. Every later phase must:
   prediction → signal → risk → execution separation;
 * show out-of-sample incremental value before any new feature or model reaches the live path.
 
+## Current step status (pre-model hardening track)
+
+| Step | Scope | Status |
+|---|---|---|
+| Step 6.4 | real-feed corrections | APPROVED |
+| Step 6.5 | execution foundation (paper / shadow, zero live orders) | APPROVED |
+| Step 6.5.1 | reconciliation / accounting hardening | APPROVED |
+| Step 6.6 | risk manager foundation (paper / shadow, zero live orders): `risk/`, docs/RISK_ARCHITECTURE.md | CURRENT |
+| Step 6.7 | realistic execution simulator (slippage, latency, queue, fill probability from recorded books) | next (not started) |
+| Step 7 | frozen real research dataset (once enough real sessions exist) | not started |
+| Step 8 | model redesign | not started |
+
+None of the future steps is complete; LIVE trading remains refused.
+
 | # | Phase | Scope placeholder | Status |
 |---|---|---|---|
 | 1 | Settlement engine improvement | model the real CF Benchmarks settlement (RTI average) instead of Coinbase proxies; settlement-aware labels | **foundation built (Step 2, research only)**: `settlement/`, docs/SETTLEMENT_ENGINE.md; awaiting real captured data to verify the window convention |
@@ -24,7 +38,7 @@ Step 1 (this baseline) froze the legacy strategy. Every later phase must:
 | 10 | EV-based signal engine | replaces the threshold gates only after validation | not started |
 | 11 | Walk-forward evaluation | shared framework for all phases | **started (Step 6)**: `feature_eval.splits` (purged chronological splits + walk-forward) and `feature_eval.ledger` are reusable by later phases |
 | 12 | Execution simulator | realistic fills, queue, fees, latency | not started |
-| 13 | Risk manager | implements `kalshi_core.interfaces.RiskManager` | not started |
+| 13 | Risk manager | deterministic portfolio / trade risk above execution | **foundation built (Step 6.6, paper / shadow only)**: `risk/`, docs/RISK_ARCHITECTURE.md; RiskCandidate / RiskSnapshot / RiskPolicy / RiskDecision / RiskApproval, hard vetoes vs size caps, worst-case loss, exposure / group / same-direction caps, persistent breakers, bound single-use approvals; thresholds are configurable fixtures, NOT research-validated; not wired into production |
 | 14 | Kalshi execution engine | behind `kalshi_core.execution`; LIVE stays unavailable until 17 | **foundation built (Step 6.5, paper / shadow only)**: `execution/`, docs/EXECUTION_ARCHITECTURE.md; OrderIntent, deterministic idempotency, state machine, append-only journal, ledger, paper adapter, reconciliation, persistent market locks, restart recovery; **no live adapter** (stub refuses), not wired into production |
 | 15 | Local dashboard | successor to the legacy page | not started |
 | 16 | Shadow validation | full pipeline in shadow against real markets | not started |

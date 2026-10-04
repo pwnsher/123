@@ -1,0 +1,558 @@
+{
+ "note": "Each mutation breaks one Step-6.6 risk-safety rule in a temporary copy; CAUGHT = the behavioural Stage-24 tests fail (never the fingerprint test).",
+ "controls": {
+  "unmutated": {
+   "caught": false,
+   "returncode": 0,
+   "seconds": 2.1,
+   "failed_test": null,
+   "passed_tests": [
+    "2 NO_CALL is always vetoed; no approval can exist for NO_CALL",
+    "3 side can never change (decision, approval, intent)",
+    "4 size can never increase",
+    "5 price can never widen (tighten only)",
+    "6 deterministic risk_decision_id (processes, restart); snapshot ",
+    "8 deterministic policy fingerprint; every semantic change change",
+    "9 expired candidate / closed market -> VETO",
+    "10 stale (or future) risk snapshot -> VETO",
+    "11 stale / UNKNOWN quote age -> VETO",
+    "14 feed FAIL -> VETO",
+    "15 feed / model UNKNOWN -> VETO",
+    "23 UNKNOWN required fee -> VETO (never zero)",
+    "24 UNKNOWN required slippage -> VETO (never zero)",
+    "25-26 UNKNOWN EV / non-positive EV -> VETO",
+    "30-33 per-trade contract / notional / worst-case loss / equity-f",
+    "34 per-asset open-risk and notional caps",
+    "35-36 portfolio open-risk and notional caps",
+    "37 crypto-group cap (both directions count)",
+    "38 same-direction crypto cap (BTC UP + ETH UP + SOL UP = 120)",
+    "39 simultaneous caps -> the smallest safe size (20 -> 4)",
+    "43 drawdown breaker (day peak incl. internally tracked)",
+    "44 consecutive-loss breaker",
+    "45 breakers persist through restart",
+    "46b a breaker latched after issuance blocks an outstanding appro",
+    "46 a breaker stays latched when PnL improves; invalid transition",
+    "51 approval expiration; no silent renewal; new snapshot -> new a",
+    "52 approval bound to its candidate; tampering detected",
+    "53 approval bound to its side",
+    "55 approval bound to its size",
+    "56 approval bound to its price",
+    "61 unresolved execution (incl. from a real engine journal) -> VE",
+    "38b a hard veto always overrides a possible reduction",
+    "39b provenance is copied, never changed or manufactured",
+    "45 exact Decimal worst-case loss; boundary and one increment abo",
+    "68 risk transaction rollback; append-only; writes need a transac",
+    "63 risk package has no network / live / credential path; product"
+   ]
+  }
+ },
+ "mutations": [
+  {
+   "id": "R1",
+   "mutation": "NO_CALL can be approved (the NO_CALL veto is removed)",
+   "tests": [
+    "nocall",
+    "hardveto"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  2 NO_CALL is always vetoed; no approval can exist for NO_CALL: AssertionError: ('APPROVE', ())",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R2",
+   "mutation": "risk can flip side (the approval carries the opposite side)",
+   "tests": [
+    "side"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  3 side can never change (decision, approval, intent): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R3",
+   "mutation": "risk can increase size (the largest of requested and caps is approved)",
+   "tests": [
+    "size",
+    "pertrade"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  4 size can never increase: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R4",
+   "mutation": "risk can widen price (max instead of min against the policy entry price)",
+   "tests": [
+    "price"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  5 price can never widen (tighten only): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R5",
+   "mutation": "a hard veto is downgraded into a size reduction (sizing runs despite hard-veto codes)",
+   "tests": [
+    "hardveto"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  38b a hard veto always overrides a possible reduction: AssertionError: ('REDUCE', ('PER_TRADE_CONTRACT_LIMIT',))",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R6",
+   "mutation": "feed FAIL ignored (feed health is skipped)",
+   "tests": [
+    "feedfail"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  14 feed FAIL -> VETO: AssertionError: ('APPROVE', ())",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R7",
+   "mutation": "UNKNOWN health treated as PASS",
+   "tests": [
+    "feedunknown"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  15 feed / model UNKNOWN -> VETO: AssertionError: ('APPROVE', ())",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R8",
+   "mutation": "expired candidate approved",
+   "tests": [
+    "expired"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  9 expired candidate / closed market -> VETO: AssertionError: ('APPROVE', ())",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R9",
+   "mutation": "stale quote approved",
+   "tests": [
+    "stalequote"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  11 stale / UNKNOWN quote age -> VETO: AssertionError: ('APPROVE', ())",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R10",
+   "mutation": "stale snapshot approved",
+   "tests": [
+    "stalesnap"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  10 stale (or future) risk snapshot -> VETO: AssertionError: ('APPROVE', ())",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R11",
+   "mutation": "non-positive EV approved (zero EV passes)",
+   "tests": [
+    "ev"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  25-26 UNKNOWN EV / non-positive EV -> VETO: AssertionError: ('APPROVE', ())",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R12",
+   "mutation": "UNKNOWN required fee treated as zero",
+   "tests": [
+    "fee"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  23 UNKNOWN required fee -> VETO (never zero): AssertionError: ('APPROVE', ())",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R13",
+   "mutation": "UNKNOWN required slippage treated as zero",
+   "tests": [
+    "slippage"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  24 UNKNOWN required slippage -> VETO (never zero): AssertionError: ('APPROVE', ())",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R14",
+   "mutation": "worst-case loss uses the current price instead of the maximum authorised price",
+   "tests": [
+    "worstcase"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  45 exact Decimal worst-case loss; boundary and one increment above: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R15",
+   "mutation": "per-trade cap ignored",
+   "tests": [
+    "pertrade"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  30-33 per-trade contract / notional / worst-case loss / equity-fraction / cash caps: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R16",
+   "mutation": "asset exposure cap ignored",
+   "tests": [
+    "asset"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  34 per-asset open-risk and notional caps: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R17",
+   "mutation": "portfolio exposure cap ignored",
+   "tests": [
+    "portfolio"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  35-36 portfolio open-risk and notional caps: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R18",
+   "mutation": "crypto-group exposure cap ignored",
+   "tests": [
+    "group"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  37 crypto-group cap (both directions count): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R19",
+   "mutation": "same-direction exposure cap ignored",
+   "tests": [
+    "samedir"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  38 same-direction crypto cap (BTC UP + ETH UP + SOL UP = 120): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R20",
+   "mutation": "multiple caps use the largest instead of the smallest",
+   "tests": [
+    "mincaps"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  39 simultaneous caps -> the smallest safe size (20 -> 4): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R21",
+   "mutation": "daily loss breaker not latched (the trigger is never persisted)",
+   "tests": [
+    "latched"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  46 a breaker stays latched when PnL improves; invalid transitions fail closed: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R22",
+   "mutation": "breaker lost on restart (latched only in process memory)",
+   "tests": [
+    "breakerrestart"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  45 breakers persist through restart: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R23",
+   "mutation": "drawdown breaker ignored",
+   "tests": [
+    "drawdown"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  43 drawdown breaker (day peak incl. internally tracked): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R24",
+   "mutation": "consecutive-loss breaker ignored",
+   "tests": [
+    "consecutive"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  44 consecutive-loss breaker: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R25",
+   "mutation": "approval expiry ignored by execution",
+   "tests": [
+    "expiry"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  51 approval expiration; no silent renewal; new snapshot -> new approval: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R26",
+   "mutation": "approval reusable for a different candidate",
+   "tests": [
+    "bindcand"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  52 approval bound to its candidate; tampering detected: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R27",
+   "mutation": "approval reusable for the opposite side",
+   "tests": [
+    "bindside"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  53 approval bound to its side: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R28",
+   "mutation": "approval reusable for a larger size",
+   "tests": [
+    "bindsize"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  55 approval bound to its size: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R29",
+   "mutation": "approval reusable for a worse price",
+   "tests": [
+    "bindprice"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  56 approval bound to its price: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R30",
+   "mutation": "risk decision id non-deterministic",
+   "tests": [
+    "decisionid"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  6 deterministic risk_decision_id (processes, restart); snapshot / policy change -> new id: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R31",
+   "mutation": "a policy change does not change the fingerprint (values excluded)",
+   "tests": [
+    "policyfp"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  8 deterministic policy fingerprint; every semantic change changes it: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R32",
+   "mutation": "risk journal write non-atomic (no BEGIN / COMMIT / ROLLBACK)",
+   "tests": [
+    "rollback"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  68 risk transaction rollback; append-only; writes need a transaction: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R33",
+   "mutation": "execution UNKNOWN / HALTED does not veto",
+   "tests": [
+    "unresolved"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  61 unresolved execution (incl. from a real engine journal) -> VETO: AssertionError: ('APPROVE', ())",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R34",
+   "mutation": "the risk package introduces a network / live API path",
+   "tests": [
+    "nonetwork"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  63 risk package has no network / live / credential path; production never imports risk: AssertionError: ('/tmp/mut-risk-namexy4v/repo/risk/manager.py', {'risk.policy', 'risk.breakers', 'risk.evaluate', 'execution.money', 'execution.risk', 'risk.types', 'risk.decision', 'urllib.request'})",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R35",
+   "mutation": "a risk approval can manufacture missing signal provenance",
+   "tests": [
+    "provenance"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  39b provenance is copied, never changed or manufactured: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R36",
+   "mutation": "(extra) a breaker latched after issuance does not block an outstanding approval",
+   "tests": [
+    "breakerapproval"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  46b a breaker latched after issuance blocks an outstanding approval (also after restart): AssertionError: ",
+    "passed_tests": []
+   }
+  }
+ ],
+ "all_caught_and_controls_pass": true
+}
