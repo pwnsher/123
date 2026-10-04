@@ -261,10 +261,7 @@ class ExecutionEngine:
                 exp[lg.side] += lg.filled_size
         if (pos.yes, pos.no) != (exp["YES"], exp["NO"]):
             return S.REJECTED, f"UNEXPLAINED_EXISTING_POSITION yes={pos.yes} no={pos.no}"
-        ok, reason = self.risk_book.consume(intent, key)          # single logical use, LAST: every check passed
-        if not ok:
-            return S.REJECTED, reason
-        return None, None
+        return None, None                            # read-only: the approval is NOT consumed here
 
     def _advance(self, key):
         intent, coid = self._intent(key)
@@ -300,6 +297,13 @@ class ExecutionEngine:
             assert_order_within_intent(intent, req, coid)
         except InvariantViolation as e:
             return self._transition(key, S.REJECTED, f"INVARIANT: {e}")
+        # FINAL risk authorisation: every approval condition re-checked against the CURRENT clock and the persisted
+        # risk state, and the approval consumed for this intent, in ONE risk transaction - the linearisation point.
+        # Nothing has been sent, so a failure is a definitive REJECTED (never EXECUTION_UNKNOWN).
+        ok, reason = self.risk_book.verify_and_consume(intent, key, self.clock.now_ms())
+        if not ok:
+            return self._transition(key, S.REJECTED, reason[:300])
+        self.faults.hit("after_final_risk_consumption_before_submitting")
         self._transition(key, S.SUBMITTING, "submitting", expect=S.READY)     # persisted BEFORE the adapter call
         self.faults.hit("before_submit")
         try:

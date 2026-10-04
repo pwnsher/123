@@ -1,12 +1,12 @@
 {
- "execution_fingerprint": "2b39e73b4b1fc9ab31400bf7ef96fd7c6aebb0f74b2d4c3a82b5836a459f184b",
+ "execution_fingerprint": "fd9ddf103edf15c4d62c512415257a62357565a41693d2ee4f41950b284b6775",
  "format": "execution_fingerprint_v1/canonical_ast_v2_sha256",
  "modules": {
   "execution/__init__.py": "d7f85979ed3982a85f8427f17ce61e116f622667d59b110d047700ddafed5bbb",
   "execution/adapter.py": "5c60b3509e031fdb9a12e7008109bcdd21cf4139a41787822d1eded511748b27",
   "execution/audit.py": "da6de0ae8ec27f7d618fddd1a6841229843137e8288bbde34022fa33fb056f94",
-  "execution/engine.py": "f88be5d0d5a23d42f60d33a2a3d0046b1d0391eaf0dc24ef3c1c06f63a5439b2",
-  "execution/faults.py": "14c28f901d61ba40282d48412191732f4f66d6de8f6327523b83617615812216",
+  "execution/engine.py": "9173e8d70236a20d823fa6a7f4eae3e8b684a2d9576b51382d2a21d5de087e9e",
+  "execution/faults.py": "cb906d495f5afbd28f243f89f1e494ce586dae20108b167a7f1e3bb549cfafb1",
   "execution/fingerprint.py": "d5f7a21f7241ce82d2f71fd5ed7cddf12ecd2850c96196100c5bbfaa5b014ff2",
   "execution/identity.py": "c5959fff17283385e7d2d2c4da3b7278607ab79606dfe31e752deacce75eca83",
   "execution/intent.py": "f561829f6ac3d242dd2c4efa1674b95485f694bac38aab5cc17392586f93bfce",
@@ -16,7 +16,7 @@
   "execution/money.py": "56e3542dd72f0f94027511cf51e4585df50cd2b5f4df7959064128f91acc4736",
   "execution/paper.py": "21e0dc4df29133e53772235f1ac7959765c4d1c2422794adb6bb78105997221a",
   "execution/reconcile.py": "71a8216bd66b75dd50caedf37aa23f92a72270460e3f155cdb81ef232feef867",
-  "execution/risk.py": "bd6f0b5d00eef5fbbeebfcb186ac32711d264f0a9136c3363fdce32fcbbfeb05",
+  "execution/risk.py": "5a020e2eef07b47b6de7b3b65f4dd8bc7dda7053d7e4faf1267ff9a21b401791",
   "execution/states.py": "73f0fc06ae3938a3e139c05b5d261e8bb9b3c4b1d3c573b10fe3fa20601378ee"
  },
  "semantics": {
@@ -65,7 +65,6 @@
    "before_journal_write",
    "journal_mid_transaction",
    "after_journal_write",
-   "after_final_risk_consumption_before_submitting",
    "before_submit",
    "during_submit",
    "after_submit_before_ack",
@@ -587,5 +586,5 @@
    ]
   ]
  },
- "semantics_sha256": "32fb24c5612acd2cff32104ad943257eebd4139440039e3f95e81f99421c7c5d"
+ "semantics_sha256": "4f3b45d75280a723e4b58565bc54c39586073c99195c87864aa67e8545b9d426"
 }

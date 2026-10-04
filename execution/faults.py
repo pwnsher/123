@@ -10,6 +10,7 @@ FAULT_POINTS = (
     "before_journal_write",       # a journal transaction is about to start
     "journal_mid_transaction",    # between two writes of ONE journal transaction (atomicity / rollback)
     "after_journal_write",        # right after a journal transaction committed
+    "after_final_risk_consumption_before_submitting",   # the risk approval was consumed, SUBMITTING not persisted
     "before_submit",              # SUBMITTING is persisted, the adapter has not been called
     "during_submit",              # the venue accepted the order, the adapter call never returned
     "after_submit_before_ack",    # the adapter returned an acknowledgement, ACKNOWLEDGED not yet persisted

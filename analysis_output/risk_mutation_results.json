@@ -4,7 +4,7 @@
   "unmutated": {
    "caught": false,
    "returncode": 0,
-   "seconds": 2.1,
+   "seconds": 2.2,
    "failed_test": null,
    "passed_tests": [
     "2 NO_CALL is always vetoed; no approval can exist for NO_CALL",
@@ -42,6 +42,16 @@
     "39b provenance is copied, never changed or manufactured",
     "45 exact Decimal worst-case loss; boundary and one increment abo",
     "68 risk transaction rollback; append-only; writes need a transac",
+    "651-3 [6.6.1] a NO_CALL still latches an authoritative breaker b",
+    "651-6A [6.6.1] same-day operator reset of DAILY_REALIZED_LOSS re",
+    "651-6B [6.6.1] same-day operator reset of DAILY_TOTAL_LOSS refus",
+    "651-6C [6.6.1] same-day operator reset of ROLLING_DRAWDOWN refus",
+    "651-18.1 [6.6.1] breaker latched between verify and final consum",
+    "651-18.2 [6.6.1] approval expires before final consume -> REJECT",
+    "651-18.3 [6.6.1] approval superseded before final consume -> REJ",
+    "651-18.4 [6.6.1] policy changes before final consume -> REJECTED",
+    "651-18.8 [6.6.1] PRECHECK completion does not consume the approv",
+    "651-18.11 [6.6.1] crash after consumption, before SUBMITTING -> ",
     "63 risk package has no network / live / credential path; product"
    ]
   }
@@ -57,7 +67,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  2 NO_CALL is always vetoed; no approval can exist for NO_CALL: AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -71,7 +81,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  3 side can never change (decision, approval, intent): AssertionError: ",
     "passed_tests": []
    }
@@ -86,7 +96,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  4 size can never increase: AssertionError: ",
     "passed_tests": []
    }
@@ -100,7 +110,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  5 price can never widen (tighten only): AssertionError: ",
     "passed_tests": []
    }
@@ -114,7 +124,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  38b a hard veto always overrides a possible reduction: AssertionError: ('REDUCE', ('PER_TRADE_CONTRACT_LIMIT',))",
     "passed_tests": []
    }
@@ -128,7 +138,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  14 feed FAIL -> VETO: AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -142,7 +152,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  15 feed / model UNKNOWN -> VETO: AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -156,7 +166,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  9 expired candidate / closed market -> VETO: AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -170,7 +180,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  11 stale / UNKNOWN quote age -> VETO: AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -184,7 +194,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  10 stale (or future) risk snapshot -> VETO: AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -198,7 +208,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  25-26 UNKNOWN EV / non-positive EV -> VETO: AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -226,7 +236,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  24 UNKNOWN required slippage -> VETO (never zero): AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -240,7 +250,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  45 exact Decimal worst-case loss; boundary and one increment above: AssertionError: ",
     "passed_tests": []
    }
@@ -254,7 +264,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  30-33 per-trade contract / notional / worst-case loss / equity-fraction / cash caps: AssertionError: ",
     "passed_tests": []
    }
@@ -268,7 +278,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  34 per-asset open-risk and notional caps: AssertionError: ",
     "passed_tests": []
    }
@@ -282,7 +292,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  35-36 portfolio open-risk and notional caps: AssertionError: ",
     "passed_tests": []
    }
@@ -296,7 +306,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  37 crypto-group cap (both directions count): AssertionError: ",
     "passed_tests": []
    }
@@ -310,7 +320,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  38 same-direction crypto cap (BTC UP + ETH UP + SOL UP = 120): AssertionError: ",
     "passed_tests": []
    }
@@ -324,7 +334,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  39 simultaneous caps -> the smallest safe size (20 -> 4): AssertionError: ",
     "passed_tests": []
    }
@@ -506,7 +516,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  61 unresolved execution (incl. from a real engine journal) -> VETO: AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -521,7 +531,7 @@
     "caught": true,
     "returncode": 1,
     "seconds": 0.2,
-    "failed_test": "FAIL  63 risk package has no network / live / credential path; production never imports risk: AssertionError: ('/tmp/mut-risk-namexy4v/repo/risk/manager.py', {'risk.policy', 'risk.breakers', 'risk.evaluate', 'execution.money', 'execution.risk', 'risk.types', 'risk.decision', 'urllib.request'})",
+    "failed_test": "FAIL  63 risk package has no network / live / credential path; production never imports risk: AssertionError: ('/tmp/mut-risk-scapfzjh/repo/risk/manager.py', {'risk.breakers', 'execution.money', 'urllib.request', 'risk.policy', 'risk.evaluate', 'risk.types', 'execution.risk', 'risk.decision'})",
     "passed_tests": []
    }
   },
@@ -541,7 +551,7 @@
   },
   {
    "id": "R36",
-   "mutation": "(extra) a breaker latched after issuance does not block an outstanding approval",
+   "mutation": "(extra) the read-only verify() ignores a breaker latched after issuance",
    "tests": [
     "breakerapproval"
    ],
@@ -550,6 +560,163 @@
     "returncode": 1,
     "seconds": 0.2,
     "failed_test": "FAIL  46b a breaker latched after issuance blocks an outstanding approval (also after restart): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R37",
+   "mutation": "NO_CALL causes breaker observation to be skipped",
+   "tests": [
+    "nocallbreaker"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  651-3 [6.6.1] a NO_CALL still latches an authoritative breaker breach (restart-safe): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R38",
+   "mutation": "a same-day operator reset clears DAILY_REALIZED_LOSS",
+   "tests": [
+    "resetrealized"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  651-6A [6.6.1] same-day operator reset of DAILY_REALIZED_LOSS refused: AssertionError: DAILY_REALIZED_LOSS cleared intraday by an operator",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R39",
+   "mutation": "a same-day operator reset clears DAILY_TOTAL_LOSS",
+   "tests": [
+    "resettotal"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  651-6B [6.6.1] same-day operator reset of DAILY_TOTAL_LOSS refused: AssertionError: DAILY_TOTAL_LOSS cleared intraday by an operator",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R40",
+   "mutation": "a same-day operator reset clears ROLLING_DRAWDOWN",
+   "tests": [
+    "resetdrawdown"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.1,
+    "failed_test": "FAIL  651-6C [6.6.1] same-day operator reset of ROLLING_DRAWDOWN refused: AssertionError: ROLLING_DRAWDOWN cleared intraday by an operator",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R41",
+   "mutation": "the final consume ignores a newly latched breaker",
+   "tests": [
+    "racebreaker"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  651-18.1 [6.6.1] breaker latched between verify and final consume -> REJECTED, 0 submits: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R42",
+   "mutation": "the final consume ignores approval expiration (a stale time is used)",
+   "tests": [
+    "raceexpiry"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  651-18.2 [6.6.1] approval expires before final consume -> REJECTED, 0 submits: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R43",
+   "mutation": "the final consume ignores approval supersession",
+   "tests": [
+    "racesupersede"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  651-18.3 [6.6.1] approval superseded before final consume -> REJECTED: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R44",
+   "mutation": "the final consume ignores a current policy mismatch",
+   "tests": [
+    "racepolicy"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  651-18.4 [6.6.1] policy changes before final consume -> REJECTED: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R45",
+   "mutation": "the approval is consumed during the preliminary PRECHECK instead of the final READY authorisation",
+   "tests": [
+    "precheckconsume"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  651-18.8 [6.6.1] PRECHECK completion does not consume the approval: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R46",
+   "mutation": "final verify and consume are non-atomic: consume skips the revalidation",
+   "tests": [
+    "racebreaker",
+    "raceexpiry",
+    "racesupersede",
+    "racepolicy"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  651-18.1 [6.6.1] breaker latched between verify and final consume -> REJECTED, 0 submits: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R47",
+   "mutation": "after a crash past consumption another logical intent can use the approval",
+   "tests": [
+    "crashafterconsume"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  651-18.11 [6.6.1] crash after consumption, before SUBMITTING -> no second intent / order: AssertionError: ",
     "passed_tests": []
    }
   }

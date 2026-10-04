@@ -27,7 +27,7 @@ from typing import Optional
 
 from execution.intent import DIRECTION_OF_SIDE, SIDES
 from execution.money import UNKNOWN
-from risk.breakers import BREAKER_REASON, BREAKER_TYPES
+from risk.breakers import BREAKER_REASON, BREAKER_TYPES, utc_day
 from risk.reasons import ordered
 from risk.types import (DIRECTIONS, EXEC_EXPOSURE, EXEC_MISMATCH, EXEC_STATES, EXEC_UNRESOLVED, HEALTH,
                         HEALTH_FIELDS, SIGNAL_STATUSES)
@@ -145,6 +145,25 @@ def snapshot_problems(s, c, policy, now_ms):
             out.append(f"{f} < 0")
     if s.captured_at > now_ms:
         out.append("snapshot captured in the future")
+    return out
+
+
+def breaker_snapshot_problems(s, now_ms):
+    """Why a snapshot is NOT authoritative for breaker observation ([] = authoritative). Breaker data is trusted only
+    when: the snapshot has an id; it was captured at or before now (never a future snapshot) and on the SAME UTC day
+    as now (a previous day's figures cannot latch today's daily breakers); the breaker-relevant fields are safely
+    representable (exact Decimal / int or the explicit UNKNOWN - guaranteed by RiskSnapshot construction, floats and
+    None are refused) and the consecutive-loss count, when known, is >= 0. UNKNOWN breaker fields never trip anything.
+    Candidate properties (signal_status, market scope, ...) play NO part: a NO_CALL never suppresses observation."""
+    out = []
+    if not isinstance(s.snapshot_id, str) or not s.snapshot_id:
+        out.append("snapshot_id missing")
+    if s.captured_at > now_ms:
+        out.append("snapshot captured in the future")
+    elif utc_day(s.captured_at) != utc_day(now_ms):
+        out.append("snapshot captured on another UTC day")
+    if s.consecutive_losses is not UNKNOWN and s.consecutive_losses < 0:
+        out.append("consecutive_losses < 0")
     return out
 
 

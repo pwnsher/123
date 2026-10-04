@@ -11,10 +11,12 @@ Event kinds / ids
     DECISION            d:<risk_decision_id>      candidate, full snapshot, policy fingerprint, decision, caps, triggers
     APPROVAL            a:<risk_decision_id>      the issued RiskApproval (+ its execution binding hash)
     APPROVAL_SUPERSEDED x:<risk_decision_id>      an unexpired, unconsumed approval replaced by a newer decision
-    CONSUMPTION         c:<risk_decision_id>      the ONE intent_id / execution_key the approval authorised
+    CONSUMPTION         c:<risk_decision_id>      the ONE intent_id / execution_key the approval authorised (appended
+                                                  only by StoreApprovalBook.verify_and_consume, after every re-check)
     BREAKER             b:<type>:<n>              previous_state, new_state, action, reason, snapshot hash, policy fp, day
     TRADE_RESULT        tr:<trade_id>:<UNKNOWN|FINAL>   realized PnL of a closed trade (UNKNOWN never counts as a win)
     OBSERVATION         o:<snapshot_hash>         a snapshot observed for breakers / day peak equity without a candidate
+    BREAKER_RESET_REJECTED rr:<n>                 a refused reset attempt (audit only; breaker state is unchanged)
 """
 import json
 import sqlite3
@@ -28,7 +30,7 @@ from risk.faults import NO_RISK_FAULTS
 
 RISK_STORE_SCHEMA_VERSION = 1
 RISK_EVENT_KINDS = ("DECISION", "APPROVAL", "APPROVAL_SUPERSEDED", "CONSUMPTION", "BREAKER", "TRADE_RESULT",
-                    "OBSERVATION")
+                    "OBSERVATION", "BREAKER_RESET_REJECTED")
 RISK_DDL = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS events (
@@ -234,20 +236,3 @@ class RiskStore:
 
     def candidate_consumed(self, candidate_id):
         return any(self.consumption(a.risk_decision_id) for a in self.approvals_for_candidate(candidate_id))
-
-    def consume(self, decision_id, intent_id, execution_key, ts_ms):
-        """Bind an approval to ONE logical intent. -> (ok, reason). Survives restart (it is a journal event)."""
-        with self.transaction(after="after_approval_consumption"):      # check + bind atomically
-            appr = self.approval(decision_id)
-            if appr is None:
-                return False, "RISK_APPROVAL_MISSING"
-            prior = self.consumption(decision_id)
-            if prior is not None:
-                if prior["intent_id"] == intent_id and prior["execution_key"] == execution_key:
-                    return True, "RISK_APPROVAL_REPLAY"
-                return False, f"RISK_APPROVAL_ALREADY_CONSUMED by {prior['intent_id']}"
-            self.faults.hit("during_approval_consumption")
-            self.append("CONSUMPTION", f"c:{decision_id}", ts_ms,
-                        {"intent_id": intent_id, "execution_key": execution_key, "candidate_id": appr.candidate_id},
-                        candidate_id=appr.candidate_id, risk_decision_id=decision_id)
-        return True, "RISK_APPROVAL_CONSUMED"

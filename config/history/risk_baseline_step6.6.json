@@ -4,17 +4,17 @@
   "risk/__init__.py": "69d34a019da8e6c88052f0d8664d53408165989f3bdcc32648abb41174c1b4b2",
   "risk/breakers.py": "ad55b7b887cbdc4c291ad864b14df3494cf25e6206faedf4084f26a36ead235a",
   "risk/decision.py": "bd939d5f15696de8517e02b234aa9575695afe078cc7197d4c54da664883c57c",
-  "risk/evaluate.py": "bd155c76107869b9f039464e21c9cc0ca991143402ce64e373a7181394906b38",
+  "risk/evaluate.py": "081b1224a7b8d3a2dd2d4e5b35336f8ceca076872695f921664e24ce8d7c747e",
   "risk/faults.py": "fc2c15ed5cb0b3df4cae573feaf81ad393311d5f18af395a5ac20710755e5be1",
   "risk/fingerprint.py": "37b689fa213fe9229987f42a2081b001c1233a48b1543fb304cd6e26f7898011",
-  "risk/manager.py": "d294578ec5b91d9c2fcd81bc38e01572103dfba4fb423e397668bc0af454d8a7",
+  "risk/manager.py": "103b5d433dde21e4c1ca6b3541b8dfc5260422dfa85220ce0588b388e1e1e11c",
   "risk/policy.py": "61a3ba3c916299760ef2cc39d5e83ffa8ad26844861e01d53b41aa252709309d",
   "risk/reasons.py": "c845150cf1306acc8d9120d0f08c0df7dda6c96cbffe35532324441e3b6c1a51",
   "risk/shadow.py": "98a3690f5b69b388c483cff46ffa3f5deaf612eb74f1ac595b81257ec9e14934",
-  "risk/store.py": "95ff970adde0e661f879d8fd1328be6a5b46595af4e3befdc13073a638207ecd",
+  "risk/store.py": "60980223e363d0ddd5b9daeabe3422e7f6db7c03a5f94ebf1c15000219bbfaeb",
   "risk/types.py": "300c5d164f0b437d023be936974003f47f026e857d2989fc03c8b43d860e9a77"
  },
- "risk_fingerprint": "4f791073991178a99664173ba2e6f15900e904460e53fd71af49ffb9c36a1664",
+ "risk_fingerprint": "c44e6b1850d645b6f3dc65c3754079b9d6ba4aad807c14a8b52edf060e469693",
  "semantics": {
   "architecture": "risk_foundation_v1",
   "breakers": {
@@ -348,8 +348,7 @@
     "CONSUMPTION",
     "BREAKER",
     "TRADE_RESULT",
-    "OBSERVATION",
-    "BREAKER_RESET_REJECTED"
+    "OBSERVATION"
    ]
   },
   "versions": {
@@ -397,5 +396,5 @@
   },
   "worst_case_loss": "q * (approved_max_limit_price + extra_reserve_per_contract [+ unknown reserves]) + estimated_fee_total + estimated_slippage_total"
  },
- "semantics_sha256": "9c4be2d8a50289078152599ec63e3d1dc7c8f361d693b941b018dcc20e6649b4"
+ "semantics_sha256": "d60d4035aff8068b994b57f625c190d1324832e4f807675c5f2b6b68a0f13112"
 }

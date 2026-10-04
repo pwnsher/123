@@ -113,7 +113,7 @@ def phase(name, workdir):
         out["replay"] = engine(venue).submit(it).value
         out["submit_attempts"] = list(venue.submit_attempts.values())
         out["consumptions"] = mgr.store.count("CONSUMPTION")
-        ok, why = mgr.approval_book().consume(replace(it, intent_id="other-intent"), "other-key")
+        ok, why = mgr.approval_book().verify_and_consume(replace(it, intent_id="other-intent"), "other-key", NOW)
         out["reuse"] = [ok, why.split(" ")[0]]
     elif name == "B1":
         d, a = mgr.evaluate(_candidate("demo-B1"), _snapshot("snap-B1", daily_realized_pnl="-75"))

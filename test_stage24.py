@@ -567,6 +567,7 @@ def test_utc_day_reset():
     r.mgr.store.record_trade_result("a", "-1", day_start - 9000)
     r.mgr.store.record_trade_result("b", "-1", day_start - 8000)
     r.mgr.store.record_trade_result("c", "-1", day_start - 7000)
+    r.clock.t = day_start - 7000                                                # never observe a future snapshot
     r.mgr.observe(snap(captured_at=day_start - 7000))
     assert r.mgr.breakers() == {"DAILY_REALIZED_LOSS": "LATCHED", "DAILY_TOTAL_LOSS": "CLEAR",
                                 "ROLLING_DRAWDOWN": "CLEAR", "CONSECUTIVE_LOSS": "LATCHED"}
@@ -789,11 +790,11 @@ def test_second_intent_cannot_reuse():
     it = intent_from_approval(cand(), a, "i1")
     r.engine().submit(it)
     m = r.restart()
-    ok, why = m.approval_book().consume(dataclasses.replace(it, intent_id="i9"), "some-key")
+    ok, why = m.approval_book().verify_and_consume(dataclasses.replace(it, intent_id="i9"), "some-key", NOW)
     assert not ok and why.startswith("RISK_APPROVAL_ALREADY_CONSUMED")
     r2, d2, a2 = _approved()
-    a_ok, _w = r2.mgr.approval_book().consume(intent_from_approval(cand(), a2, "x1"), "k1")
-    assert a_ok and not r2.mgr.approval_book().consume(intent_from_approval(cand(), a2, "x2"), "k2")[0]
+    a_ok, _w = r2.mgr.approval_book().verify_and_consume(intent_from_approval(cand(), a2, "x1"), "k1", NOW)
+    assert a_ok and not r2.mgr.approval_book().verify_and_consume(intent_from_approval(cand(), a2, "x2"), "k2", NOW)[0]
 
 
 def test_supersede_and_candidate_conflict():
@@ -1027,11 +1028,230 @@ def test_crash_points():
         assert eng.submit(it) == S.ACKNOWLEDGED, point
         assert r.mgr.store.count("CONSUMPTION") == 1 and list(r.venue.submit_attempts.values()) == [1]
         other = dataclasses.replace(it, intent_id="i2")
-        assert not r.mgr.approval_book().consume(other, "k")[0]                    # still single use
+        assert not r.mgr.approval_book().verify_and_consume(other, "k", NOW)[0]                    # still single use
     assert set(RISK_FAULT_POINTS) == {"before_decision_write", "during_decision_transaction", "after_decision_write",
                                       "before_approval_creation", "after_approval_creation",
                                       "during_breaker_transition", "after_breaker_trigger",
                                       "during_approval_consumption", "after_approval_consumption"}
+
+
+# ═══════════════════ Step 6.6.1: breaker observation, reset rule, atomic final authorisation ═══════════════════
+from execution.adapter import AdapterUnavailable  # noqa: E402
+from execution.faults import FaultInjector  # noqa: E402
+from risk.manager import RiskBreakerResetError  # noqa: E402
+
+
+def test_no_call_latches_breaker():
+    """brief §3: a NO_CALL with an authoritative loss beyond the limit latches the breaker; a later same-day CALL with
+    PnL back at 0 is VETOED - with and without a restart in between."""
+    for restart in (False, True):
+        r = REnv()
+        d, a = r.mgr.evaluate(cand("n1", signal_status="NO_CALL"), snap("s1", daily_realized_pnl="-100"))
+        assert d.decision == "VETO" and "NO_CALL" in d.reason_codes and a is None
+        assert r.mgr.breakers()["DAILY_REALIZED_LOSS"] == "LATCHED"
+        m = r.restart() if restart else r.mgr
+        r.clock.t = NOW + 1000                                                  # later, same UTC day
+        d, a = m.evaluate(cand("c2"), snap("s2", captured_at=NOW + 1000, daily_realized_pnl="0"))
+        assert d.decision == "VETO" and "DAILY_REALIZED_LOSS_BREAKER" in d.reason_codes and a is None, restart
+    # an INVALID candidate (any candidate property) cannot suppress observation of an authoritative snapshot either
+    r = REnv()
+    r.mgr.evaluate(cand("bad", requested_contracts="0"), snap(daily_realized_pnl="-100"))
+    assert r.mgr.breakers()["DAILY_REALIZED_LOSS"] == "LATCHED"
+    # non-authoritative snapshots never latch: future, or captured on another UTC day
+    r = REnv()
+    r.mgr.evaluate(cand("f1", signal_status="NO_CALL"), snap(captured_at=NOW + 1, daily_realized_pnl="-100"))
+    r.mgr.observe(snap("yday", captured_at=NOW - DAY, daily_realized_pnl="-100"))
+    assert r.mgr.breakers()["DAILY_REALIZED_LOSS"] == "CLEAR"
+    from risk.evaluate import breaker_snapshot_problems
+    assert breaker_snapshot_problems(snap(), NOW) == []
+    assert breaker_snapshot_problems(snap(captured_at=NOW + 1), NOW) and breaker_snapshot_problems(snap(sid=""), NOW)
+
+
+def _trip(kind):
+    r = REnv()
+    s = {"DAILY_REALIZED_LOSS": snap(daily_realized_pnl="-60"),
+         "DAILY_TOTAL_LOSS": snap(daily_realized_pnl="-40", daily_unrealized_pnl="-41"),
+         "ROLLING_DRAWDOWN": snap(account_equity="850", day_peak_equity="1000")}[kind]
+    r.mgr.observe(s)
+    assert r.mgr.breakers()[kind] == "LATCHED"
+    return r
+
+
+def _refused_reset(kind):
+    r = _trip(kind)
+    n = r.mgr.store.count("BREAKER")
+    try:
+        r.mgr.reset_breaker(kind, "manual override"); raise AssertionError(f"{kind} cleared intraday by an operator")
+    except RiskBreakerResetError:
+        pass
+    assert r.mgr.breakers()[kind] == "LATCHED" and r.mgr.store.count("BREAKER") == n      # history untouched
+    assert r.mgr.store.count("BREAKER_RESET_REJECTED") == 1
+    assert r.restart().breakers()[kind] == "LATCHED"
+    d, _ = r.mgr.evaluate(cand(), snap("s9"))
+    assert d.decision == "VETO"
+
+
+def test_reset_rule_realized():
+    _refused_reset("DAILY_REALIZED_LOSS")
+
+
+def test_reset_rule_total():
+    _refused_reset("DAILY_TOTAL_LOSS")
+
+
+def test_reset_rule_drawdown():
+    _refused_reset("ROLLING_DRAWDOWN")
+
+
+def test_reset_rule_consecutive_and_day_boundary():
+    r = REnv()
+    for i in range(3):
+        r.mgr.store.record_trade_result(f"t{i}", "-1", NOW)
+    r.mgr.observe(snap())
+    assert r.mgr.breakers()["CONSECUTIVE_LOSS"] == "LATCHED"
+    for bad in ("", "   ", None):                                                 # E. a reason is mandatory
+        try:
+            r.mgr.reset_breaker("CONSECUTIVE_LOSS", bad); raise AssertionError("reset without a reason")
+        except RiskBreakerResetError:
+            pass
+    assert r.mgr.breakers()["CONSECUTIVE_LOSS"] == "LATCHED"
+    r.mgr.reset_breaker("CONSECUTIVE_LOSS", "operator reviewed the streak")       # D. allowed
+    assert r.mgr.breakers()["CONSECUTIVE_LOSS"] == "CLEAR"
+    try:
+        r.mgr.reset_breaker("NOT_A_BREAKER", "x"); raise AssertionError("unknown breaker reset")
+    except RiskBreakerResetError:
+        pass
+    r = _trip("DAILY_REALIZED_LOSS")                                              # F. day N -> day N+1
+    nxt = (NOW // DAY + 1) * DAY + 5
+    r.clock.t = nxt
+    d, a = r.mgr.evaluate(cand("c-next", created_at=nxt - 10, decision_ts=nxt - 20, expires_at=nxt + 300_000,
+                               market_close_ts=nxt + 600_000), snap("s-next", captured_at=nxt))
+    assert r.mgr.breakers()["DAILY_REALIZED_LOSS"] == "CLEAR" and d.decision == "APPROVE"
+    assert [e["payload"]["action"] for e in r.mgr.store.events("BREAKER")][-1] == "RESET"
+
+
+class _Hooked(PaperExecutionAdapter):
+    """Paper adapter that runs a hook during the n-th position query (call 1 = PRECHECK, call 2 = final READY)."""
+
+    def __init__(self, venue, hooks):
+        super().__init__(venue)
+        self.hooks, self.calls = hooks, 0
+
+    def get_positions(self, market_ticker):
+        self.calls += 1
+        h = self.hooks.get(self.calls)
+        if h:
+            h()
+        return super().get_positions(market_ticker)
+
+
+def _race(hook2=None, hook1=None, c=None, faults=None, jname="race.sqlite"):
+    r, d, a = _approved(c=c)
+    it = intent_from_approval(c or cand(), a, "i1")
+    hooks = {k: v for k, v in ((1, hook1), (2, hook2)) if v}
+    eng = ExecutionEngine(Journal(os.path.join(r.dir, jname)), _Hooked(r.venue, {k: (lambda f=f: f(r, a, it))
+                                                                                  for k, f in hooks.items()}),
+                          r.mgr.approval_book(), r.clock, faults=faults)
+    return r, a, it, eng
+
+
+def test_race_breaker():
+    r, a, it, eng = _race(lambda r, a, it: r.mgr.observe(snap("loss", daily_realized_pnl="-100")))
+    assert eng.submit(it) == S.REJECTED and reasons_of(eng, it).startswith("RISK_BREAKER_LATCHED")
+    assert r.venue.submit_attempts == {} and r.mgr.store.count("CONSUMPTION") == 0
+
+
+def test_race_expiry():
+    r, a, it, eng = _race(lambda r, a, it: setattr(r.clock, "t", a.expires_at))     # now == expires_at
+    assert eng.submit(it) == S.REJECTED and reasons_of(eng, it) == "RISK_APPROVAL_EXPIRED"
+    assert r.venue.submit_attempts == {} and r.mgr.store.count("CONSUMPTION") == 0
+
+
+def test_race_supersede():
+    r, a, it, eng = _race(lambda r, a, it: r.mgr.evaluate(cand(), snap("s-new", account_equity="1001")))
+    assert eng.submit(it) == S.REJECTED and reasons_of(eng, it) == "RISK_APPROVAL_SUPERSEDED"
+    assert r.venue.submit_attempts == {} and r.mgr.store.count("CONSUMPTION") == 0
+
+
+def test_race_policy():
+    r, a, it, eng = _race(lambda r, a, it: r.mgr.set_policy(policy(max_contracts_per_trade="999")))
+    assert eng.submit(it) == S.REJECTED and reasons_of(eng, it) == "RISK_POLICY_CHANGED"
+    assert r.venue.submit_attempts == {}
+
+
+def test_race_other_intent():
+    def steal(r, a, it):
+        ok, _ = r.mgr.approval_book().verify_and_consume(dataclasses.replace(it, intent_id="thief"), "k-thief", NOW)
+        assert ok
+    r, a, it, eng = _race(steal)
+    assert eng.submit(it) == S.REJECTED and reasons_of(eng, it).startswith("RISK_APPROVAL_ALREADY_CONSUMED by thief")
+    assert r.venue.submit_attempts == {} and r.mgr.store.count("CONSUMPTION") == 1
+
+
+def test_final_consume_once_and_replay():
+    seen = {}
+    r, a, it, eng = _race(hook2=lambda r, a, it: seen.setdefault("during_ready", r.mgr.store.count("CONSUMPTION")),
+                          hook1=lambda r, a, it: seen.setdefault("during_precheck", r.mgr.store.count("CONSUMPTION")))
+    assert eng.submit(it) == S.ACKNOWLEDGED
+    assert seen == {"during_precheck": 0, "during_ready": 0}                     # 9: consumed only at the end
+    ev = r.mgr.store.events("CONSUMPTION")
+    assert len(ev) == 1 and ev[0]["payload"]["intent_id"] == "i1" and list(r.venue.submit_attempts.values()) == [1]
+    for _ in range(3):                                                           # 6: exact replay is idempotent
+        assert eng.submit(it) == S.ACKNOWLEDGED
+    assert r.mgr.store.count("CONSUMPTION") == 1 and list(r.venue.submit_attempts.values()) == [1]
+
+
+def test_precheck_does_not_consume():
+    def fail_ready(r, a, it):
+        raise AdapterUnavailable("position query timed out")
+    r, a, it, eng = _race(hook2=fail_ready)
+    assert eng.submit(it) == S.REJECTED and reasons_of(eng, it).startswith("PRECHECK_UNVERIFIABLE")
+    assert r.mgr.store.count("CONSUMPTION") == 0                                 # 8: PRECHECK never consumed it
+    assert r.mgr.approval_book().verify_and_consume(dataclasses.replace(it, intent_id="i2"), "k2", NOW)[0]
+
+
+def test_crash_before_final_consume():
+    r, a, it, eng = _race()
+    r.faults.arm("during_approval_consumption")
+    crash(eng.submit, it)
+    m = r.restart()
+    assert m.store.count("CONSUMPTION") == 0                                     # 10: still unconsumed
+    eng2 = ExecutionEngine(Journal(os.path.join(r.dir, "race.sqlite")), PaperExecutionAdapter(r.venue),
+                           m.approval_book(), r.clock)
+    assert eng2.state(execution_key_of(it)) == S.READY
+    assert eng2.submit(it) == S.ACKNOWLEDGED and list(r.venue.submit_attempts.values()) == [1]
+    assert m.store.count("CONSUMPTION") == 1
+
+
+def execution_key_of(it):
+    from execution.identity import execution_key
+    return execution_key(it)
+
+
+def test_crash_after_final_consume():
+    """11: the risk consumption is durable but SUBMITTING was never journaled. Recovery semantics: the approval stays
+    bound to that intent; no other intent can use it, no new approval is issued for the candidate, and the SAME
+    intent replays idempotently (final checks re-run, consumption replays) and submits exactly once."""
+    xf = FaultInjector().arm("after_final_risk_consumption_before_submitting")
+    r, a, it, eng = _race(faults=xf)
+    crash(eng.submit, it)
+    m = r.restart()
+    assert m.store.count("CONSUMPTION") == 1 and r.venue.submit_attempts == {}
+    eng2 = ExecutionEngine(Journal(os.path.join(r.dir, "race.sqlite")), PaperExecutionAdapter(r.venue),
+                           m.approval_book(), r.clock)
+    assert eng2.state(execution_key_of(it)) == S.READY
+    eng2.recover()
+    other = dataclasses.replace(it, intent_id="i-other")
+    ok, why = m.approval_book().verify_and_consume(other, "k-other", NOW)
+    assert not ok and why.startswith("RISK_APPROVAL_ALREADY_CONSUMED")
+    eng3 = ExecutionEngine(Journal(os.path.join(r.dir, "other.sqlite")), PaperExecutionAdapter(r.venue),
+                           m.approval_book(), r.clock)
+    assert eng3.submit(other) == S.REJECTED
+    d2, a2 = m.evaluate(cand(), snap("s-again"))
+    assert d2.decision == "VETO" and "CANDIDATE_ALREADY_EXECUTED" in d2.reason_codes and a2 is None
+    assert eng2.submit(it) == S.ACKNOWLEDGED
+    assert list(r.venue.submit_attempts.values()) == [1] and m.store.count("CONSUMPTION") == 1
+    assert eng2.submit(it) == S.ACKNOWLEDGED and list(r.venue.submit_attempts.values()) == [1]
 
 
 # ═══════════════════ 63-67, 70 isolation / structure ═══════════════════
@@ -1151,7 +1371,10 @@ def test_docs():
         assert s in rm, s
     mut = json.load(open(os.path.join(HERE, "analysis_output", "risk_mutation_results.json")))
     assert mut["all_caught_and_controls_pass"] is True
-    assert {m["id"] for m in mut["mutations"]} >= {f"R{i}" for i in range(1, 36)}
+    assert {m["id"] for m in mut["mutations"]} >= {f"R{i}" for i in range(1, 48)}
+    for s in ("linearization point", "verify_and_consume", "breaker-authoritative", "reset_rule is enforced",
+              "after_final_risk_consumption_before_submitting", "r47"):
+        assert s in low, s
 
 
 def test_previous_stages():
@@ -1228,6 +1451,20 @@ TESTS = [
     ("crash", "53 crash at every risk fault point -> restart: nothing lost, no veto -> approval, no breaker cleared", test_crash_points),
     ("rollback", "68 risk transaction rollback; append-only; writes need a transaction", test_risk_rollback),
     ("journal", "69 the risk journal survives restart (decisions, approvals, breakers, streak)", test_risk_journal_restart),
+    ("nocallbreaker", "651-3 [6.6.1] a NO_CALL still latches an authoritative breaker breach (restart-safe)", test_no_call_latches_breaker),
+    ("resetrealized", "651-6A [6.6.1] same-day operator reset of DAILY_REALIZED_LOSS refused", test_reset_rule_realized),
+    ("resettotal", "651-6B [6.6.1] same-day operator reset of DAILY_TOTAL_LOSS refused", test_reset_rule_total),
+    ("resetdrawdown", "651-6C [6.6.1] same-day operator reset of ROLLING_DRAWDOWN refused", test_reset_rule_drawdown),
+    ("resetconsec", "651-6DEF [6.6.1] CONSECUTIVE_LOSS operator reset (reason required); UTC day-boundary reset", test_reset_rule_consecutive_and_day_boundary),
+    ("racebreaker", "651-18.1 [6.6.1] breaker latched between verify and final consume -> REJECTED, 0 submits", test_race_breaker),
+    ("raceexpiry", "651-18.2 [6.6.1] approval expires before final consume -> REJECTED, 0 submits", test_race_expiry),
+    ("racesupersede", "651-18.3 [6.6.1] approval superseded before final consume -> REJECTED", test_race_supersede),
+    ("racepolicy", "651-18.4 [6.6.1] policy changes before final consume -> REJECTED", test_race_policy),
+    ("raceother", "651-18.5 [6.6.1] approval consumed by another intent before final consume -> REJECTED", test_race_other_intent),
+    ("finalonce", "651-18.6/7/9 [6.6.1] final consume once at READY; exact replay idempotent", test_final_consume_once_and_replay),
+    ("precheckconsume", "651-18.8 [6.6.1] PRECHECK completion does not consume the approval", test_precheck_does_not_consume),
+    ("crashbeforeconsume", "651-18.10 [6.6.1] crash before final consumption -> approval unconsumed", test_crash_before_final_consume),
+    ("crashafterconsume", "651-18.11 [6.6.1] crash after consumption, before SUBMITTING -> no second intent / order", test_crash_after_final_consume),
     ("nonetwork", "63 risk package has no network / live / credential path; production never imports risk", test_no_network_path),
     ("live", "64 LIVE remains refused", test_live_refused),
     ("isolation", "65 47 production fixtures + every existing fingerprint unchanged", test_production_isolation),

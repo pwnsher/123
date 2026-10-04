@@ -11,9 +11,11 @@ Step 6.6 (approval validation only - no other execution semantics changed):
       fingerprints, issued_at) sealed by binding_hash (approval_binding_hash): a tampered approval, an approval for
       another candidate, or one whose provenance differs from the intent is rejected;
     * a book may require the CURRENT risk policy fingerprint (an approval issued under another policy is rejected);
-    * single logical use: verify() checks, consume() binds the approval to ONE intent_id (a replay of the same intent
-      is idempotent; any other intent is rejected). This in-memory book is the manual / test book; risk.manager
-      provides the durable, restart-safe book backed by the risk store.
+    * single logical use (Step 6.6.1): verify() is READ-ONLY (PRECHECK / READY); verify_and_consume() is the FINAL,
+      atomic authorisation the engine calls immediately before READY -> SUBMITTING: it re-runs every check at the
+      current time and binds the approval to ONE intent_id + execution key (the same intent replays idempotently; any
+      other intent is rejected). This in-memory book is the manual / test book; risk.manager provides the durable,
+      restart-safe book whose final check + consumption is one risk-store transaction.
 """
 import hashlib
 import json
@@ -76,7 +78,7 @@ class RiskApprovalBook:
 
     def __init__(self, approvals=(), required_policy_fingerprint=None):
         self._by_id = {}
-        self._consumed = {}                       # decision_id -> intent_id (single logical use, in memory)
+        self._consumed = {}                       # decision_id -> (intent_id, execution_key) (single use)
         self.required_policy_fingerprint = required_policy_fingerprint
         for a in approvals:
             self._by_id[a.decision_id] = a
@@ -88,13 +90,17 @@ class RiskApprovalBook:
         return check_intent_against_approval(intent, self.get(intent.risk_decision_id), now_ms,
                                              self.required_policy_fingerprint)
 
-    def consume(self, intent, execution_key):
-        """Bind the approval to this intent. -> (ok, reason). The same intent again is an idempotent replay."""
+    def verify_and_consume(self, intent, execution_key, now_ms):
+        """FINAL authorisation: re-run every check at `now_ms`, then bind the approval to this ONE intent / execution
+        key. -> (ok, reason). The same intent + key again is an idempotent replay; anything else is rejected."""
+        ok, reason = self.verify(intent, now_ms)
+        if not ok:
+            return False, reason
         prior = self._consumed.get(intent.risk_decision_id)
-        if prior is not None and prior != intent.intent_id:
-            return False, f"RISK_APPROVAL_ALREADY_CONSUMED by {prior}"
-        self._consumed[intent.risk_decision_id] = intent.intent_id
-        return True, "RISK_APPROVAL_CONSUMED"
+        if prior is not None and prior != (intent.intent_id, execution_key):
+            return False, f"RISK_APPROVAL_ALREADY_CONSUMED by {prior[0]}"
+        self._consumed[intent.risk_decision_id] = (intent.intent_id, execution_key)
+        return True, "RISK_APPROVAL_CONSUMED" if prior is None else "RISK_APPROVAL_REPLAY"
 
 
 def check_intent_against_approval(intent, approval, now_ms, required_policy_fingerprint=None):

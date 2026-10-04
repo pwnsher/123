@@ -1,4 +1,4 @@
-# Risk architecture (Step 6.6: risk manager foundation, PAPER / SHADOW ONLY, zero live orders)
+# Risk architecture (Step 6.6 + 6.6.1: risk manager foundation, PAPER / SHADOW ONLY, zero live orders)
 
 Package: `risk/` (pure stdlib, Python 3.10-3.13, exact `Decimal`). Tests: `test_stage24.py`. Mutations:
 `scripts/mutation_test_risk.py` (R1-R35). Demo: `scripts/risk_restart_demo.py`. Fingerprint:
@@ -185,6 +185,20 @@ CLEAR --TRIGGER--> TRIGGERED --LATCH--> LATCHED --RESET--> CLEAR      (any other
   does neither (documented and tested). An UNKNOWN result is never a win: it is recorded as unresolved, and the
   loss-streak state is UNKNOWN (veto) until a final result arrives. The count used is the larger of the persisted
   streak and the snapshot's.
+* **Observation is independent of the candidate (Step 6.6.1).** Every `RiskManager.evaluate()` first OBSERVES
+  the snapshot (`_observe_breakers`), whatever the candidate is: CALL, NO_CALL or even an invalid candidate. Only then
+  does it AUTHORIZE. A NO_CALL still never yields an approval, but an authoritative snapshot showing a breach latches
+  the breaker. `observe()` uses the same path.
+* **Breaker-authoritative snapshot** (`risk.evaluate.breaker_snapshot_problems` is empty):
+  * it has a snapshot id;
+  * `captured_at <= now` (never a future snapshot) and it was captured on the SAME UTC day as now (yesterday's
+    figures never latch today's daily breakers);
+  * its breaker fields are safely representable (exact Decimal / int or explicit UNKNOWN, guaranteed by RiskSnapshot
+    construction, which refuses floats and None);
+  * the consecutive-loss count, when known, is >= 0.
+
+  UNKNOWN breaker fields never trip anything (they veto the candidate instead). Candidate properties (signal status,
+  market scope, size) play no part.
 * **Breaker persistence:** TRIGGER and LATCH are written in one transaction, and each transition stores
   `breaker_id, breaker_type, previous_state, new_state, timestamp, reason, snapshot_hash, policy_fingerprint` and the
   UTC day. Current state is the replay of that history, so a restart never clears a breaker, and better intraday PnL
@@ -192,6 +206,11 @@ CLEAR --TRIGGER--> TRIGGERED --LATCH--> LATCHED --RESET--> CLEAR      (any other
 * **Reset semantics:** the daily realized, daily total and drawdown breakers reset at the first evaluation or
   observation on a LATER UTC calendar day than the day they latched (UTC from the millisecond timestamp, never the
   local time zone). CONSECUTIVE_LOSS resets only by an explicit operator reset with a reason. Every reset is logged.
+* **RESET_RULE is enforced (Step 6.6.1).** `RiskManager.reset_breaker` allows an operator reset ONLY for a
+  breaker whose rule is OPERATOR (CONSECUTIVE_LOSS), and only with a non-empty reason. A reset of DAILY_REALIZED_LOSS,
+  DAILY_TOTAL_LOSS or ROLLING_DRAWDOWN (rule UTC_DAY_BOUNDARY), an unknown breaker or a reasonless reset raises
+  `RiskBreakerResetError`. Breaker history is untouched; the refused attempt is recorded as an append-only
+  `BREAKER_RESET_REJECTED` audit event.
 
 ## 11. RiskDecision
 
@@ -234,12 +253,39 @@ risk_policy_fingerprint, signal_fingerprint, model_fingerprint, calibration_fing
   (`RISK_APPROVAL_SUPERSEDED`). A candidate whose approval was consumed is never approved again
   (`CANDIDATE_ALREADY_EXECUTED`).
 
-## 13. Approval consumption / replay
+## 13. Final authorization, approval consumption and replay (Step 6.6.1)
 
-`StoreApprovalBook.consume` binds an approval to ONE `intent_id` / execution key, as a `CONSUMPTION` event in the
-risk journal, so it survives restart. Execution calls it LAST in its pre-submit checks, after every other check
-passed. The same logical intent replaying after a restart is idempotent; any other intent is rejected
-(`RISK_APPROVAL_ALREADY_CONSUMED`). The check and the bind happen in one transaction.
+`StoreApprovalBook` exposes two operations:
+
+* `verify(intent, now_ms)` is **read-only**. Execution calls it during PRECHECK and READY; it never consumes.
+* `verify_and_consume(intent, execution_key, now_ms)` is the **final authorization**. Execution calls it exactly once,
+  immediately before READY -> SUBMITTING (after the order-vs-intent invariants). In ONE risk-store transaction
+  (`BEGIN IMMEDIATE`, so it is serialized with every breaker / approval / supersession write) it re-checks
+  everything against the CURRENT clock (the later of the engine's freshly read time and the risk clock, read inside
+  the transaction) and the persisted state:
+  * the approval exists and is not superseded;
+  * no breaker is TRIGGERED or LATCHED;
+  * binding hash, candidate, CURRENT policy fingerprint (`RiskManager.set_policy` changes it at once), provenance and
+    snapshot hash;
+  * expiry: `now >= expires_at` means EXPIRED;
+  * market / asset / side, size and price;
+  * prior consumption: the same intent_id + execution_key is an idempotent replay, anything else is rejected.
+
+  Only then does it append the CONSUMPTION event.
+* **Linearization point:** the commit of that CONSUMPTION event. A breaker transition, supersession, policy change or
+  expiry ordered BEFORE it makes the authorization fail. One ordered AFTER it cannot affect an execution that is
+  already authorized (exits / position management come later).
+* **A final-check failure** (breaker, expiry, supersession, policy, binding, consumed by another intent) means
+  READY -> REJECTED with the exact risk reason. No venue request was made, so it is never EXECUTION_UNKNOWN, and
+  there are zero submit attempts.
+* **A crash before consumption** rolls back: the approval stays unconsumed and a replay authorizes normally.
+* **A crash after consumption but before SUBMITTING** (execution fault point
+  `after_final_risk_consumption_before_submitting`) leaves the approval durably bound to that intent / execution key:
+  * no other intent can use it, and the candidate is never approved again (`CANDIDATE_ALREADY_EXECUTED`);
+  * on restart the execution journal still shows READY. Replaying the SAME intent re-runs every final check and
+    replays the consumption idempotently, then submits exactly once;
+  * if the approval has expired (or a breaker latched) in the meantime, the final check fails: REJECTED, with no order
+    and no second authorization. The spent approval stays spent (fail closed).
 
 ## 14. Execution integration
 
@@ -294,6 +340,7 @@ Rewriting requires `--write --i-intend-to-change-the-risk-baseline` and an OLD /
 | Step | OLD | NEW | Why |
 |---|---|---|---|
 | Step 6.6 | (none) | `c44e6b1850d645b6f3dc65c3754079b9d6ba4aad807c14a8b52edf060e469693` | initial risk manager foundation |
+| Step 6.6.1 | `c44e6b1850d645b6f3dc65c3754079b9d6ba4aad807c14a8b52edf060e469693` | `4f791073991178a99664173ba2e6f15900e904460e53fd71af49ffb9c36a1664` | audit hardening. `risk/evaluate.py`: `breaker_snapshot_problems` (authority criteria). `risk/manager.py`: breaker observation independent of the candidate's signal; RESET_RULE enforced (`RiskBreakerResetError`); `set_policy`; `StoreApprovalBook` with read-only `verify` and atomic `verify_and_consume` (all checks + consumption in one transaction at the current time). `risk/store.py`: the unchecked `consume` primitive removed; new audit event kind `BREAKER_RESET_REJECTED`. The old baseline is archived in `config/history/risk_baseline_step6.6.json`. |
 
 ## 19. Why Step 6.6 cannot place live orders
 
@@ -307,7 +354,7 @@ Rewriting requires `--write --i-intend-to-change-the-risk-baseline` and an OLD /
 
 ## 20. Mutation tests (R1-R35)
 
-`py scripts/mutation_test_risk.py` applies each mutation to a temporary copy and runs the behavioural Stage-24 tests
+`py scripts/mutation_test_risk.py` (R1-R47) applies each mutation to a temporary copy and runs the behavioural Stage-24 tests
 (never the fingerprint test). The mutations:
 * **Signal, side, size, price:** R1 NO_CALL approved; R2 side flipped; R3 size increased; R4 price widened;
   R5 hard veto downgraded to a reduction.
@@ -324,7 +371,12 @@ Rewriting requires `--write --i-intend-to-change-the-risk-baseline` and an OLD /
 * **Determinism and safety:** R30 non-deterministic decision id; R31 policy change not fingerprinted; R32 non-atomic
   journal; R33 execution UNKNOWN not vetoed; R34 network path introduced; R35 approval manufactures missing
   provenance.
-* **Extra:** R36 a breaker latched after issuance does not block an outstanding approval.
+* **Extra:** R36 the read-only verify ignores a breaker latched after issuance.
+* **Step 6.6.1:** R37 NO_CALL skips breaker observation; R38 / R39 / R40 a same-day operator reset clears
+  DAILY_REALIZED_LOSS / DAILY_TOTAL_LOSS / ROLLING_DRAWDOWN; R41 / R42 / R43 / R44 the final consume ignores a newly
+  latched breaker / approval expiration / supersession / a policy change; R45 consumption during PRECHECK instead of
+  READY; R46 the final consume skips revalidation (non-atomic); R47 after a crash past consumption, another intent
+  can use the approval.
 
 Results are in `analysis_output/risk_mutation_results.json`.
 

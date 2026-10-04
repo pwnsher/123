@@ -4,7 +4,7 @@ Mutation tests for the Step-6.6 risk manager foundation (paper / shadow only, of
 
     py scripts/mutation_test_risk.py [--out analysis_output/risk_mutation_results.json] [--only R1,R7]
 
-Each mutation breaks ONE risk-safety rule (R1-R35 of the Step-6.6 brief; R36 an extra) in a TEMPORARY copy of the repository and
+Each mutation breaks ONE risk-safety rule (R1-R35 of the Step-6.6 brief, R36 an extra, R37-R47 of Step 6.6.1) in a TEMPORARY copy of the repository and
 runs the relevant BEHAVIOURAL Stage-24 tests there; CAUGHT = those tests fail. The fingerprint test is never used to
 catch a mutation. Control: the unmutated copy must PASS the same tests. The working tree is never modified.
 """
@@ -164,10 +164,57 @@ MUTATIONS = [
        'signal_fingerprint=candidate.signal_fingerprint if isinstance(candidate.signal_fingerprint, str) '
        'and candidate.signal_fingerprint else "0" * 32,', 1)],
      ["provenance"]),
-    ("R36", "(extra) a breaker latched after issuance does not block an outstanding approval",
+    ("R36", "(extra) the read-only verify() ignores a breaker latched after issuance",
+     [(MGR, "    def verify(self, intent, now_ms):\n        return self._authorize(intent, now_ms)\n",
+       "    def verify(self, intent, now_ms):\n        return check_intent_against_approval(intent, self.get("
+       "intent.risk_decision_id), now_ms, self.required_policy_fingerprint)\n", 1)],
+     ["breakerapproval"]),
+    ("R37", "NO_CALL causes breaker observation to be skipped",
+     [(MGR, "            observed = self._observe_breakers(snapshot, now, snap_hash)       # A. observation",
+       '            observed = self._observe_breakers(snapshot, now, snap_hash) if candidate.signal_status == "CALL" '
+       'else []  # A. observation', 1)],
+     ["nocallbreaker"]),
+    ("R38", "a same-day operator reset clears DAILY_REALIZED_LOSS",
+     [(MGR, '        if RESET_RULE.get(breaker_type) != "OPERATOR" or not reason_ok:',
+       '        if (RESET_RULE.get(breaker_type) != "OPERATOR" and breaker_type != "DAILY_REALIZED_LOSS") or not reason_ok:', 1)],
+     ["resetrealized"]),
+    ("R39", "a same-day operator reset clears DAILY_TOTAL_LOSS",
+     [(MGR, '        if RESET_RULE.get(breaker_type) != "OPERATOR" or not reason_ok:',
+       '        if (RESET_RULE.get(breaker_type) != "OPERATOR" and breaker_type != "DAILY_TOTAL_LOSS") or not reason_ok:', 1)],
+     ["resettotal"]),
+    ("R40", "a same-day operator reset clears ROLLING_DRAWDOWN",
+     [(MGR, '        if RESET_RULE.get(breaker_type) != "OPERATOR" or not reason_ok:',
+       '        if (RESET_RULE.get(breaker_type) != "OPERATOR" and breaker_type != "ROLLING_DRAWDOWN") or not reason_ok:', 1)],
+     ["resetdrawdown"]),
+    ("R41", "the final consume ignores a newly latched breaker",
      [(MGR, "        if latched:                                  # a breaker latched AFTER issuance still stops the "
             "entry\n", "        if False:\n", 1)],
-     ["breakerapproval"]),
+     ["racebreaker"]),
+    ("R42", "the final consume ignores approval expiration (a stale time is used)",
+     [(MGR, "            now = max(now_ms, self.clock.now_ms())          # the CURRENT time",
+       "            now = intent.created_at                          # the CURRENT time", 1)],
+     ["raceexpiry"]),
+    ("R43", "the final consume ignores approval supersession",
+     [(MGR, "        if intent.risk_decision_id and self.store.superseded(intent.risk_decision_id):\n",
+       "        if False:\n", 1)],
+     ["racesupersede"]),
+    ("R44", "the final consume ignores a current policy mismatch",
+     [(MGR, "                                             self.required_policy_fingerprint)\n",
+       "                                             None)\n", 1)],
+     ["racepolicy"]),
+    ("R45", "the approval is consumed during the preliminary PRECHECK instead of the final READY authorisation",
+     [("execution/engine.py", "        return None, None                            # read-only: the approval is NOT "
+                              "consumed here",
+       "        ok, reason = self.risk_book.verify_and_consume(intent, key, now)\n"
+       "        return (None, None) if ok else (S.REJECTED, reason)", 1)],
+     ["precheckconsume"]),
+    ("R46", "final verify and consume are non-atomic: consume skips the revalidation",
+     [(MGR, "            ok, reason = self._authorize(intent, now)\n", '            ok, reason = True, "unchecked"\n', 1)],
+     ["racebreaker", "raceexpiry", "racesupersede", "racepolicy"]),
+    ("R47", "after a crash past consumption another logical intent can use the approval",
+     [(MGR, "                return False, f\"RISK_APPROVAL_ALREADY_CONSUMED by {prior['intent_id']}\"\n",
+       '                return True, "RISK_APPROVAL_REPLAY"\n', 1)],
+     ["crashafterconsume"]),
 ]
 
 
