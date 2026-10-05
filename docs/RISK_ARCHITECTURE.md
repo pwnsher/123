@@ -1,4 +1,4 @@
-# Risk architecture (Step 6.6 + 6.6.1: risk manager foundation, PAPER / SHADOW ONLY, zero live orders)
+# Risk architecture (Step 6.6 + 6.6.1 + 6.6.2: risk manager foundation, PAPER / SHADOW ONLY, zero live orders)
 
 Package: `risk/` (pure stdlib, Python 3.10-3.13, exact `Decimal`). Tests: `test_stage24.py`. Mutations:
 `scripts/mutation_test_risk.py` (R1-R35). Demo: `scripts/risk_restart_demo.py`. Fingerprint:
@@ -85,6 +85,26 @@ reserve, and an optional `max_entry_price` (tighten only).
 `risk_policy_fingerprint` is a sha256 over every policy value plus the rules version and the evaluation order. Any
 semantic change (a limit, health behaviour, a staleness threshold, the TTL, a group mapping) changes it; mapping order
 does not. Every RiskDecision stores it.
+
+**RiskPolicy object vs ACTIVE policy (Step 6.6.2).** A `RiskPolicy` is a configuration value. The ACTIVE policy is
+DURABLE, ordered state of the risk journal: `POLICY_ACTIVATED` events, append-only, each storing `event_id`,
+`previous_policy_fingerprint`, `new_policy_fingerprint`, `policy_id`, `policy_version`, the full policy, the timestamp
+and a mandatory `reason`.
+* **Changing it:** `RiskManager.activate_policy(policy, reason)` (`set_policy` is an alias) appends one activation
+  inside a risk-store transaction (`BEGIN IMMEDIATE`). It is therefore totally ordered with every evaluation and
+  every final authorization, across processes, RiskManager instances and SQLite connections. The moment it commits,
+  approvals carrying the previous fingerprint are rejected (`RISK_POLICY_CHANGED`).
+* **Construction** validates the supplied policy and reconciles it with the journal:
+  * a fresh store activates it (audited "initial activation");
+  * the same fingerprint continues;
+  * a different fingerprint raises `RiskPolicyMismatchError` unless an explicit `activate_reason` is given. There is
+    never a silent overwrite or reversion.
+* **Reopening:** `RiskManager.from_store(store, clock)` reopens with the persisted active policy, after re-verifying
+  its fingerprint (a mismatch fails closed).
+* **One policy per transaction:** every risk transaction resolves ONE `(policy, fingerprint)` pair from the journal
+  and uses it for everything in that transaction: day-reset metadata, breaker thresholds and transitions, the
+  evaluation's caps, the decision id, and the RiskDecision / RiskApproval fingerprint. Thresholds and identity can
+  never mix policies.
 
 **Why thresholds are not research-validated.** No value in this repository is claimed to be optimal or profitable.
 Tests build explicit fixture policies, and `config/risk_policy_shadow_v1.json` is labelled TEST / SHADOW DEFAULT,
@@ -211,6 +231,25 @@ CLEAR --TRIGGER--> TRIGGERED --LATCH--> LATCHED --RESET--> CLEAR      (any other
   DAILY_TOTAL_LOSS or ROLLING_DRAWDOWN (rule UTC_DAY_BOUNDARY), an unknown breaker or a reasonless reset raises
   `RiskBreakerResetError`. Breaker history is untouched; the refused attempt is recorded as an append-only
   `BREAKER_RESET_REJECTED` audit event.
+* **The CONSECUTIVE_LOSS reset is effective (Step 6.6.2).** The operator reset appends a `LOSS_STREAK_RESET` event
+  (`reset_id`, timestamp, `operator_reason`, `previous_consecutive_losses`, `new_baseline = 0`, `epoch`,
+  `policy_fingerprint`) and the breaker LATCHED -> CLEAR transition in ONE risk-store transaction. A crash between
+  or after them rolls BOTH back. `RiskStore.loss_streak()` replays the journal in order:
+  * a reset sets the streak to 0, and earlier losses no longer count;
+  * later losses count normally; a win resets; zero PnL keeps the current post-reset streak;
+  * an UNKNOWN result stays unresolved (fail closed, never a win), whenever it was recorded;
+  * TRADE_RESULT history is never deleted;
+  * a second reset while CLEAR is an invalid breaker transition, so it is never applied twice;
+  * restart reconstructs everything.
+* **Consecutive-loss source of truth (Step 6.6.2).** The persisted, post-reset streak of the risk journal is
+  canonical. Each reset starts a new consecutive-loss EPOCH (the count of LOSS_STREAK_RESET events). A snapshot's
+  `consecutive_losses` is taken into account (the maximum of it and the journal's) ONLY when its `loss_streak_epoch`
+  equals the journal's current epoch:
+  * a count from an older epoch predates the operator reset and is not applied, so an old external "3" cannot
+    immediately undo the reset;
+  * a newer or UNKNOWN epoch is inconsistent evidence, which means CONSECUTIVE_LOSS_STATE_UNKNOWN (veto).
+
+  Snapshot loss information is therefore still used, just never across a reset it does not know about.
 
 ## 11. RiskDecision
 
@@ -253,7 +292,7 @@ risk_policy_fingerprint, signal_fingerprint, model_fingerprint, calibration_fing
   (`RISK_APPROVAL_SUPERSEDED`). A candidate whose approval was consumed is never approved again
   (`CANDIDATE_ALREADY_EXECUTED`).
 
-## 13. Final authorization, approval consumption and replay (Step 6.6.1)
+## 13. Final authorization, approval consumption and replay (Step 6.6.1 / 6.6.2)
 
 `StoreApprovalBook` exposes two operations:
 
@@ -265,16 +304,30 @@ risk_policy_fingerprint, signal_fingerprint, model_fingerprint, calibration_fing
   the transaction) and the persisted state:
   * the approval exists and is not superseded;
   * no breaker is TRIGGERED or LATCHED;
-  * binding hash, candidate, CURRENT policy fingerprint (`RiskManager.set_policy` changes it at once), provenance and
-    snapshot hash;
+  * binding hash, candidate, the DURABLE active policy fingerprint (read from the journal inside the transaction),
+    provenance and snapshot hash;
   * expiry: `now >= expires_at` means EXPIRED;
   * market / asset / side, size and price;
   * prior consumption: the same intent_id + execution_key is an idempotent replay, anything else is rejected.
 
-  Only then does it append the CONSUMPTION event.
-* **Linearization point:** the commit of that CONSUMPTION event. A breaker transition, supersession, policy change or
-  expiry ordered BEFORE it makes the authorization fail. One ordered AFTER it cannot affect an execution that is
-  already authorized (exits / position management come later).
+  Then comes the **final critical section (Step 6.6.2)**, with no callback, hook or fault point between its checks
+  and the append:
+  * `authorized_at` = a FINAL read of the current clock (the later of the clock and the earlier `now`);
+  * the durable active policy fingerprint is re-read and must equal the approval's;
+  * `authorized_at < expires_at` is re-checked (`>=` means RISK_APPROVAL_EXPIRED);
+  * the breakers are re-read;
+  * then the CONSUMPTION event is appended, carrying exactly that `authorized_at` and the approval's policy
+    fingerprint.
+
+  An exact replay of the same intent re-runs this section too (an expired / re-policied replay is rejected).
+* **The linearization point has two parts (Step 6.6.2):**
+* **Time authorization point:** the final clock read `authorized_at`, immediately before the append. Time cannot be
+  locked, so expiry is decided at that exact, recorded instant, never at a stale earlier read.
+* **Durability / state-ordering point:** the COMMIT of the CONSUMPTION event. A breaker transition, supersession or
+  policy activation committed BEFORE it makes the authorization fail (it is read inside the serialized transaction).
+  One committed AFTER it cannot affect an execution that is already authorized; it governs only later
+  authorizations (exits / position management come later). A policy activation attempted from another connection
+  while the final transaction holds the write lock waits for it and is ordered after the consumption.
 * **A final-check failure** (breaker, expiry, supersession, policy, binding, consumed by another intent) means
   READY -> REJECTED with the exact risk reason. No venue request was made, so it is never EXECUTION_UNKNOWN, and
   there are zero submit attempts.
@@ -301,10 +354,14 @@ reconciliation owns it. `risk.shadow.execution_facts` derives these facts from a
 
 ## 15. Risk journal
 
-`risk/store.py`, SQLite, schema version 1, append-only (triggers abort UPDATE / DELETE). Writes need a transaction
+`risk/store.py`, SQLite, schema version 2 (Step 6.6.2: + POLICY_ACTIVATED, LOSS_STREAK_RESET). The table and trigger
+DDL is unchanged, so a version-1 store is migrated meta-only (`migrated_from = 1`; the manager then records an audited
+initial policy activation) and a newer or unknown version is refused. It is append-only (triggers abort UPDATE /
+DELETE). Writes need a transaction
 (`BEGIN IMMEDIATE`; any exception, including a simulated crash, rolls back). Event kinds: DECISION (the candidate, the
 full snapshot, policy fingerprint, decision, sizes, prices, worst-case loss, caps, triggers, reason codes, approval
-id, timestamp, expiry), APPROVAL, APPROVAL_SUPERSEDED, CONSUMPTION, BREAKER, TRADE_RESULT, OBSERVATION.
+id, timestamp, expiry), APPROVAL, APPROVAL_SUPERSEDED, CONSUMPTION (with `authorized_at`), BREAKER, TRADE_RESULT,
+OBSERVATION, BREAKER_RESET_REJECTED, POLICY_ACTIVATED, LOSS_STREAK_RESET.
 
 Deterministic event ids make an identical re-append a no-op; differing content raises. The journal answers: why was
 this trade allowed or vetoed, why was its size reduced, and what exact state did risk see?
@@ -340,6 +397,7 @@ Rewriting requires `--write --i-intend-to-change-the-risk-baseline` and an OLD /
 | Step | OLD | NEW | Why |
 |---|---|---|---|
 | Step 6.6 | (none) | `c44e6b1850d645b6f3dc65c3754079b9d6ba4aad807c14a8b52edf060e469693` | initial risk manager foundation |
+| Step 6.6.2 | `4f791073991178a99664173ba2e6f15900e904460e53fd71af49ffb9c36a1664` | `d489039cae8495dbe3a2614ee17cfd6b13f13e95e0e9e6d3728a6d690a8b694f` | final authorization linearization and streak reset hardening. `risk/manager.py`: a durable, ordered active policy (`activate_policy`, `from_store`, construction reconciliation, `RiskPolicyMismatchError`); one (policy, fingerprint) per transaction; a final critical section in `verify_and_consume` (final clock read `authorized_at`, durable-policy / expiry / breaker re-check, then the append); the CONSECUTIVE_LOSS reset appends LOSS_STREAK_RESET atomically with the breaker clear. `risk/store.py`: schema 2 (POLICY_ACTIVATED, LOSS_STREAK_RESET, meta-only v1 migration), streak relative to the latest reset, epoch. `risk/types.py`: RiskSnapshot schema 2 (+ `loss_streak_epoch`). `risk/evaluate.py`: the epoch rule for consecutive losses. `risk/faults.py`: two reset fault points. The old baseline is archived in `config/history/risk_baseline_step6.6.1.json`. |
 | Step 6.6.1 | `c44e6b1850d645b6f3dc65c3754079b9d6ba4aad807c14a8b52edf060e469693` | `4f791073991178a99664173ba2e6f15900e904460e53fd71af49ffb9c36a1664` | audit hardening. `risk/evaluate.py`: `breaker_snapshot_problems` (authority criteria). `risk/manager.py`: breaker observation independent of the candidate's signal; RESET_RULE enforced (`RiskBreakerResetError`); `set_policy`; `StoreApprovalBook` with read-only `verify` and atomic `verify_and_consume` (all checks + consumption in one transaction at the current time). `risk/store.py`: the unchecked `consume` primitive removed; new audit event kind `BREAKER_RESET_REJECTED`. The old baseline is archived in `config/history/risk_baseline_step6.6.json`. |
 
 ## 19. Why Step 6.6 cannot place live orders
@@ -352,9 +410,9 @@ Rewriting requires `--write --i-intend-to-change-the-risk-baseline` and an OLD /
   refuses every call; the repository-wide LIVE refusal is unchanged and tested.
 * Nothing in production imports `risk` or `execution`.
 
-## 20. Mutation tests (R1-R35)
+## 20. Mutation tests (R1-R55)
 
-`py scripts/mutation_test_risk.py` (R1-R47) applies each mutation to a temporary copy and runs the behavioural Stage-24 tests
+`py scripts/mutation_test_risk.py` (R1-R55) applies each mutation to a temporary copy and runs the behavioural Stage-24 tests
 (never the fingerprint test). The mutations:
 * **Signal, side, size, price:** R1 NO_CALL approved; R2 side flipped; R3 size increased; R4 price widened;
   R5 hard veto downgraded to a reduction.
@@ -374,9 +432,19 @@ Rewriting requires `--write --i-intend-to-change-the-risk-baseline` and an OLD /
 * **Extra:** R36 the read-only verify ignores a breaker latched after issuance.
 * **Step 6.6.1:** R37 NO_CALL skips breaker observation; R38 / R39 / R40 a same-day operator reset clears
   DAILY_REALIZED_LOSS / DAILY_TOTAL_LOSS / ROLLING_DRAWDOWN; R41 / R42 / R43 / R44 the final consume ignores a newly
-  latched breaker / approval expiration / supersession / a policy change; R45 consumption during PRECHECK instead of
+  latched breaker / approval expiration / supersession / a policy change (since Step 6.6.2 R41 / R42 / R44 disable
+  both the authorize check and the final critical-section re-check, which is otherwise defence in depth); R45 consumption during PRECHECK instead of
   READY; R46 the final consume skips revalidation (non-atomic); R47 after a crash past consumption, another intent
   can use the approval.
+* **Step 6.6.2:**
+  * R48 policy changed after the final check, old approval still consumed;
+  * R49 a stale time lets an approval that expired inside the critical section through;
+  * R50 the CONSECUTIVE_LOSS reset clears the breaker but not the streak;
+  * R51 the streak reset is not restart persistent;
+  * R52 the streak reset and the breaker clear are non-atomic;
+  * R53 a pre-reset snapshot count defeats the reset;
+  * R54 a decision evaluated under policy A is persisted with policy B's fingerprint;
+  * R55 a policy change is not durable.
 
 Results are in `analysis_output/risk_mutation_results.json`.
 

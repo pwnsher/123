@@ -15,6 +15,8 @@ RISK_FAULT_POINTS = (
     "after_breaker_trigger",          # a breaker trigger + latch committed
     "during_approval_consumption",    # inside the consumption transaction
     "after_approval_consumption",     # the consumption committed
+    "after_streak_reset_before_breaker_clear",   # inside the CONSECUTIVE_LOSS reset transaction (Step 6.6.2)
+    "after_breaker_clear_before_commit",         # inside the CONSECUTIVE_LOSS reset transaction (Step 6.6.2)
 )
 
 __all__ = ["RISK_FAULT_POINTS", "RiskFaultInjector", "SimulatedCrash", "NO_RISK_FAULTS"]

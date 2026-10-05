@@ -31,7 +31,7 @@ from risk.breakers import BREAKER_TYPES, InvalidBreakerTransition, check_breaker
 from risk.decision import RiskDecision, RiskInvariantViolation  # noqa: E402
 from risk.evaluate import RiskState, evaluate, worst_case_loss  # noqa: E402
 from risk.faults import RISK_FAULT_POINTS, RiskFaultInjector, SimulatedCrash  # noqa: E402
-from risk.manager import RiskManager  # noqa: E402
+from risk.manager import RiskManager, RiskPolicyMismatchError  # noqa: E402
 from risk.policy import RiskPolicy, load_policy, risk_policy_fingerprint  # noqa: E402
 from risk.reasons import REASON_CODES  # noqa: E402
 from risk.shadow import Exposure, execution_facts, exposure_fields, intent_from_approval  # noqa: E402
@@ -749,7 +749,12 @@ def test_approval_price_binding():
 
 def test_approval_policy_binding():
     r, d, a = _approved()
-    m = r.restart(policy(max_contracts_per_trade="999"))                        # the policy changed
+    try:                                                                         # never a silent policy swap
+        r.restart(policy(max_contracts_per_trade="999")); raise AssertionError("policy silently overwritten")
+    except RiskPolicyMismatchError:
+        pass
+    m = r.restart(policy())
+    m.activate_policy(policy(max_contracts_per_trade="999"), "test: policy change")   # explicit, durable
     ok, why = m.approval_book().verify(intent_from_approval(cand(), a, "i1"), NOW)
     assert not ok and why == "RISK_POLICY_CHANGED"
     d2, a2 = m.evaluate(cand(), snap())
@@ -1032,7 +1037,9 @@ def test_crash_points():
     assert set(RISK_FAULT_POINTS) == {"before_decision_write", "during_decision_transaction", "after_decision_write",
                                       "before_approval_creation", "after_approval_creation",
                                       "during_breaker_transition", "after_breaker_trigger",
-                                      "during_approval_consumption", "after_approval_consumption"}
+                                      "during_approval_consumption", "after_approval_consumption",
+                                      "after_streak_reset_before_breaker_clear",
+                                      "after_breaker_clear_before_commit"}
 
 
 # ═══════════════════ Step 6.6.1: breaker observation, reset rule, atomic final authorisation ═══════════════════
@@ -1254,6 +1261,260 @@ def test_crash_after_final_consume():
     assert eng2.submit(it) == S.ACKNOWLEDGED and list(r.venue.submit_attempts.values()) == [1]
 
 
+# ═══════════════════ Step 6.6.2: durable active policy, final time point, effective streak reset ═══════════════════
+import threading  # noqa: E402
+import time as _time  # noqa: E402
+
+
+def _inside_final(r, cb):
+    """Run cb exactly once INSIDE verify_and_consume: after the full _authorize() passed and the prior-consumption
+    lookup ran, before the final critical section (the same point the audit used)."""
+    st = r.mgr.store
+    orig, fired = st.consumption, []
+
+    def hooked(rid):
+        if not fired:
+            fired.append(1)
+            cb()
+        return orig(rid)
+    st.consumption = hooked
+    return fired
+
+
+def test_policy_race_separate_connection():
+    """§5: policy A approval passes the read-only checks; policy B is activated (separate RiskStore connection /
+    RiskManager) and COMMITTED before the final authorisation -> REJECTED RISK_POLICY_CHANGED, nothing consumed."""
+    def activate_b(r, a, it):
+        other = RiskManager(RiskStore(r.path), r.p, r.clock)                       # another connection / manager
+        other.activate_policy(policy(max_contracts_per_trade="999"), "operator: tighter limits")
+    r, a, it, eng = _race(activate_b)
+    assert eng.submit(it) == S.REJECTED and reasons_of(eng, it) == "RISK_POLICY_CHANGED"
+    assert r.venue.submit_attempts == {} and r.mgr.store.consumption(a.risk_decision_id) is None
+    assert r.mgr.store.count("CONSUMPTION") == 0
+
+
+def test_policy_race_inside_final():
+    """The audited ordering: _authorize under policy A already succeeded inside verify_and_consume; policy B is then
+    activated before the CONSUMPTION append -> the final critical section re-reads the durable active policy."""
+    r, d, a = _approved()
+    it = intent_from_approval(cand(), a, "i1")
+    fired = _inside_final(r, lambda: r.mgr.activate_policy(policy(max_contracts_per_trade="999"), "mid-flight"))
+    eng = r.engine()
+    assert eng.submit(it) == S.REJECTED and reasons_of(eng, it) == "RISK_POLICY_CHANGED" and fired
+    assert r.venue.submit_attempts == {} and r.mgr.store.count("CONSUMPTION") == 0
+
+
+def test_policy_reverse_order():
+    """Consumption commits FIRST; a policy activation from another thread / connection blocks on the risk-store write
+    lock and commits AFTERWARDS: the execution stays authorised (idempotent replay), policy B governs what follows."""
+    r, d, a = _approved()
+    it = intent_from_approval(cand(), a, "i1")
+    errs, started = [], threading.Event()
+
+    def other_process():
+        try:
+            started.set()
+            m2 = RiskManager(RiskStore(r.path), r.p, r.clock)                  # blocks until the consume commits
+            m2.activate_policy(policy(max_contracts_per_trade="999"), "operator: policy B")
+        except Exception as e:                                                   # noqa: BLE001
+            errs.append(e)
+    th = threading.Thread(target=other_process)
+
+    def start_and_wait():
+        th.start()
+        started.wait(5)
+        _time.sleep(0.3)                                                         # the activation is now blocked
+    _inside_final(r, start_and_wait)
+    eng = r.engine()
+    assert eng.submit(it) == S.ACKNOWLEDGED
+    th.join(10)
+    assert not errs and not th.is_alive(), errs
+    evs = r.mgr.store.events()
+    seq = {e["kind"]: e["seq"] for e in evs if e["kind"] in ("CONSUMPTION",)}
+    act = [e for e in evs if e["kind"] == "POLICY_ACTIVATED"][-1]
+    assert act["seq"] > seq["CONSUMPTION"] and act["payload"]["reason"] == "operator: policy B"
+    cons = r.mgr.store.consumption(a.risk_decision_id)
+    assert cons["policy_fingerprint"] == a.risk_policy_fingerprint
+    assert r.mgr.policy_fingerprint == risk_policy_fingerprint(policy(max_contracts_per_trade="999"))
+    for _ in range(2):
+        assert eng.submit(it) == S.ACKNOWLEDGED                                  # idempotent, never re-authorised
+    assert list(r.venue.submit_attempts.values()) == [1] and r.mgr.store.count("CONSUMPTION") == 1
+    d2, a2 = r.mgr.evaluate(cand("c-next"), snap("s-next"))                      # policy B applies from now on
+    assert a2.risk_policy_fingerprint == risk_policy_fingerprint(policy(max_contracts_per_trade="999"))
+
+
+def test_policy_durable_restart():
+    pa, pb = policy(), policy(max_contracts_per_trade="7")
+    fa, fb = risk_policy_fingerprint(pa), risk_policy_fingerprint(pb)
+    r = REnv(pa)
+    acts = r.mgr.store.events("POLICY_ACTIVATED")
+    assert len(acts) == 1 and acts[0]["payload"]["previous_policy_fingerprint"] is None
+    assert acts[0]["payload"]["new_policy_fingerprint"] == fa and "initial activation" in acts[0]["payload"]["reason"]
+    try:
+        r.mgr.activate_policy(pb, "  "); raise AssertionError("activation without a reason")
+    except ValueError:
+        pass
+    r.mgr.activate_policy(pb, "operator: smaller size cap")
+    p = r.mgr.store.events("POLICY_ACTIVATED")[-1]
+    assert p["event_id"] == "pa:1" and p["payload"]["previous_policy_fingerprint"] == fa
+    assert (p["payload"]["new_policy_fingerprint"], p["payload"]["policy_id"], p["payload"]["policy_version"],
+            p["payload"]["reason"]) == (fb, "fixture", 1, "operator: smaller size cap") and p["ts_ms"] == NOW
+    r.faults.disarm()
+    m = RiskManager.from_store(RiskStore(r.path), r.clock)                       # restart: B is reconstructed
+    assert m.policy_fingerprint == fb and risk_policy_fingerprint(m.policy) == fb
+    try:                                                                         # no silent reversion to A
+        RiskManager(RiskStore(r.path), pa, r.clock); raise AssertionError("silent policy reversion")
+    except RiskPolicyMismatchError:
+        pass
+    m2 = RiskManager(RiskStore(r.path), pa, r.clock, activate_reason="operator: revert to A")
+    assert m2.policy_fingerprint == fa and m2.store.count("POLICY_ACTIVATED") == 3
+    try:
+        with m2.store.transaction():
+            m2.store.conn.execute("UPDATE events SET payload_json='{}' WHERE kind='POLICY_ACTIVATED'")
+        raise AssertionError("policy history rewritten")
+    except Exception as e:                                                       # noqa: BLE001
+        assert "append-only" in str(e)
+    # a Step-6.6.1 (schema 1) store migrates meta-only and gets an audited initial activation; newer is refused
+    d = tmpdir()
+    st = RiskStore(os.path.join(d, "old.sqlite"))
+    st.conn.execute("UPDATE meta SET value='1' WHERE key='schema_version'")
+    st.close()
+    st = RiskStore(os.path.join(d, "old.sqlite"))
+    meta = dict(st.conn.execute("SELECT key, value FROM meta").fetchall())
+    assert meta["schema_version"] == "2" and meta["migrated_from"] == "1" and st.active_policy() is None
+    assert RiskManager(st, pa, r.clock).policy_fingerprint == fa
+    st.conn.execute("UPDATE meta SET value='3' WHERE key='schema_version'")
+    st.close()
+    try:
+        RiskStore(os.path.join(d, "old.sqlite")); raise AssertionError("a newer risk store was opened")
+    except Exception as e:                                                       # noqa: BLE001
+        assert "not supported" in str(e)
+
+
+def test_expiry_inside_final():
+    r, d, a = _approved()
+    it = intent_from_approval(cand(), a, "i1")
+    fired = _inside_final(r, lambda: setattr(r.clock, "t", a.expires_at))       # exactly expires_at
+    eng = r.engine()
+    assert eng.submit(it) == S.REJECTED and reasons_of(eng, it) == "RISK_APPROVAL_EXPIRED" and fired
+    assert r.venue.submit_attempts == {} and r.mgr.store.count("CONSUMPTION") == 0
+    r2, d2, a2 = _approved()                                                     # expires_at - 1 may authorise
+    it2 = intent_from_approval(cand(), a2, "i1")
+    _inside_final(r2, lambda: setattr(r2.clock, "t", a2.expires_at - 1))
+    eng2 = r2.engine()
+    assert eng2.submit(it2) == S.ACKNOWLEDGED
+    c = r2.mgr.store.consumption(a2.risk_decision_id)
+    assert c["authorized_at"] == a2.expires_at - 1                              # the exact final time read
+    assert r2.mgr.store.events("CONSUMPTION")[0]["ts_ms"] == a2.expires_at - 1
+
+
+def _three_losses(r):
+    for i in range(3):
+        r.mgr.store.record_trade_result(f"old{i}", "-1", NOW)
+    r.mgr.observe(snap("s-loss"))
+    assert r.mgr.breakers()["CONSECUTIVE_LOSS"] == "LATCHED" and r.mgr.store.loss_streak() == (3, 0)
+
+
+def test_streak_reset_effective():
+    r = REnv()
+    _three_losses(r)
+    r.mgr.reset_breaker("CONSECUTIVE_LOSS", "operator reviewed the streak")           # A
+    assert r.mgr.breakers()["CONSECUTIVE_LOSS"] == "CLEAR" and r.mgr.store.loss_streak() == (0, 0)
+    rs = r.mgr.store.events("LOSS_STREAK_RESET")
+    assert len(rs) == 1 and rs[0]["payload"]["previous_consecutive_losses"] == 3
+    assert rs[0]["payload"]["new_baseline"] == 0 and rs[0]["payload"]["operator_reason"]
+    assert rs[0]["payload"]["policy_fingerprint"] == r.mgr.policy_fingerprint
+    assert r.mgr.store.count("TRADE_RESULT") == 3                                  # history intact
+    d, a = r.mgr.evaluate(cand("c1"), snap("s1"))
+    assert "CONSECUTIVE_LOSS_BREAKER" not in d.reason_codes and d.decision == "APPROVE" and a is not None
+    try:                                                                            # never applied twice
+        r.mgr.reset_breaker("CONSECUTIVE_LOSS", "again"); raise AssertionError("double reset")
+    except InvalidBreakerTransition:
+        pass
+    assert r.mgr.store.count("LOSS_STREAK_RESET") == 1
+    m = r.restart()                                                                  # B
+    assert m.breakers()["CONSECUTIVE_LOSS"] == "CLEAR" and m.store.loss_streak() == (0, 0)
+    assert m.evaluate(cand("c2"), snap("s2"))[0].decision == "APPROVE"
+    m.store.record_trade_result("new0", "-1", NOW)                                  # C
+    assert m.store.loss_streak() == (1, 0)
+    m.store.record_trade_result("z", "0", NOW)                                      # zero keeps the post-reset streak
+    assert m.store.loss_streak() == (1, 0)
+    for i in (1, 2):                                                                 # D
+        m.store.record_trade_result(f"new{i}", "-1", NOW)
+    assert m.store.loss_streak() == (3, 0)
+    m.observe(snap("s3"))
+    assert m.breakers()["CONSECUTIVE_LOSS"] == "LATCHED"
+
+
+def test_streak_reset_snapshot_epoch():
+    """§13: the journal's post-reset streak is canonical; a snapshot count counts only in the CURRENT epoch."""
+    r = REnv()
+    _three_losses(r)
+    r.mgr.reset_breaker("CONSECUTIVE_LOSS", "operator reviewed the streak")
+    d, _ = r.mgr.evaluate(cand("c1"), snap("s1", consecutive_losses=3, loss_streak_epoch=0))   # pre-reset count
+    assert d.decision == "APPROVE" and r.mgr.breakers()["CONSECUTIVE_LOSS"] == "CLEAR"
+    d, _ = r.mgr.evaluate(cand("c2"), snap("s2", consecutive_losses=2, loss_streak_epoch=1))   # new info, epoch 1
+    assert d.decision == "APPROVE"
+    assert_veto(ev(s=snap(consecutive_losses=0, loss_streak_epoch=2), state=RiskState(loss_streak_epoch=1)),
+                "CONSECUTIVE_LOSS_STATE_UNKNOWN")                                  # an epoch the journal never saw
+    assert_veto(ev(s=snap(loss_streak_epoch=UNKNOWN)), "CONSECUTIVE_LOSS_STATE_UNKNOWN")
+    d, _ = r.mgr.evaluate(cand("c3"), snap("s3", consecutive_losses=3, loss_streak_epoch=1))   # 3 NEW losses
+    assert "CONSECUTIVE_LOSS_BREAKER" in d.reason_codes and r.mgr.breakers()["CONSECUTIVE_LOSS"] == "LATCHED"
+
+
+def test_streak_reset_atomic():
+    for point in ("after_streak_reset_before_breaker_clear", "after_breaker_clear_before_commit"):   # E, F
+        r = REnv()
+        _three_losses(r)
+        r.faults.arm(point)
+        crash(r.mgr.reset_breaker, "CONSECUTIVE_LOSS", "operator reviewed")
+        m = r.restart()
+        assert m.breakers()["CONSECUTIVE_LOSS"] == "LATCHED" and m.store.loss_streak() == (3, 0), point
+        assert m.store.count("LOSS_STREAK_RESET") == 0
+        d, _ = m.evaluate(cand("c1"), snap("s1"))
+        assert d.decision == "VETO" and "CONSECUTIVE_LOSS_BREAKER" in d.reason_codes
+
+
+def test_streak_reset_unknown_result():
+    r = REnv()
+    _three_losses(r)
+    r.mgr.reset_breaker("CONSECUTIVE_LOSS", "operator reviewed")
+    r.mgr.store.record_trade_result("n1", "-1", NOW)
+    r.mgr.store.record_trade_result("n2", "-1", NOW)
+    r.mgr.store.record_trade_result("u", UNKNOWN, NOW)                              # G
+    assert r.mgr.store.loss_streak() == (2, 1)                                      # not reset: never a win
+    d, _ = r.mgr.evaluate(cand("c1"), snap("s1"))
+    assert d.decision == "VETO" and "CONSECUTIVE_LOSS_STATE_UNKNOWN" in d.reason_codes
+    r.mgr.store.record_trade_result("u", "-2", NOW)
+    assert r.mgr.store.loss_streak() == (3, 0)
+
+
+def test_evaluate_one_policy():
+    """§15/16: one (policy, fingerprint) pair per evaluation. Policy B activated in the middle of evaluate() (after
+    the pure evaluation, before persistence) never produces a decision computed under A but labelled B."""
+    pa, pb = policy(max_contracts_per_trade="6"), policy(max_contracts_per_trade="999")
+    r = REnv(pa)
+    st = r.mgr.store
+    orig, fired = st.decision_record, []
+
+    def hooked(rid):
+        if not fired:
+            fired.append(1)
+            r.mgr.activate_policy(pb, "mid-evaluation")
+        return orig(rid)
+    st.decision_record = hooked
+    d, a = r.mgr.evaluate(cand(), snap())
+    st.decision_record = orig
+    assert fired and d.approved_contracts == D("6") and d.decision == "REDUCE"         # caps of A ...
+    assert d.risk_policy_fingerprint == risk_policy_fingerprint(pa)                  # ... labelled A
+    assert a.risk_policy_fingerprint == risk_policy_fingerprint(pa)
+    assert st.decision_record(d.risk_decision_id)["policy_fingerprint"] == risk_policy_fingerprint(pa)
+    ok, why = r.mgr.approval_book().verify(intent_from_approval(cand(), a, "i1"), NOW)
+    assert not ok and why == "RISK_POLICY_CHANGED"                                   # B is active now
+    d2, _ = r.mgr.evaluate(cand(), snap("s2"))
+    assert d2.approved_contracts == D("10") and d2.risk_policy_fingerprint == risk_policy_fingerprint(pb)
+
+
 # ═══════════════════ 63-67, 70 isolation / structure ═══════════════════
 FORBIDDEN_IMPORTS = {"requests", "http", "urllib", "urllib3", "socket", "ssl", "httpx", "aiohttp", "websocket",
                      "websockets", "asyncio", "cryptography", "hmac", "subprocess", "kalshi_dashboard", "kalshi_bot",
@@ -1371,7 +1632,10 @@ def test_docs():
         assert s in rm, s
     mut = json.load(open(os.path.join(HERE, "analysis_output", "risk_mutation_results.json")))
     assert mut["all_caught_and_controls_pass"] is True
-    assert {m["id"] for m in mut["mutations"]} >= {f"R{i}" for i in range(1, 48)}
+    assert {m["id"] for m in mut["mutations"]} >= {f"R{i}" for i in range(1, 56)}
+    for s in ("policy_activated", "activate_policy", "authorized_at", "loss_streak_reset", "loss_streak_epoch",
+              "durability / state-ordering point", "time authorization point", "r55"):
+        assert s in low, s
     for s in ("linearization point", "verify_and_consume", "breaker-authoritative", "reset_rule is enforced",
               "after_final_risk_consumption_before_submitting", "r47"):
         assert s in low, s
@@ -1465,6 +1729,16 @@ TESTS = [
     ("precheckconsume", "651-18.8 [6.6.1] PRECHECK completion does not consume the approval", test_precheck_does_not_consume),
     ("crashbeforeconsume", "651-18.10 [6.6.1] crash before final consumption -> approval unconsumed", test_crash_before_final_consume),
     ("crashafterconsume", "651-18.11 [6.6.1] crash after consumption, before SUBMITTING -> no second intent / order", test_crash_after_final_consume),
+    ("policyrace", "662-5a [6.6.2] policy B committed (other connection) before final consume -> RISK_POLICY_CHANGED", test_policy_race_separate_connection),
+    ("policyinside", "662-5b [6.6.2] policy B activated inside the final authorisation -> RISK_POLICY_CHANGED", test_policy_race_inside_final),
+    ("policyreverse", "662-5c [6.6.2] consumption first, activation after (thread + connection): stays authorised", test_policy_reverse_order),
+    ("policydurable", "662-2/3/4 [6.6.2] active policy durable, audited, restart-safe, no silent overwrite; migration", test_policy_durable_restart),
+    ("expiryinside", "662-9 [6.6.2] expiry reached inside the final authorisation -> rejected; expires_at-1 ok", test_expiry_inside_final),
+    ("streakreset", "662-14ABCD [6.6.2] operator reset restores eligibility; restart; new losses count again", test_streak_reset_effective),
+    ("streakepoch", "662-13 [6.6.2] snapshot loss count only in the current epoch (pre-reset count ignored)", test_streak_reset_snapshot_epoch),
+    ("streakatomic", "662-14EF [6.6.2] streak reset + breaker clear are one transaction", test_streak_reset_atomic),
+    ("streakunknown", "662-14G [6.6.2] UNKNOWN result after reset fails closed, never a win", test_streak_reset_unknown_result),
+    ("onepolicy", "662-15 [6.6.2] one policy snapshot per evaluation (caps and fingerprint never mixed)", test_evaluate_one_policy),
     ("nonetwork", "63 risk package has no network / live / credential path; production never imports risk", test_no_network_path),
     ("live", "64 LIVE remains refused", test_live_refused),
     ("isolation", "65 47 production fixtures + every existing fingerprint unchanged", test_production_isolation),

@@ -4,17 +4,17 @@
   "risk/__init__.py": "69d34a019da8e6c88052f0d8664d53408165989f3bdcc32648abb41174c1b4b2",
   "risk/breakers.py": "ad55b7b887cbdc4c291ad864b14df3494cf25e6206faedf4084f26a36ead235a",
   "risk/decision.py": "bd939d5f15696de8517e02b234aa9575695afe078cc7197d4c54da664883c57c",
-  "risk/evaluate.py": "2f6a43821090642685cb64d9112fe6834bce05b6e893c703d095afc0af12f0c6",
-  "risk/faults.py": "de77bc25e9441fce024afdfbfc1523c968aa8d4e9c9a20623da5841c17960998",
+  "risk/evaluate.py": "bd155c76107869b9f039464e21c9cc0ca991143402ce64e373a7181394906b38",
+  "risk/faults.py": "fc2c15ed5cb0b3df4cae573feaf81ad393311d5f18af395a5ac20710755e5be1",
   "risk/fingerprint.py": "37b689fa213fe9229987f42a2081b001c1233a48b1543fb304cd6e26f7898011",
-  "risk/manager.py": "f0399119b077ca896694590fd7618e00e43c9d458cb363eff9fab6b65d15b1d4",
+  "risk/manager.py": "d294578ec5b91d9c2fcd81bc38e01572103dfba4fb423e397668bc0af454d8a7",
   "risk/policy.py": "61a3ba3c916299760ef2cc39d5e83ffa8ad26844861e01d53b41aa252709309d",
   "risk/reasons.py": "c845150cf1306acc8d9120d0f08c0df7dda6c96cbffe35532324441e3b6c1a51",
   "risk/shadow.py": "98a3690f5b69b388c483cff46ffa3f5deaf612eb74f1ac595b81257ec9e14934",
-  "risk/store.py": "1483e908fdfc52f6b6037f1413e3af5a79adf69fafc73c372fa5aeb3eb56d3e2",
-  "risk/types.py": "e8d04f6c3de90810146c8ed143cadc65027f47510b5a3a61394202b56417f325"
+  "risk/store.py": "95ff970adde0e661f879d8fd1328be6a5b46595af4e3befdc13073a638207ecd",
+  "risk/types.py": "300c5d164f0b437d023be936974003f47f026e857d2989fc03c8b43d860e9a77"
  },
- "risk_fingerprint": "d489039cae8495dbe3a2614ee17cfd6b13f13e95e0e9e6d3728a6d690a8b694f",
+ "risk_fingerprint": "4f791073991178a99664173ba2e6f15900e904460e53fd71af49ffb9c36a1664",
  "semantics": {
   "architecture": "risk_foundation_v1",
   "breakers": {
@@ -96,9 +96,7 @@
    "during_breaker_transition",
    "after_breaker_trigger",
    "during_approval_consumption",
-   "after_approval_consumption",
-   "after_streak_reset_before_breaker_clear",
-   "after_breaker_clear_before_commit"
+   "after_approval_consumption"
   ],
   "hard_veto_codes": [
    "INVALID_POLICY",
@@ -338,7 +336,6 @@
     "exposure_group",
     "market_execution_state",
     "asset_execution_state",
-    "loss_streak_epoch",
     "schema_version"
    ]
   },
@@ -352,9 +349,7 @@
     "BREAKER",
     "TRADE_RESULT",
     "OBSERVATION",
-    "BREAKER_RESET_REJECTED",
-    "POLICY_ACTIVATED",
-    "LOSS_STREAK_RESET"
+    "BREAKER_RESET_REJECTED"
    ]
   },
   "versions": {
@@ -367,9 +362,9 @@
    "policy": 1,
    "policy_fingerprint": "risk_policy_fp_v1",
    "rules": "risk_rules_v1",
-   "snapshot": 2,
+   "snapshot": 1,
    "snapshot_hash": "risk_snapshot_v1",
-   "store": 2
+   "store": 1
   },
   "vocabularies": {
    "decisions": [
@@ -402,5 +397,5 @@
   },
   "worst_case_loss": "q * (approved_max_limit_price + extra_reserve_per_contract [+ unknown reserves]) + estimated_fee_total + estimated_slippage_total"
  },
- "semantics_sha256": "6c719312a9b5dd416c64d5709d350b05cefbaff0d41dfba53878b4ea2636392f"
+ "semantics_sha256": "9c4be2d8a50289078152599ec63e3d1dc7c8f361d693b941b018dcc20e6649b4"
 }

@@ -16,49 +16,121 @@ data, never calls a network API and never places or cancels an order. It is not 
 
     approval_book() -> StoreApprovalBook: the durable book execution consults (verify + single-use consume, both
     restart-safe), requiring the CURRENT policy fingerprint (an approval issued under another policy is rejected).
+
+ACTIVE POLICY (Step 6.6.2): the active risk policy is DURABLE state of the risk journal (POLICY_ACTIVATED events,
+append-only: previous / new fingerprint, policy id / version, the full policy, timestamp, reason). It is changed only
+by activate_policy() inside a risk-store transaction (BEGIN IMMEDIATE), so a policy change is totally ordered with every
+evaluation and every final authorisation, across processes, RiskManager instances and SQLite connections. Each
+transaction resolves ONE (policy, fingerprint) pair from the journal and uses it for everything it does (day resets,
+breaker observation, evaluation, decision id, approval). Construction reconciles the supplied RiskPolicy with the
+persisted active policy:
+    fresh store (no POLICY_ACTIVATED)  -> the supplied policy is activated (audited "initial activation");
+    same fingerprint                   -> continue;
+    different fingerprint              -> RiskPolicyMismatchError, unless the caller passes activate_reason (an
+                                          explicit, audited activation). Never a silent overwrite or reversion.
+RiskManager.from_store(store, clock) reopens with the persisted active policy (its fingerprint re-verified).
 """
 from execution.risk import check_intent_against_approval
 from risk.breakers import BREAKER_TYPES, RESET_RULE, utc_day
 from risk.decision import RiskDecision, approval_for, decision_id
 from risk.evaluate import RiskState, breaker_snapshot_problems, breaker_triggers, evaluate
-from risk.policy import risk_policy_fingerprint
-from risk.types import risk_snapshot_hash
+from risk.policy import RiskPolicy, risk_policy_fingerprint
+from risk.store import RiskStoreError
+from risk.types import RiskInputError, risk_snapshot_hash
+
+
+class RiskPolicyMismatchError(RuntimeError):
+    """The supplied policy differs from the durable active policy and no explicit activation was requested."""
 
 
 class RiskManager:
-    def __init__(self, store, policy, clock):
-        self.store, self.policy, self.clock = store, policy, clock
-        self.policy_fingerprint = risk_policy_fingerprint(policy)
+    def __init__(self, store, policy, clock, activate_reason=None):
+        self.store, self.clock = store, clock
+        problems = policy.problems()
+        if problems:
+            raise RiskInputError(f"invalid risk policy: {problems}")
+        self.policy_fingerprint_supplied = risk_policy_fingerprint(policy)
+        with store.transaction():
+            active = store.active_policy()
+            if active is None:
+                store.append_policy_activation(clock.now_ms(), policy.to_dict(), self.policy_fingerprint_supplied,
+                                               "initial activation (no recorded active policy)")
+            elif active["new_policy_fingerprint"] != self.policy_fingerprint_supplied:
+                if not (isinstance(activate_reason, str) and activate_reason.strip()):
+                    raise RiskPolicyMismatchError(
+                        f"the risk journal's active policy is {active['new_policy_fingerprint'][:16]}... "
+                        f"({active['policy_id']} v{active['policy_version']}); the supplied policy is "
+                        f"{self.policy_fingerprint_supplied[:16]}...: activate it explicitly (activate_reason)")
+                store.append_policy_activation(clock.now_ms(), policy.to_dict(), self.policy_fingerprint_supplied,
+                                               activate_reason)
+
+    @classmethod
+    def from_store(cls, store, clock):
+        """Reopen with the durable active policy (no reconfiguration)."""
+        pol, _fp = _resolve_active(store)
+        return cls(store, pol, clock)
+
+    # ---------------- active policy (durable, ordered) ----------------
+    def _active(self):
+        """ONE authoritative (policy, fingerprint) pair, read from the risk journal (call inside a transaction)."""
+        return _resolve_active(self.store)
+
+    @property
+    def policy(self):
+        return self._active()[0]
+
+    @property
+    def policy_fingerprint(self):
+        return self.store.active_policy_fingerprint()
+
+    def activate_policy(self, policy, reason):
+        """Durably activate another policy (POLICY_ACTIVATED, ordered with every authorisation). Approvals issued under
+        the previous fingerprint are rejected from the moment this commits."""
+        if not (isinstance(reason, str) and reason.strip()):
+            raise ValueError("a policy activation needs a reason")
+        problems = policy.problems()
+        if problems:
+            raise RiskInputError(f"invalid risk policy: {problems}")
+        fp = risk_policy_fingerprint(policy)
+        with self.store.transaction():
+            if self.store.active_policy_fingerprint() != fp:
+                self.store.append_policy_activation(self.clock.now_ms(), policy.to_dict(), fp, reason)
+        return fp
+
+    def set_policy(self, policy, reason="set_policy"):
+        """Compatibility alias of activate_policy (durable, ordered)."""
+        return self.activate_policy(policy, reason)
 
     # ---------------- persisted state ----------------
     def state(self, candidate=None, now_ms=None):
         now_ms = self.clock.now_ms() if now_ms is None else now_ms
         n, unresolved = self.store.loss_streak()
+        epoch = self.store.loss_streak_epoch()
         conflict = consumed = False
         if candidate is not None:
             prior = self.store.candidate_hash(candidate.candidate_id)
             conflict = prior is not None and prior != candidate.content_hash()
             consumed = self.store.candidate_consumed(candidate.candidate_id)
         return RiskState(breakers=tuple((t, s) for t, (s, _d) in sorted(self.store.breaker_states().items())),
-                         consecutive_losses=n, unresolved_trade_results=unresolved,
+                         consecutive_losses=n, unresolved_trade_results=unresolved, loss_streak_epoch=epoch,
                          day_peak_equity=self.store.day_peak_equity(utc_day(now_ms)), candidate_consumed=consumed,
                          candidate_conflict=conflict)
 
-    def _day_resets(self, now_ms):
+    def _day_resets(self, now_ms, fp):
         today = utc_day(now_ms)
         for t, (st, day) in sorted(self.store.breaker_states().items()):
             if st == "LATCHED" and RESET_RULE[t] == "UTC_DAY_BOUNDARY" and day is not None and day < today:
                 self.store.breaker_transition(t, "CLEAR", now_ms, f"RESET at UTC day boundary ({day} -> {today})",
-                                              policy_fingerprint=self.policy_fingerprint)
+                                              policy_fingerprint=fp)
 
-    def _latch(self, triggers, now_ms, snap_hash):
+    def _latch(self, triggers, now_ms, snap_hash, fp):
         states = self.store.breaker_states()
         for t, reason in triggers:
             if states[t][0] != "CLEAR":
                 continue
-            self.store.breaker_transition(t, "TRIGGERED", now_ms, reason, snap_hash, self.policy_fingerprint)
+            self.store.breaker_transition(t, "TRIGGERED", now_ms, reason, snap_hash, fp)
             self.store.faults.hit("during_breaker_transition")
-            self.store.breaker_transition(t, "LATCHED", now_ms, reason, snap_hash, self.policy_fingerprint)
+            self.store.breaker_transition(t, "LATCHED", now_ms, reason, snap_hash, fp)
 
     def reset_breaker(self, breaker_type, operator_reason):
         """Explicit operator reset - ONLY for breakers whose RESET_RULE is OPERATOR (CONSECUTIVE_LOSS). Daily and
@@ -76,21 +148,22 @@ class RiskManager:
                                    "state": self.store.breaker_states().get(breaker_type, ("?", None))[0]},
                                   breaker_type=breaker_type if breaker_type in BREAKER_TYPES else None)
             raise RiskBreakerResetError(why)
-        with self.store.transaction():
+        with self.store.transaction():                     # ONE transaction: streak baseline + breaker clear
+            _pol, fp = self._active()
+            if breaker_type == "CONSECUTIVE_LOSS":
+                self.store.append_loss_streak_reset(now, operator_reason, fp)
+                self.store.faults.hit("after_streak_reset_before_breaker_clear")
             self.store.breaker_transition(breaker_type, "CLEAR", now, f"OPERATOR RESET: {operator_reason}",
-                                          policy_fingerprint=self.policy_fingerprint)
+                                          policy_fingerprint=fp)
+            self.store.faults.hit("after_breaker_clear_before_commit")
 
-    def set_policy(self, policy):
-        """Activate another policy. Approvals issued under the previous policy fingerprint are rejected from now on."""
-        self.policy, self.policy_fingerprint = policy, risk_policy_fingerprint(policy)
-
-    def _observe_breakers(self, snapshot, now_ms, snap_hash):
+    def _observe_breakers(self, snapshot, now_ms, snap_hash, pol, fp):
         """Breaker OBSERVATION, independent of any candidate (CALL or NO_CALL): an authoritative snapshot
         (risk.evaluate.breaker_snapshot_problems is empty) that trips a breaker latches it."""
         if breaker_snapshot_problems(snapshot, now_ms):
             return []
-        triggers, _unknown = breaker_triggers(snapshot, self.policy, self.state(None, now_ms))
-        self._latch(triggers, now_ms, snap_hash)
+        triggers, _unknown = breaker_triggers(snapshot, pol, self.state(None, now_ms))
+        self._latch(triggers, now_ms, snap_hash, fp)
         return triggers
 
     # ---------------- observation (breakers / day peak without a candidate) ----------------
@@ -99,9 +172,10 @@ class RiskManager:
         now = self.clock.now_ms()
         h = risk_snapshot_hash(snapshot)
         with self.store.transaction(after="after_breaker_trigger"):
-            self._day_resets(now)
+            pol, fp = self._active()
+            self._day_resets(now, fp)
             self.store.append("OBSERVATION", f"o:{h}", now, {"snapshot_hash": h, "snapshot": snapshot.to_dict()})
-            self._observe_breakers(snapshot, now, h)
+            self._observe_breakers(snapshot, now, h, pol, fp)
         return self.breakers()
 
     def breakers(self):
@@ -112,16 +186,17 @@ class RiskManager:
         now = self.clock.now_ms()
         snap_hash = risk_snapshot_hash(snapshot)
         with self.store.transaction(before="before_decision_write", after="after_decision_write"):
-            self._day_resets(now)
-            observed = self._observe_breakers(snapshot, now, snap_hash)       # A. observation (never by signal)
+            pol, fp = self._active()        # ONE policy snapshot for this whole evaluation (thresholds + identity)
+            self._day_resets(now, fp)
+            observed = self._observe_breakers(snapshot, now, snap_hash, pol, fp)   # A. observation (never by signal)
             state = self.state(candidate, now)                                # B. authorisation sees the result
-            ev = evaluate(candidate, snapshot, self.policy, state, now)
-            rid = decision_id(candidate.candidate_id, candidate.content_hash(), snap_hash, self.policy_fingerprint,
+            ev = evaluate(candidate, snapshot, pol, state, now)
+            rid = decision_id(candidate.candidate_id, candidate.content_hash(), snap_hash, fp,
                               ev.decision, ev.approved_contracts, ev.approved_max_limit_price, ev.reason_codes)
             stored = self.store.decision_record(rid)
             if stored is not None:                               # the same logical decision: idempotent
                 return self._load(rid)
-            self._latch(ev.triggers, now, snap_hash)
+            self._latch(ev.triggers, now, snap_hash, fp)
             d = RiskDecision(risk_decision_id=rid, candidate_id=candidate.candidate_id,
                              candidate_hash=candidate.content_hash(), decision=ev.decision, decision_ts=now,
                              expires_at=ev.expires_at, market_ticker=candidate.market_ticker, asset=candidate.asset,
@@ -131,12 +206,12 @@ class RiskManager:
                              requested_max_limit_price=candidate.requested_max_limit_price,
                              approved_max_limit_price=ev.approved_max_limit_price,
                              calculated_worst_case_loss=ev.worst_case_loss, risk_snapshot_hash=snap_hash,
-                             risk_policy_fingerprint=self.policy_fingerprint, reason_codes=ev.reason_codes,
+                             risk_policy_fingerprint=fp, reason_codes=ev.reason_codes,
                              human_readable_reasons=ev.reasons)
             approval = approval_for(d, candidate)
             self.store.append("DECISION", f"d:{rid}", now,
                               {"decision": d.to_dict(), "candidate": candidate.to_dict(), "snapshot": snapshot.to_dict(),
-                               "snapshot_hash": snap_hash, "policy_fingerprint": self.policy_fingerprint,
+                               "snapshot_hash": snap_hash, "policy_fingerprint": fp,
                                "caps": ev.caps, "triggers": [list(t) for t in ev.triggers],
                                "observed_triggers": [list(t) for t in observed],
                                "approval_id": rid if approval else None},
@@ -203,7 +278,7 @@ class StoreApprovalBook:
 
     @property
     def required_policy_fingerprint(self):
-        return self.mgr.policy_fingerprint                  # the CURRENT policy, read at check time
+        return self.store.active_policy_fingerprint()       # the DURABLE active policy, read at check time
 
     def get(self, decision_id):
         a = self.store.approval(decision_id)
@@ -229,14 +304,33 @@ class StoreApprovalBook:
             if not ok:
                 return False, reason
             prior = st.consumption(intent.risk_decision_id)
-            if prior is not None:
-                if prior["intent_id"] == intent.intent_id and prior["execution_key"] == execution_key:
-                    return True, "RISK_APPROVAL_REPLAY"
+            if prior is not None and (prior["intent_id"], prior["execution_key"]) != (intent.intent_id, execution_key):
                 return False, f"RISK_APPROVAL_ALREADY_CONSUMED by {prior['intent_id']}"
             st.faults.hit("during_approval_consumption")
             appr = st.approval(intent.risk_decision_id)
-            st.append("CONSUMPTION", f"c:{intent.risk_decision_id}", now,
+            # ---- FINAL critical section: no callback / hook / fault point between these checks and the append ----
+            authorized_at = max(now, self.clock.now_ms())          # FINAL time read = the TIME authorisation point
+            if st.active_policy_fingerprint() != appr.risk_policy_fingerprint:
+                return False, "RISK_POLICY_CHANGED"
+            if authorized_at >= appr.expires_at:
+                return False, "RISK_APPROVAL_EXPIRED"
+            if any(s != "CLEAR" for s, _d in st.breaker_states().values()):
+                return False, "RISK_BREAKER_LATCHED"
+            if prior is not None:
+                return True, "RISK_APPROVAL_REPLAY"
+            st.append("CONSUMPTION", f"c:{intent.risk_decision_id}", authorized_at,
                       {"intent_id": intent.intent_id, "execution_key": execution_key, "candidate_id": appr.candidate_id,
-                       "authorized_at": now},
+                       "authorized_at": authorized_at, "policy_fingerprint": appr.risk_policy_fingerprint},
                       candidate_id=appr.candidate_id, risk_decision_id=intent.risk_decision_id)
         return True, "RISK_APPROVAL_CONSUMED"
+
+
+def _resolve_active(store):
+    a = store.active_policy()
+    if a is None:
+        raise RiskStoreError("the risk journal has no active policy")
+    pol = RiskPolicy.from_dict(a["policy"])
+    fp = risk_policy_fingerprint(pol)
+    if fp != a["new_policy_fingerprint"]:
+        raise RiskStoreError("the persisted active policy does not match its recorded fingerprint (fail closed)")
+    return pol, fp

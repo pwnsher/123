@@ -17,7 +17,7 @@ from dataclasses import dataclass, fields
 from execution.money import UNKNOWN, canon, dec
 
 RISK_CANDIDATE_SCHEMA_VERSION = 1
-RISK_SNAPSHOT_SCHEMA_VERSION = 1
+RISK_SNAPSHOT_SCHEMA_VERSION = 2       # 2 (Step 6.6.2): + loss_streak_epoch
 SNAPSHOT_HASH_VERSION = "risk_snapshot_v1"
 
 HEALTH = ("PASS", "DEGRADED", "FAIL", "UNKNOWN", "UNAVAILABLE")
@@ -181,6 +181,8 @@ class RiskSnapshot(_Frozen):
     exposure_group: str                  # the group the provider aggregated (must match policy.asset_group_map)
     market_execution_state: str          # EXEC_STATES for this market (from the execution layer)
     asset_execution_state: str           # worst EXEC_STATES across the asset's other markets
+    loss_streak_epoch: object = 0        # the consecutive-loss EPOCH consecutive_losses refers to (number of operator
+                                         # LOSS_STREAK_RESETs the provider has applied); see risk.evaluate.breaker_triggers
     schema_version: int = RISK_SNAPSHOT_SCHEMA_VERSION
 
     _NUM = ("account_equity", "available_cash", "day_start_equity", "day_peak_equity", "daily_realized_pnl",
@@ -188,7 +190,8 @@ class RiskSnapshot(_Frozen):
             "asset_gross_notional", "same_direction_crypto_risk", "opposite_direction_crypto_risk",
             "current_position_size", "current_market_open_risk", "spread", "available_depth",
             "market_minutes_remaining")
-    _INT = ("captured_at", "open_positions_count", "consecutive_losses", "quote_age_ms", "feature_age_ms",
+    _INT = ("captured_at", "open_positions_count", "consecutive_losses", "loss_streak_epoch", "quote_age_ms",
+            "feature_age_ms",
             "model_decision_age_ms", "schema_version")
 
 

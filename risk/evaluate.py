@@ -43,6 +43,7 @@ class RiskState:
     breakers: tuple = ()                 # ((breaker_type, state), ...)
     consecutive_losses: int = 0
     unresolved_trade_results: int = 0
+    loss_streak_epoch: int = 0           # number of LOSS_STREAK_RESETs in the risk journal
     day_peak_equity: Optional[Decimal] = None
     candidate_consumed: bool = False
     candidate_conflict: bool = False     # this candidate_id was evaluated before with DIFFERENT content
@@ -139,7 +140,8 @@ def snapshot_problems(s, c, policy, now_ms):
         v = getattr(s, f)
         if v is not UNKNOWN and v < 0:
             out.append(f"{f} < 0")
-    for f in ("open_positions_count", "consecutive_losses", "quote_age_ms", "feature_age_ms", "model_decision_age_ms"):
+    for f in ("open_positions_count", "consecutive_losses", "loss_streak_epoch", "quote_age_ms", "feature_age_ms",
+              "model_decision_age_ms"):
         v = getattr(s, f)
         if v is not UNKNOWN and v < 0:
             out.append(f"{f} < 0")
@@ -164,6 +166,8 @@ def breaker_snapshot_problems(s, now_ms):
         out.append("snapshot captured on another UTC day")
     if s.consecutive_losses is not UNKNOWN and s.consecutive_losses < 0:
         out.append("consecutive_losses < 0")
+    if s.loss_streak_epoch is not UNKNOWN and s.loss_streak_epoch < 0:
+        out.append("loss_streak_epoch < 0")
     return out
 
 
@@ -189,10 +193,18 @@ def breaker_triggers(s, policy, state):
         peak = max(peak, eq, state.day_peak_equity if state.day_peak_equity is not None else peak)
         if peak - eq > policy.max_rolling_drawdown:
             triggers.append(("ROLLING_DRAWDOWN", f"drawdown {peak - eq} (peak {peak}) > {policy.max_rolling_drawdown}"))
-    if s.consecutive_losses is UNKNOWN or state.unresolved_trade_results > 0:
-        unknown.append(("CONSECUTIVE_LOSS_STATE_UNKNOWN", "consecutive-loss state UNKNOWN (unresolved trade results)"))
+    # consecutive losses - SOURCE OF TRUTH (Step 6.6.2): the persisted, post-reset streak of the risk journal is
+    # canonical; a snapshot's count is used (max with the journal) ONLY when it refers to the journal's CURRENT
+    # consecutive-loss epoch. A count from an older epoch predates an operator LOSS_STREAK_RESET and is not applied (it
+    # would undo the reset); a newer / UNKNOWN epoch is inconsistent evidence -> fail closed.
+    se = s.loss_streak_epoch
+    if (s.consecutive_losses is UNKNOWN or se is UNKNOWN or state.unresolved_trade_results > 0
+            or se > state.loss_streak_epoch):
+        unknown.append(("CONSECUTIVE_LOSS_STATE_UNKNOWN", "consecutive-loss state UNKNOWN (unresolved trade results, "
+                                                          "or a snapshot loss epoch the journal does not know)"))
     else:
-        n = max(s.consecutive_losses, state.consecutive_losses)
+        n = max(s.consecutive_losses, state.consecutive_losses) if se == state.loss_streak_epoch \
+            else state.consecutive_losses
         if n >= policy.max_consecutive_losses:
             triggers.append(("CONSECUTIVE_LOSS", f"{n} consecutive losses >= {policy.max_consecutive_losses}"))
     return triggers, unknown

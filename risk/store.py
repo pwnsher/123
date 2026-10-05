@@ -1,5 +1,13 @@
 """
-Persistent risk state (Step 6.6): an append-only SQLite risk journal (RISK_STORE_SCHEMA_VERSION 1).
+Persistent risk state (Step 6.6): an append-only SQLite risk journal (RISK_STORE_SCHEMA_VERSION 2).
+
+Schema history:
+    1  Step 6.6 / 6.6.1  DECISION ... BREAKER_RESET_REJECTED
+    2  Step 6.6.2        + POLICY_ACTIVATED (the durable, ordered ACTIVE risk policy) and LOSS_STREAK_RESET (an
+                         append-only consecutive-loss baseline). The table / trigger DDL is unchanged; a version-1
+                         store is a valid version-2 store, so opening one upgrades only the meta row (migrated_from=1).
+                         It has no recorded active policy: the RiskManager records an initial activation, audited.
+                         A store NEWER than this code (or an unknown version) is refused.
 
 Everything is an EVENT appended inside an explicit transaction (BEGIN IMMEDIATE ... COMMIT; any exception, including a
 simulated process death, rolls back). Triggers abort UPDATE / DELETE. Event ids are deterministic: an identical
@@ -28,9 +36,10 @@ from risk.breakers import BREAKER_TYPES, check_breaker_transition, utc_day
 from risk.decision import RiskApproval
 from risk.faults import NO_RISK_FAULTS
 
-RISK_STORE_SCHEMA_VERSION = 1
+RISK_STORE_SCHEMA_VERSION = 2
+MIGRATABLE_STORE_VERSIONS = (1,)        # older stores whose content is a valid subset of the current schema
 RISK_EVENT_KINDS = ("DECISION", "APPROVAL", "APPROVAL_SUPERSEDED", "CONSUMPTION", "BREAKER", "TRADE_RESULT",
-                    "OBSERVATION", "BREAKER_RESET_REJECTED")
+                    "OBSERVATION", "BREAKER_RESET_REJECTED", "POLICY_ACTIVATED", "LOSS_STREAK_RESET")
 RISK_DDL = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS events (
@@ -82,8 +91,14 @@ class RiskStore:
         if row is None:
             self.conn.execute("INSERT INTO meta (key, value) VALUES ('schema_version', ?)",
                               (str(RISK_STORE_SCHEMA_VERSION),))
+        elif int(row[0]) in MIGRATABLE_STORE_VERSIONS:
+            old = int(row[0])                   # one atomic meta-only upgrade; no event row is touched
+            self.conn.executescript(f"BEGIN IMMEDIATE; UPDATE meta SET value='{int(RISK_STORE_SCHEMA_VERSION)}' WHERE "
+                                    f"key='schema_version'; INSERT OR IGNORE INTO meta (key, value) VALUES "
+                                    f"('migrated_from', '{old}'); COMMIT;")
         elif int(row[0]) != RISK_STORE_SCHEMA_VERSION:
-            raise RiskStoreError(f"risk store schema {row[0]} is not supported ({RISK_STORE_SCHEMA_VERSION})")
+            raise RiskStoreError(f"risk store schema {row[0]} is not supported (this code reads "
+                                 f"{RISK_STORE_SCHEMA_VERSION}, migrates {list(MIGRATABLE_STORE_VERSIONS)}); refusing")
         self._in_tx = False
 
     def close(self):
@@ -181,9 +196,18 @@ class RiskStore:
                                {"trade_id": trade_id, "realized_pnl": canon(dec(realized_pnl))})
 
     def loss_streak(self):
-        """-> (consecutive_losses, unresolved_trade_results)."""
+        """-> (consecutive_losses, unresolved_trade_results), RELATIVE TO THE LATEST LOSS_STREAK_RESET.
+        Events are replayed in journal order: a LOSS_STREAK_RESET sets the streak to its new_baseline (0); TRADE_RESULTs
+        before it no longer count, those after it count normally. Historical TRADE_RESULTs are never deleted. A result
+        still UNKNOWN stays unresolved (fail closed) whether it was recorded before or after a reset; when its FINAL
+        value arrives it is applied at that point of the journal (a late loss therefore counts - conservative)."""
         n, unknown, final = 0, set(), set()
-        for e in self.events("TRADE_RESULT"):
+        for e in self.events():
+            if e["kind"] == "LOSS_STREAK_RESET":
+                n = int(e["payload"]["new_baseline"])
+                continue
+            if e["kind"] != "TRADE_RESULT":
+                continue
             p = e["payload"]
             if p["realized_pnl"] == "UNKNOWN":
                 unknown.add(p["trade_id"])
@@ -195,6 +219,39 @@ class RiskStore:
             elif v > 0:
                 n = 0
         return n, len(unknown - final)
+
+    def loss_streak_epoch(self):
+        """The number of LOSS_STREAK_RESETs applied: the consecutive-loss EPOCH a snapshot's count must refer to."""
+        return self.count("LOSS_STREAK_RESET")
+
+    def append_loss_streak_reset(self, ts_ms, operator_reason, policy_fingerprint):
+        """Append-only new consecutive-loss baseline (must run inside the caller's transaction)."""
+        prev, unresolved = self.loss_streak()
+        n = self.loss_streak_epoch()
+        return self.append("LOSS_STREAK_RESET", f"lsr:{n}", ts_ms,
+                           {"reset_id": f"lsr:{n}", "operator_reason": operator_reason,
+                            "previous_consecutive_losses": prev, "unresolved_at_reset": unresolved, "new_baseline": 0,
+                            "epoch": n + 1, "policy_fingerprint": policy_fingerprint})
+
+    # ---------------- active policy ----------------
+    def active_policy(self):
+        """The latest POLICY_ACTIVATED payload (the durable ACTIVE policy), or None if none was ever recorded."""
+        row = self.conn.execute("SELECT payload_json FROM events WHERE kind='POLICY_ACTIVATED' ORDER BY seq DESC "
+                                "LIMIT 1").fetchone()
+        return None if row is None else json.loads(row[0])
+
+    def active_policy_fingerprint(self):
+        a = self.active_policy()
+        return None if a is None else a["new_policy_fingerprint"]
+
+    def append_policy_activation(self, ts_ms, policy_dict, fingerprint, reason):
+        """Append-only policy transition (must run inside the caller's transaction)."""
+        prev = self.active_policy_fingerprint()
+        n = self.count("POLICY_ACTIVATED")
+        return self.append("POLICY_ACTIVATED", f"pa:{n}", ts_ms,
+                           {"previous_policy_fingerprint": prev, "new_policy_fingerprint": fingerprint,
+                            "policy_id": policy_dict["policy_id"], "policy_version": policy_dict["policy_version"],
+                            "policy": policy_dict, "reason": reason})
 
     # ---------------- snapshots / day peak ----------------
     def day_peak_equity(self, day):

@@ -4,7 +4,7 @@
   "unmutated": {
    "caught": false,
    "returncode": 0,
-   "seconds": 2.2,
+   "seconds": 3.0,
    "failed_test": null,
    "passed_tests": [
     "2 NO_CALL is always vetoed; no approval can exist for NO_CALL",
@@ -52,6 +52,14 @@
     "651-18.4 [6.6.1] policy changes before final consume -> REJECTED",
     "651-18.8 [6.6.1] PRECHECK completion does not consume the approv",
     "651-18.11 [6.6.1] crash after consumption, before SUBMITTING -> ",
+    "662-5a [6.6.2] policy B committed (other connection) before fina",
+    "662-5b [6.6.2] policy B activated inside the final authorisation",
+    "662-2/3/4 [6.6.2] active policy durable, audited, restart-safe, ",
+    "662-9 [6.6.2] expiry reached inside the final authorisation -> r",
+    "662-14ABCD [6.6.2] operator reset restores eligibility; restart;",
+    "662-13 [6.6.2] snapshot loss count only in the current epoch (pr",
+    "662-14EF [6.6.2] streak reset + breaker clear are one transactio",
+    "662-15 [6.6.2] one policy snapshot per evaluation (caps and fing",
     "63 risk package has no network / live / credential path; product"
    ]
   }
@@ -81,7 +89,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  3 side can never change (decision, approval, intent): AssertionError: ",
     "passed_tests": []
    }
@@ -96,7 +104,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  4 size can never increase: AssertionError: ",
     "passed_tests": []
    }
@@ -110,7 +118,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  5 price can never widen (tighten only): AssertionError: ",
     "passed_tests": []
    }
@@ -124,7 +132,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  38b a hard veto always overrides a possible reduction: AssertionError: ('REDUCE', ('PER_TRADE_CONTRACT_LIMIT',))",
     "passed_tests": []
    }
@@ -138,7 +146,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  14 feed FAIL -> VETO: AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -166,7 +174,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  9 expired candidate / closed market -> VETO: AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -180,7 +188,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  11 stale / UNKNOWN quote age -> VETO: AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -194,7 +202,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  10 stale (or future) risk snapshot -> VETO: AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -208,7 +216,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  25-26 UNKNOWN EV / non-positive EV -> VETO: AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -222,7 +230,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.1,
     "failed_test": "FAIL  23 UNKNOWN required fee -> VETO (never zero): AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -236,7 +244,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  24 UNKNOWN required slippage -> VETO (never zero): AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -250,7 +258,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  45 exact Decimal worst-case loss; boundary and one increment above: AssertionError: ",
     "passed_tests": []
    }
@@ -264,7 +272,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  30-33 per-trade contract / notional / worst-case loss / equity-fraction / cash caps: AssertionError: ",
     "passed_tests": []
    }
@@ -292,7 +300,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  35-36 portfolio open-risk and notional caps: AssertionError: ",
     "passed_tests": []
    }
@@ -306,7 +314,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  37 crypto-group cap (both directions count): AssertionError: ",
     "passed_tests": []
    }
@@ -334,7 +342,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  39 simultaneous caps -> the smallest safe size (20 -> 4): AssertionError: ",
     "passed_tests": []
    }
@@ -362,7 +370,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.3,
     "failed_test": "FAIL  45 breakers persist through restart: AssertionError: ",
     "passed_tests": []
    }
@@ -390,7 +398,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.3,
     "failed_test": "FAIL  44 consecutive-loss breaker: AssertionError: ",
     "passed_tests": []
    }
@@ -404,7 +412,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.3,
     "failed_test": "FAIL  51 approval expiration; no silent renewal; new snapshot -> new approval: AssertionError: ",
     "passed_tests": []
    }
@@ -516,7 +524,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  61 unresolved execution (incl. from a real engine journal) -> VETO: AssertionError: ('APPROVE', ())",
     "passed_tests": []
    }
@@ -530,8 +538,8 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
-    "failed_test": "FAIL  63 risk package has no network / live / credential path; production never imports risk: AssertionError: ('/tmp/mut-risk-scapfzjh/repo/risk/manager.py', {'risk.breakers', 'execution.money', 'urllib.request', 'risk.policy', 'risk.evaluate', 'risk.types', 'execution.risk', 'risk.decision'})",
+    "seconds": 0.3,
+    "failed_test": "FAIL  63 risk package has no network / live / credential path; production never imports risk: AssertionError: ('/tmp/mut-risk-vw_w1twl/repo/risk/manager.py', {'risk.evaluate', 'risk.store', 'risk.breakers', 'risk.decision', 'execution.risk', 'risk.policy', 'risk.types', 'urllib.request', 'execution.",
     "passed_tests": []
    }
   },
@@ -544,7 +552,7 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.2,
+    "seconds": 0.3,
     "failed_test": "FAIL  39b provenance is copied, never changed or manufactured: AssertionError: ",
     "passed_tests": []
    }
@@ -614,14 +622,14 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.1,
+    "seconds": 0.2,
     "failed_test": "FAIL  651-6C [6.6.1] same-day operator reset of ROLLING_DRAWDOWN refused: AssertionError: ROLLING_DRAWDOWN cleared intraday by an operator",
     "passed_tests": []
    }
   },
   {
    "id": "R41",
-   "mutation": "the final consume ignores a newly latched breaker",
+   "mutation": "the final consume ignores a newly latched breaker (both the authorise check and the final re-check)",
    "tests": [
     "racebreaker"
    ],
@@ -635,7 +643,7 @@
   },
   {
    "id": "R42",
-   "mutation": "the final consume ignores approval expiration (a stale time is used)",
+   "mutation": "the final consume ignores approval expiration (a stale time is used at both checks)",
    "tests": [
     "raceexpiry"
    ],
@@ -663,9 +671,10 @@
   },
   {
    "id": "R44",
-   "mutation": "the final consume ignores a current policy mismatch",
+   "mutation": "the final consume ignores a current policy mismatch (both the authorise check and the final re-check)",
    "tests": [
-    "racepolicy"
+    "racepolicy",
+    "policyrace"
    ],
    "as_is": {
     "caught": true,
@@ -701,9 +710,12 @@
    "as_is": {
     "caught": true,
     "returncode": 1,
-    "seconds": 0.3,
-    "failed_test": "FAIL  651-18.1 [6.6.1] breaker latched between verify and final consume -> REJECTED, 0 submits: AssertionError: ",
-    "passed_tests": []
+    "seconds": 0.4,
+    "failed_test": "FAIL  651-18.3 [6.6.1] approval superseded before final consume -> REJECTED: AssertionError: ",
+    "passed_tests": [
+     "651-18.1 [6.6.1] breaker latched between verify and final consum",
+     "651-18.2 [6.6.1] approval expires before final consume -> REJECT"
+    ]
    }
   },
   {
@@ -717,6 +729,118 @@
     "returncode": 1,
     "seconds": 0.2,
     "failed_test": "FAIL  651-18.11 [6.6.1] crash after consumption, before SUBMITTING -> no second intent / order: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R48",
+   "mutation": "policy can change after the final authorisation check and the old approval is still consumed",
+   "tests": [
+    "policyinside"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  662-5b [6.6.2] policy B activated inside the final authorisation -> RISK_POLICY_CHANGED: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R49",
+   "mutation": "the final consume uses a stale time and permits an approval that expired inside the critical section",
+   "tests": [
+    "expiryinside"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.3,
+    "failed_test": "FAIL  662-9 [6.6.2] expiry reached inside the final authorisation -> rejected; expires_at-1 ok: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R50",
+   "mutation": "the CONSECUTIVE_LOSS operator reset clears the breaker but not the effective streak",
+   "tests": [
+    "streakreset"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  662-14ABCD [6.6.2] operator reset restores eligibility; restart; new losses count again: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R51",
+   "mutation": "the loss-streak reset is not restart persistent (kept in process memory only)",
+   "tests": [
+    "streakreset"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  662-14ABCD [6.6.2] operator reset restores eligibility; restart; new losses count again: AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R52",
+   "mutation": "the loss-streak reset and the breaker clear are non-atomic (two transactions)",
+   "tests": [
+    "streakatomic"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  662-14EF [6.6.2] streak reset + breaker clear are one transaction: AssertionError: after_streak_reset_before_breaker_clear",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R53",
+   "mutation": "a pre-reset snapshot consecutive-loss count immediately defeats the operator reset",
+   "tests": [
+    "streakepoch"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  662-13 [6.6.2] snapshot loss count only in the current epoch (pre-reset count ignored): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R54",
+   "mutation": "a RiskDecision evaluated under policy A can be persisted with the policy-B fingerprint",
+   "tests": [
+    "onepolicy"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  662-15 [6.6.2] one policy snapshot per evaluation (caps and fingerprint never mixed): AssertionError: ",
+    "passed_tests": []
+   }
+  },
+  {
+   "id": "R55",
+   "mutation": "an active-policy change is not durable (silently lost on restart)",
+   "tests": [
+    "policydurable"
+   ],
+   "as_is": {
+    "caught": true,
+    "returncode": 1,
+    "seconds": 0.2,
+    "failed_test": "FAIL  662-2/3/4 [6.6.2] active policy durable, audited, restart-safe, no silent overwrite; migration: AssertionError: ",
     "passed_tests": []
    }
   }

@@ -4,7 +4,7 @@ Mutation tests for the Step-6.6 risk manager foundation (paper / shadow only, of
 
     py scripts/mutation_test_risk.py [--out analysis_output/risk_mutation_results.json] [--only R1,R7]
 
-Each mutation breaks ONE risk-safety rule (R1-R35 of the Step-6.6 brief, R36 an extra, R37-R47 of Step 6.6.1) in a TEMPORARY copy of the repository and
+Each mutation breaks ONE risk-safety rule (R1-R35 of the Step-6.6 brief, R36 an extra, R37-R47 of Step 6.6.1, R48-R55 of Step 6.6.2) in a TEMPORARY copy of the repository and
 runs the relevant BEHAVIOURAL Stage-24 tests there; CAUGHT = those tests fail. The fingerprint test is never used to
 catch a mutation. Control: the unmutated copy must PASS the same tests. The working tree is never modified.
 """
@@ -102,11 +102,11 @@ MUTATIONS = [
        '        for t, reason in [x for x in triggers if x[0] != "DAILY_REALIZED_LOSS"]:\n', 1)],
      ["latched"]),
     ("R22", "breaker lost on restart (latched only in process memory)",
-     [(MGR, "        self.policy_fingerprint = risk_policy_fingerprint(policy)\n",
-       "        self.policy_fingerprint = risk_policy_fingerprint(policy)\n        self._mem = {}\n", 1),
-      (MGR, '            self.store.breaker_transition(t, "TRIGGERED", now_ms, reason, snap_hash, self.policy_fingerprint)\n'
+     [(MGR, "        self.store, self.clock = store, clock\n",
+       "        self.store, self.clock = store, clock\n        self._mem = {}\n", 1),
+      (MGR, '            self.store.breaker_transition(t, "TRIGGERED", now_ms, reason, snap_hash, fp)\n'
             '            self.store.faults.hit("during_breaker_transition")\n'
-            '            self.store.breaker_transition(t, "LATCHED", now_ms, reason, snap_hash, self.policy_fingerprint)\n',
+            '            self.store.breaker_transition(t, "LATCHED", now_ms, reason, snap_hash, fp)\n',
        '            self._mem[t] = "LATCHED"\n', 1),
       (MGR, "breakers=tuple((t, s) for t, (s, _d) in sorted(self.store.breaker_states().items())),",
        "breakers=tuple((t, self._mem.get(t, s)) for t, (s, _d) in sorted(self.store.breaker_states().items())),", 1)],
@@ -170,9 +170,9 @@ MUTATIONS = [
        "intent.risk_decision_id), now_ms, self.required_policy_fingerprint)\n", 1)],
      ["breakerapproval"]),
     ("R37", "NO_CALL causes breaker observation to be skipped",
-     [(MGR, "            observed = self._observe_breakers(snapshot, now, snap_hash)       # A. observation",
-       '            observed = self._observe_breakers(snapshot, now, snap_hash) if candidate.signal_status == "CALL" '
-       'else []  # A. observation', 1)],
+     [(MGR, "            observed = self._observe_breakers(snapshot, now, snap_hash, pol, fp)   # A. observation",
+       '            observed = self._observe_breakers(snapshot, now, snap_hash, pol, fp) if candidate.signal_status '
+       '== "CALL" else []  # A. observation', 1)],
      ["nocallbreaker"]),
     ("R38", "a same-day operator reset clears DAILY_REALIZED_LOSS",
      [(MGR, '        if RESET_RULE.get(breaker_type) != "OPERATOR" or not reason_ok:',
@@ -186,22 +186,28 @@ MUTATIONS = [
      [(MGR, '        if RESET_RULE.get(breaker_type) != "OPERATOR" or not reason_ok:',
        '        if (RESET_RULE.get(breaker_type) != "OPERATOR" and breaker_type != "ROLLING_DRAWDOWN") or not reason_ok:', 1)],
      ["resetdrawdown"]),
-    ("R41", "the final consume ignores a newly latched breaker",
+    ("R41", "the final consume ignores a newly latched breaker (both the authorise check and the final re-check)",
      [(MGR, "        if latched:                                  # a breaker latched AFTER issuance still stops the "
-            "entry\n", "        if False:\n", 1)],
+            "entry\n", "        if False:\n", 1),
+      (MGR, '            if any(s != "CLEAR" for s, _d in st.breaker_states().values()):\n'
+            '                return False, "RISK_BREAKER_LATCHED"\n', "", 1)],
      ["racebreaker"]),
-    ("R42", "the final consume ignores approval expiration (a stale time is used)",
+    ("R42", "the final consume ignores approval expiration (a stale time is used at both checks)",
      [(MGR, "            now = max(now_ms, self.clock.now_ms())          # the CURRENT time",
-       "            now = intent.created_at                          # the CURRENT time", 1)],
+       "            now = intent.created_at                          # the CURRENT time", 1),
+      (MGR, "            authorized_at = max(now, self.clock.now_ms())          # FINAL time read",
+       "            authorized_at = now                                    # FINAL time read", 1)],
      ["raceexpiry"]),
     ("R43", "the final consume ignores approval supersession",
      [(MGR, "        if intent.risk_decision_id and self.store.superseded(intent.risk_decision_id):\n",
        "        if False:\n", 1)],
      ["racesupersede"]),
-    ("R44", "the final consume ignores a current policy mismatch",
+    ("R44", "the final consume ignores a current policy mismatch (both the authorise check and the final re-check)",
      [(MGR, "                                             self.required_policy_fingerprint)\n",
-       "                                             None)\n", 1)],
-     ["racepolicy"]),
+       "                                             None)\n", 1),
+      (MGR, '            if st.active_policy_fingerprint() != appr.risk_policy_fingerprint:\n'
+            '                return False, "RISK_POLICY_CHANGED"\n', "", 1)],
+     ["racepolicy", "policyrace"]),
     ("R45", "the approval is consumed during the preliminary PRECHECK instead of the final READY authorisation",
      [("execution/engine.py", "        return None, None                            # read-only: the approval is NOT "
                               "consumed here",
@@ -215,6 +221,42 @@ MUTATIONS = [
      [(MGR, "                return False, f\"RISK_APPROVAL_ALREADY_CONSUMED by {prior['intent_id']}\"\n",
        '                return True, "RISK_APPROVAL_REPLAY"\n', 1)],
      ["crashafterconsume"]),
+    ("R48", "policy can change after the final authorisation check and the old approval is still consumed",
+     [(MGR, '            if st.active_policy_fingerprint() != appr.risk_policy_fingerprint:\n'
+            '                return False, "RISK_POLICY_CHANGED"\n', "", 1)],
+     ["policyinside"]),
+    ("R49", "the final consume uses a stale time and permits an approval that expired inside the critical section",
+     [(MGR, "            authorized_at = max(now, self.clock.now_ms())          # FINAL time read",
+       "            authorized_at = now                                    # FINAL time read", 1)],
+     ["expiryinside"]),
+    ("R50", "the CONSECUTIVE_LOSS operator reset clears the breaker but not the effective streak",
+     [(MGR, "                self.store.append_loss_streak_reset(now, operator_reason, fp)\n", "                pass\n", 1)],
+     ["streakreset"]),
+    ("R51", "the loss-streak reset is not restart persistent (kept in process memory only)",
+     [(MGR, "                self.store.append_loss_streak_reset(now, operator_reason, fp)\n",
+       "                self._mem_streak_reset = True\n", 1),
+      (MGR, "        n, unresolved = self.store.loss_streak()\n        epoch = self.store.loss_streak_epoch()\n",
+       '        n, unresolved = (0, 0) if getattr(self, "_mem_streak_reset", False) else self.store.loss_streak()\n'
+       '        epoch = self.store.loss_streak_epoch() + (1 if getattr(self, "_mem_streak_reset", False) else 0)\n', 1)],
+     ["streakreset"]),
+    ("R52", "the loss-streak reset and the breaker clear are non-atomic (two transactions)",
+     [(MGR, '                self.store.faults.hit("after_streak_reset_before_breaker_clear")\n',
+       '                self.store.conn.execute("COMMIT"); self.store.conn.execute("BEGIN IMMEDIATE")\n'
+       '                self.store.faults.hit("after_streak_reset_before_breaker_clear")\n', 1)],
+     ["streakatomic"]),
+    ("R53", "a pre-reset snapshot consecutive-loss count immediately defeats the operator reset",
+     [(EVL, "        n = max(s.consecutive_losses, state.consecutive_losses) if se == state.loss_streak_epoch \\\n"
+            "            else state.consecutive_losses\n",
+       "        n = max(s.consecutive_losses, state.consecutive_losses)\n", 1)],
+     ["streakepoch"]),
+    ("R54", "a RiskDecision evaluated under policy A can be persisted with the policy-B fingerprint",
+     [(MGR, "                             risk_policy_fingerprint=fp, reason_codes=ev.reason_codes,",
+       "                             risk_policy_fingerprint=self.policy_fingerprint, reason_codes=ev.reason_codes,", 1)],
+     ["onepolicy"]),
+    ("R55", "an active-policy change is not durable (silently lost on restart)",
+     [(MGR, "                self.store.append_policy_activation(self.clock.now_ms(), policy.to_dict(), fp, reason)\n",
+       "                self._pending_policy = (policy, fp)\n", 1)],
+     ["policydurable"]),
 ]
 
 
