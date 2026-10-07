@@ -1,0 +1,8 @@
+{
+  "records": [
+    {"source": "MOCK example export", "captured_at": "2026-10-07T00:00:00Z", "chain": "solana",
+     "contract": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "metric": "mint_authority_active", "value": false},
+    {"source": "MOCK example export", "captured_at": 1791331200, "chain": "solana",
+     "contract": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "metric": "holder_count", "value": 8200}
+  ]
+}

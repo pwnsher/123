@@ -1,0 +1,20 @@
+[project]
+name = "gem-radar"
+version = "0.1.0"
+description = "Heuristic memecoin risk/quality scoring from a contract address (read-only analysis)"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.ruff]
+line-length = 110
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true

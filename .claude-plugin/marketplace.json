@@ -1,0 +1,16 @@
+{
+  "name": "pwnsher-tools",
+  "owner": {
+    "name": "pwnsher"
+  },
+  "metadata": {
+    "description": "Claude Code plugins by pwnsher: Gem Radar memecoin risk analysis"
+  },
+  "plugins": [
+    {
+      "name": "gem-radar",
+      "source": "./gem-radar",
+      "description": "Heuristic memecoin risk scoring: /gem <contract> -> GEM / WATCH / AVOID with provenance (read-only)"
+    }
+  ]
+}

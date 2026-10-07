@@ -1,0 +1,59 @@
+{
+  "verdict_bands": {
+    "gem_min": 80,
+    "watch_min": 40
+  },
+  "critical_cap": 20,
+  "min_completeness_for_verdict": 0.4,
+  "thresholds": {
+    "dev_critical_pct": 15.0,
+    "sell_tax_critical_pct": 50.0,
+    "buy_tax_critical_pct": 50.0,
+    "unlocked_lp_max_locked_pct": 50.0,
+    "unlocked_lp_top10_critical_pct": 50.0,
+    "top10_high_pct": 60.0,
+    "wash_volume_liquidity_ratio": 15.0,
+    "blacklist_is_critical": false
+  },
+  "freshness_seconds": {
+    "market": 300,
+    "liquidity": 900,
+    "holders": 3600,
+    "contract": 86400,
+    "age": 604800,
+    "social": 86400
+  },
+  "cache_ttl_seconds": 120,
+  "conflict_policy": "conservative",
+  "deep_scan": {
+    "score_low": 40,
+    "score_high": 80,
+    "confidence_below": 60,
+    "on_conflict": true,
+    "on_suspicious_activity": true
+  },
+  "http": {
+    "timeout_seconds": 10,
+    "retries": 2,
+    "backoff_seconds": 1.0
+  },
+  "rate_limit_min_interval_seconds": {
+    "dexscreener": 0.25,
+    "goplus": 1.0,
+    "honeypot_is": 0.5,
+    "rugcheck": 0.5,
+    "solana_rpc": 0.2,
+    "evm_rpc": 0.2
+  },
+  "provider_reliability": {
+    "dexscreener": 0.85,
+    "goplus": 0.8,
+    "honeypot_is": 0.85,
+    "rugcheck": 0.8,
+    "solana_rpc": 0.95,
+    "evm_rpc": 0.95,
+    "local": 0.5,
+    "mock": 0.5
+  },
+  "providers_disabled": []
+}

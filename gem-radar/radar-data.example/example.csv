@@ -1,0 +1,4 @@
+source,captured_at,chain,contract,metric,value,unit
+MOCK example export,2026-10-07T00:00:00Z,ethereum,0x1111111111111111111111111111111111111111,liquidity_usd,250000,
+MOCK example export,2026-10-07T00:00:00Z,ethereum,0x1111111111111111111111111111111111111111,top10_pct,0.31,fraction
+MOCK example export,2026-10-07T00:00:00Z,ethereum,0x1111111111111111111111111111111111111111,is_honeypot,false,

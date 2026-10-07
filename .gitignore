@@ -1,3 +1,9 @@
 __pycache__/
 *.pyc
 *.zip
+# Gem Radar: engine-written editor types and local runtime data
+gem-radar/.claude-plugin/types/
+radar-data/
+.gem-radar/
+.mypy_cache/
+.ruff_cache/

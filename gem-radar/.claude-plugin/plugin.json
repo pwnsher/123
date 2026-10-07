@@ -1,0 +1,10 @@
+{
+  "name": "gem-radar",
+  "version": "0.1.0",
+  "description": "Heuristic memecoin risk scoring: /gem <contract> gives a GEM / WATCH / AVOID verdict with provenance (read-only; never trades)",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "pwnsher"
+  },
+  "license": "MIT"
+}

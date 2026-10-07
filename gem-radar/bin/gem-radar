@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+# Standalone CLI: gem-radar scan <contract> [--chain name] | recheck | watch | history | status | probe
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+PYTHONPATH="$HERE/src${PYTHONPATH:+:$PYTHONPATH}" exec "${GEM_RADAR_PYTHON:-python3}" -m gem_radar "$@"
